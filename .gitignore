@@ -1,0 +1,17 @@
+# Python build/dist directories
+build/
+dist/
+
+# Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# PyInstaller files
+*.spec
+
+# Env files
+.env
+venv/
+.venv/
