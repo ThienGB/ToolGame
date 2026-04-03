@@ -86,12 +86,64 @@ class TenMinuteMail(TempEmailService):
                 match = re.search(pattern, content, re.IGNORECASE)
                 if match:
                     otp = match.group(1)
-                    print(f"✓ Tìm thấy OTP: {otp}")
+                    logger.info(f"Tìm thấy OTP: {otp}")
                     return otp
             
             return None
         except Exception as e:
-            print(f"✗ Lỗi trích xuất OTP: {e}")
+            logger.error(f"Exception occurred: {e}")
+            return None
+
+
+class OneSecMail(TempEmailService):
+    """Service sử dụng 1secmail.com"""
+    
+    def __init__(self):
+        self.session = requests.Session()
+        self.email = None
+        self.base_url = "https://www.1secmail.com/api/v1/"
+    
+    def get_email(self) -> str:
+        """Tạo email ngẫu nhiên"""
+        try:
+            params = {'action': 'genRandomMailbox', 'count': 1}
+            response = self.session.get(self.base_url, params=params, timeout=10)
+            if response.status_code != 200:
+                print(f"Loi API 1secmail: HTTP {response.status_code}")
+                return ""
+            self.email = response.json()[0]
+            print(f"Email tam thoi: {self.email}")
+            return self.email
+        except Exception as e:
+            print(f"Loi 1secmail: {e}")
+            return ""
+
+    def get_messages(self) -> list:
+        """Lấy tin nhắn"""
+        try:
+            user, domain = self.email.split('@')
+            params = {'action': 'getMessages', 'login': user, 'domain': domain}
+            response = self.session.get(self.base_url, params=params)
+            return response.json() if response.status_code == 200 else []
+        except:
+            return []
+
+    def extract_otp(self, message: Dict) -> Optional[str]:
+        """Trích xuất OTP"""
+        try:
+            user, domain = self.email.split('@')
+            params = {'action': 'readMessage', 'login': user, 'domain': domain, 'id': message['id']}
+            response = self.session.get(self.base_url, params=params)
+            content = response.json().get('body', '')
+            
+            for pattern in OTP_PATTERNS:
+                match = re.search(pattern, content, re.IGNORECASE)
+                if match:
+                    otp = match.group(1)
+                    print(f"✓ Tìm thấy OTP: {otp}")
+                    return otp
+            return None
+        except:
             return None
 
 

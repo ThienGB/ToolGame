@@ -1,0 +1,539 @@
+2026-04-01 11:49:36,169 [INFO] --- Creating account 1/1 ---
+2026-04-01 11:49:36,169 [INFO] Initializing browser...
+2026-04-01 11:49:37,371 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:49:44,571 [INFO] Retrying with standard Selenium fallback...
+2026-04-01 11:49:44,585 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 11:49:46,588 [INFO] Initializing browser...
+2026-04-01 11:49:47,768 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:49:54,902 [INFO] Retrying with standard Selenium fallback...
+2026-04-01 11:49:54,911 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 11:51:08,710 [INFO] --- Creating account 1/1 ---
+2026-04-01 11:51:08,710 [INFO] Initializing browser...
+2026-04-01 11:51:09,927 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:51:14,588 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 11:51:19,192 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 11:51:21,192 [INFO] Initializing browser...
+2026-04-01 11:51:22,419 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:52:35,327 [INFO] --- Creating account 1/1 ---
+2026-04-01 11:52:35,327 [INFO] Initializing browser...
+2026-04-01 11:52:36,566 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:52:41,241 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 11:52:46,190 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 11:52:48,191 [INFO] Initializing browser...
+2026-04-01 11:52:49,483 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:54:24,006 [INFO] --- Creating account 1/1 ---
+2026-04-01 11:54:24,006 [INFO] Initializing browser...
+2026-04-01 11:54:25,245 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:54:30,281 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 11:54:36,306 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 11:54:38,307 [INFO] Initializing browser...
+2026-04-01 11:54:39,480 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:56:16,949 [INFO] --- Creating account 1/1 ---
+2026-04-01 11:56:16,949 [INFO] Initializing browser...
+2026-04-01 11:56:18,247 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:56:23,099 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 11:56:28,678 [ERROR] Could not get temporary email.
+2026-04-01 11:56:28,868 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 11:56:30,870 [INFO] Initializing browser...
+2026-04-01 11:56:32,120 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:56:37,137 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 11:56:41,827 [ERROR] Could not get temporary email.
+2026-04-01 11:56:42,005 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 11:56:44,006 [INFO] Initializing browser...
+2026-04-01 11:56:45,215 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:57:49,881 [INFO] --- Creating account 1/1 ---
+2026-04-01 11:57:49,881 [INFO] Initializing browser...
+2026-04-01 11:57:51,115 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:57:55,532 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 11:57:55,892 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 11:58:01,231 [INFO] Email API bi chan, dang thu lay email qua Tab moi...
+2026-04-01 11:58:06,246 [ERROR] Khong the lay email qua ca API lan Browser: list index out of range
+2026-04-01 11:58:06,414 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 11:58:08,416 [INFO] Initializing browser...
+2026-04-01 11:58:09,657 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 11:58:14,198 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 11:58:14,573 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 11:58:19,296 [INFO] Email API bi chan, dang thu lay email qua Tab moi...
+2026-04-01 12:02:46,542 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:02:46,543 [INFO] Initializing browser...
+2026-04-01 12:02:47,783 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:02:52,285 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:02:52,671 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:02:58,217 [INFO] Email API bi chan, dang thu lay email qua Tab moi...
+2026-04-01 12:03:24,771 [ERROR] Khong the lay email qua ca API lan Browser: Message: 
+Stacktrace:
+	undetected_chromedriver!GetHandleVerifier [0x107cdf3+10b03]
+	undetected_chromedriver!GetHandleVerifier [0x107cf24+10c34]
+	undetected_chromedriver!(No symbol) [0xe62120]
+	undetected_chromedriver!(No symbol) [0xeaabca]
+	undetected_chromedriver!(No symbol) [0xeaae6b]
+	undetected_chromedriver!(No symbol) [0xeed0b2]
+	undetected_chromedriver!(No symbol) [0xecdb54]
+	undetected_chromedriver!(No symbol) [0xeea9a5]
+	undetected_chromedriver!(No symbol) [0xecd8a6]
+	undetected_chromedriver!(No symbol) [0xea0229]
+	undetected_chromedriver!(No symbol) [0xea0fe4]
+	undetected_chromedriver!GetHandleVerifier [0x12e48b9+2785c9]
+	undetected_chromedriver!GetHandleVerifier [0x12dfeb5+273bc5]
+	undetected_chromedriver!GetHandleVerifier [0x12fe06b+291d7b]
+	undetected_chromedriver!GetHandleVerifier [0x1095cc8+299d8]
+	undetected_chromedriver!GetHandleVerifier [0x109d9fd+3170d]
+	undetected_chromedriver!GetHandleVerifier [0x10858c8+195d8]
+	undetected_chromedriver!GetHandleVerifier [0x1085a92+197a2]
+	undetected_chromedriver!GetHandleVerifier [0x106ee9a+2baa]
+	KERNEL32!BaseThreadInitThunk [0x75095d49+19]
+	ntdll!RtlInitializeExceptionChain [0x7736d81b+6b]
+	ntdll!RtlGetAppContainerNamedObjectPath [0x7736d7a1+231]
+
+2026-04-01 12:03:25,166 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 12:03:27,168 [INFO] Initializing browser...
+2026-04-01 12:03:28,404 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:03:32,928 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:03:33,309 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:06:14,568 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:06:14,569 [INFO] Initializing browser...
+2026-04-01 12:06:15,829 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:06:20,268 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:06:20,640 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:06:25,625 [INFO] Su dung email tu tao: vf1fejrdwr@1secmail.com
+2026-04-01 12:06:25,625 [INFO] Attempting to register: User=hqh81ogzd75, Email=vf1fejrdwr@1secmail.com
+2026-04-01 12:06:50,023 [WARNING] Could not find GET CODE via text, trying secondary button: Message: element click intercepted: Element <button type="button" class="secondary">...</button> is not clickable at point (793, 490). Other element would receive the click: <iframe src="https://geo.captcha-delivery.com/captcha/?initialCid=AHrlqAAAAAMArvwxOF6Gvo4Aq_MwQQ==&amp;cid=POQIqrwvqqPX6DIYCBGgJrDx59h3OSRs5lO1WZ858fWf78qJDKW42eeA05yteeJBaOHGpwwTdQgrU46nzvU~UsAF8c8_WKxxptDkRrV6pjArxf08bkEhMxI_eDIJAQq7&amp;referer=HTTPS%3A%2F%2Fsso.garena.com%2Fapi%2Fregister%2Fcheck&amp;hash=AE3F04AD3F0D3A462481A337485081&amp;t=bv&amp;s=40194&amp;e=660eceb4e9d48b5099c7631be657f9ef1481efed24852eca58a0e6c6dd75c2293fabf8703c6e25d31842e07ecb69ec8a&amp;b=755272&amp;dm=jd" title="Verification system" id="ddChallengeBody1775020008728" width="100%" height="100%" sandbox="allow-scripts allow-same-origin allow-forms" allow="accelerometer; gyroscope; magnetometer" frameborder="0" border="0" scrolling="yes" style="height:100vh;"></iframe>
+  (Session info: chrome=146.0.7680.167); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementclickinterceptedexception
+Stacktrace:
+	undetected_chromedriver!GetHandleVerifier [0x5dcdf3+10b03]
+	undetected_chromedriver!GetHandleVerifier [0x5dcf24+10c34]
+	undetected_chromedriver!(No symbol) [0x3c2120]
+	undetected_chromedriver!(No symbol) [0x4112b8]
+	undetected_chromedriver!(No symbol) [0x40f4c9]
+	undetected_chromedriver!(No symbol) [0x40ce82]
+	undetected_chromedriver!(No symbol) [0x40c094]
+	undetected_chromedriver!(No symbol) [0x401ca8]
+	undetected_chromedriver!(No symbol) [0x42db0c]
+	undetected_chromedriver!(No symbol) [0x4016e4]
+	undetected_chromedriver!(No symbol) [0x42dcd4]
+	undetected_chromedriver!(No symbol) [0x44a9a5]
+	undetected_chromedriver!(No symbol) [0x42d8a6]
+	undetected_chromedriver!(No symbol) [0x400229]
+	undetected_chromedriver!(No symbol) [0x400fe4]
+	undetected_chromedriver!GetHandleVerifier [0x8448b9+2785c9]
+	undetected_chromedriver!GetHandleVerifier [0x83feb5+273bc5]
+	undetected_chromedriver!GetHandleVerifier [0x85e06b+291d7b]
+	undetected_chromedriver!GetHandleVerifier [0x5f5cc8+299d8]
+	undetected_chromedriver!GetHandleVerifier [0x5fd9fd+3170d]
+	undetected_chromedriver!GetHandleVerifier [0x5e58c8+195d8]
+	undetected_chromedriver!GetHandleVerifier [0x5e5a92+197a2]
+	undetected_chromedriver!GetHandleVerifier [0x5cee9a+2baa]
+	KERNEL32!BaseThreadInitThunk [0x75095d49+19]
+	ntdll!RtlInitializeExceptionChain [0x7736d81b+6b]
+	ntdll!RtlGetAppContainerNamedObjectPath [0x7736d7a1+231]
+
+2026-04-01 12:06:51,322 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 12:06:53,324 [INFO] Initializing browser...
+2026-04-01 12:06:54,654 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:06:59,028 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:06:59,405 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:07:03,544 [INFO] Su dung email tu tao: ouyiqvyss5@1secmail.org
+2026-04-01 12:07:03,544 [INFO] Attempting to register: User=d997x80rh94, Email=ouyiqvyss5@1secmail.org
+2026-04-01 12:08:16,454 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:08:16,454 [INFO] Initializing browser...
+2026-04-01 12:08:17,703 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:08:22,152 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:08:22,527 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:08:27,315 [INFO] Su dung email tu tao: c1weglwaa1@1secmail.net
+2026-04-01 12:08:27,316 [INFO] Attempting to register: User=5zlkxcljh57, Email=c1weglwaa1@1secmail.net
+2026-04-01 12:08:36,111 [INFO] Da dien email va nhan TAB (Blur)
+2026-04-01 12:08:59,588 [WARNING] Could not find GET CODE via text, trying secondary button: Message: 
+Stacktrace:
+	undetected_chromedriver!GetHandleVerifier [0xf5cdf3+10b03]
+	undetected_chromedriver!GetHandleVerifier [0xf5cf24+10c34]
+	undetected_chromedriver!(No symbol) [0xd42120]
+	undetected_chromedriver!(No symbol) [0xd8abca]
+	undetected_chromedriver!(No symbol) [0xd8ae6b]
+	undetected_chromedriver!(No symbol) [0xdcd0b2]
+	undetected_chromedriver!(No symbol) [0xdadb54]
+	undetected_chromedriver!(No symbol) [0xdca9a5]
+	undetected_chromedriver!(No symbol) [0xdad8a6]
+	undetected_chromedriver!(No symbol) [0xd80229]
+	undetected_chromedriver!(No symbol) [0xd80fe4]
+	undetected_chromedriver!GetHandleVerifier [0x11c48b9+2785c9]
+	undetected_chromedriver!GetHandleVerifier [0x11bfeb5+273bc5]
+	undetected_chromedriver!GetHandleVerifier [0x11de06b+291d7b]
+	undetected_chromedriver!GetHandleVerifier [0xf75cc8+299d8]
+	undetected_chromedriver!GetHandleVerifier [0xf7d9fd+3170d]
+	undetected_chromedriver!GetHandleVerifier [0xf658c8+195d8]
+	undetected_chromedriver!GetHandleVerifier [0xf65a92+197a2]
+	undetected_chromedriver!GetHandleVerifier [0xf4ee9a+2baa]
+	KERNEL32!BaseThreadInitThunk [0x75095d49+19]
+	ntdll!RtlInitializeExceptionChain [0x7736d81b+6b]
+	ntdll!RtlGetAppContainerNamedObjectPath [0x7736d7a1+231]
+
+2026-04-01 12:09:12,301 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:09:12,301 [INFO] Initializing browser...
+2026-04-01 12:09:13,510 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:09:17,899 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:09:18,274 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:09:23,230 [INFO] Su dung email human-like: nambui200191@1secmail.com
+2026-04-01 12:09:23,230 [INFO] Attempting to register: User=h9zdrmuew97, Email=nambui200191@1secmail.com
+2026-04-01 12:09:33,160 [INFO] Da dien email va nhan TAB (Blur)
+2026-04-01 12:10:52,938 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:10:52,938 [INFO] Initializing browser...
+2026-04-01 12:10:54,102 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:10:58,484 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:10:58,865 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:11:03,756 [INFO] Su dung email human-like: thanhhoang199015@1secmail.com
+2026-04-01 12:11:03,756 [INFO] Attempting to register: User=loqcfk9lu20, Email=thanhhoang199015@1secmail.com
+2026-04-01 12:11:15,455 [INFO] Da dien email va nhan TAB (Blur)
+2026-04-01 12:11:22,377 [INFO] Da mo phong di chuyen chuot ngau nhien
+2026-04-01 12:11:22,405 [INFO] Da Click GET CODE qua JavaScript
+2026-04-01 12:11:27,415 [INFO] Dang cho OTP qua Tab trình duyet...
+2026-04-01 12:11:38,307 [INFO]   ... van dang cho OTP (10s)
+2026-04-01 12:11:48,601 [INFO]   ... van dang cho OTP (21s)
+2026-04-01 12:11:58,883 [INFO]   ... van dang cho OTP (31s)
+2026-04-01 12:12:09,172 [INFO]   ... van dang cho OTP (41s)
+2026-04-01 12:12:19,467 [INFO]   ... van dang cho OTP (52s)
+2026-04-01 12:12:29,757 [INFO]   ... van dang cho OTP (62s)
+2026-04-01 12:14:30,611 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:14:30,611 [INFO] Initializing browser...
+2026-04-01 12:14:30,611 [INFO] Using User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+2026-04-01 12:14:32,274 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:14:36,523 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:14:36,892 [INFO] Set window size to 1440x816
+2026-04-01 12:14:43,894 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:14:49,353 [INFO] Su dung email DropMail: thanhvu198851@pafis.site
+2026-04-01 12:14:49,353 [INFO] Attempting to register: User=xswvmyj9t12, Email=thanhvu198851@pafis.site
+2026-04-01 12:14:59,462 [INFO] Da dien email va nhan TAB (Blur)
+2026-04-01 12:15:16,272 [INFO] Da Click GET CODE qua JavaScript
+2026-04-01 12:15:21,331 [INFO] Dang cho OTP qua Tab trình duyet...
+2026-04-01 12:15:35,452 [INFO] Clicked Register Now
+2026-04-01 12:15:40,761 [WARNING] Registration might have failed. URL: https://sso.garena.com/universal/register
+2026-04-01 12:15:41,441 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 12:15:43,485 [INFO] Initializing browser...
+2026-04-01 12:15:43,504 [INFO] Using User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+2026-04-01 12:15:45,107 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:15:51,107 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:15:51,472 [INFO] Set window size to 1369x770
+2026-04-01 12:18:17,434 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:18:17,434 [INFO] Initializing browser...
+2026-04-01 12:18:17,436 [INFO] Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+2026-04-01 12:18:18,669 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:18:23,131 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:18:23,501 [INFO] Set window size to 1045x795
+2026-04-01 12:18:29,503 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:18:34,544 [INFO] Su dung email fextemp: tuanle199579@fextemp.com
+2026-04-01 12:18:34,545 [INFO] Attempting to register: User=mojmcybez73, Email=tuanle199579@fextemp.com
+2026-04-01 12:18:44,797 [INFO] Da dien email va nhan TAB (Blur)
+2026-04-01 12:18:58,658 [INFO] Da mo phong di chuyen chuot ngau nhien
+2026-04-01 12:18:58,687 [INFO] Da Click GET CODE qua JavaScript
+2026-04-01 12:19:03,699 [INFO] Dang cho OTP qua Tab trình duyet...
+2026-04-01 12:19:18,585 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 12:19:20,586 [INFO] Initializing browser...
+2026-04-01 12:19:20,586 [INFO] Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+2026-04-01 12:36:35,570 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:36:35,571 [INFO] Dang thuc hien doi IP: warp-cli connect
+2026-04-01 12:37:07,335 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:37:07,336 [INFO] Dang thuc hien doi IP: "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" connect
+2026-04-01 12:37:17,910 [INFO] Initializing browser...
+2026-04-01 12:37:17,910 [INFO] Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+2026-04-01 12:37:19,171 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:37:24,752 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:37:24,796 [INFO] Set window size to 1529x769
+2026-04-01 12:37:34,796 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:37:39,043 [INFO] Su dung email fextemp: thanhle199311@fextemp.com
+2026-04-01 12:37:39,043 [INFO] Attempting to register: User=sghzicmlq49, Email=thanhle199311@fextemp.com
+2026-04-01 12:37:49,871 [INFO] Da dien email va nhan TAB (Blur)
+2026-04-01 12:38:18,993 [WARNING] Loi khi click GET CODE: Message: 
+Stacktrace:
+	undetected_chromedriver!GetHandleVerifier [0x111cdf3+10b03]
+	undetected_chromedriver!GetHandleVerifier [0x111cf24+10c34]
+	undetected_chromedriver!(No symbol) [0xf02120]
+	undetected_chromedriver!(No symbol) [0xf4abca]
+	undetected_chromedriver!(No symbol) [0xf4ae6b]
+	undetected_chromedriver!(No symbol) [0xf8d0b2]
+	undetected_chromedriver!(No symbol) [0xf6db54]
+	undetected_chromedriver!(No symbol) [0xf8a9a5]
+	undetected_chromedriver!(No symbol) [0xf6d8a6]
+	undetected_chromedriver!(No symbol) [0xf40229]
+	undetected_chromedriver!(No symbol) [0xf40fe4]
+	undetected_chromedriver!GetHandleVerifier [0x13848b9+2785c9]
+	undetected_chromedriver!GetHandleVerifier [0x137feb5+273bc5]
+	undetected_chromedriver!GetHandleVerifier [0x139e06b+291d7b]
+	undetected_chromedriver!GetHandleVerifier [0x1135cc8+299d8]
+	undetected_chromedriver!GetHandleVerifier [0x113d9fd+3170d]
+	undetected_chromedriver!GetHandleVerifier [0x11258c8+195d8]
+	undetected_chromedriver!GetHandleVerifier [0x1125a92+197a2]
+	undetected_chromedriver!GetHandleVerifier [0x110ee9a+2baa]
+	KERNEL32!BaseThreadInitThunk [0x75095d49+19]
+	ntdll!RtlInitializeExceptionChain [0x7736d81b+6b]
+	ntdll!RtlGetAppContainerNamedObjectPath [0x7736d7a1+231]
+
+2026-04-01 12:38:32,831 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:38:32,831 [INFO] Dang thuc hien doi IP: "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" connect
+2026-04-01 12:38:42,886 [INFO] Initializing browser...
+2026-04-01 12:38:42,886 [INFO] Using User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+2026-04-01 12:38:44,188 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:38:48,818 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:38:49,223 [INFO] Set window size to 1537x740
+2026-04-01 12:38:55,224 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:39:00,715 [INFO] Su dung email fextemp: ducvu198287@fextemp.com
+2026-04-01 12:39:00,716 [INFO] Attempting to register: User=k2nbuojef77, Email=ducvu198287@fextemp.com
+2026-04-01 12:39:10,441 [INFO] Da dien email va nhan TAB (Blur)
+2026-04-01 12:39:39,631 [WARNING] Loi khi click GET CODE: Message: 
+Stacktrace:
+	undetected_chromedriver!GetHandleVerifier [0xd9cdf3+10b03]
+	undetected_chromedriver!GetHandleVerifier [0xd9cf24+10c34]
+	undetected_chromedriver!(No symbol) [0xb82120]
+	undetected_chromedriver!(No symbol) [0xbcabca]
+	undetected_chromedriver!(No symbol) [0xbcae6b]
+	undetected_chromedriver!(No symbol) [0xc0d0b2]
+	undetected_chromedriver!(No symbol) [0xbedb54]
+	undetected_chromedriver!(No symbol) [0xc0a9a5]
+	undetected_chromedriver!(No symbol) [0xbed8a6]
+	undetected_chromedriver!(No symbol) [0xbc0229]
+	undetected_chromedriver!(No symbol) [0xbc0fe4]
+	undetected_chromedriver!GetHandleVerifier [0x10048b9+2785c9]
+	undetected_chromedriver!GetHandleVerifier [0xfffeb5+273bc5]
+	undetected_chromedriver!GetHandleVerifier [0x101e06b+291d7b]
+	undetected_chromedriver!GetHandleVerifier [0xdb5cc8+299d8]
+	undetected_chromedriver!GetHandleVerifier [0xdbd9fd+3170d]
+	undetected_chromedriver!GetHandleVerifier [0xda58c8+195d8]
+	undetected_chromedriver!GetHandleVerifier [0xda5a92+197a2]
+	undetected_chromedriver!GetHandleVerifier [0xd8ee9a+2baa]
+	KERNEL32!BaseThreadInitThunk [0x75095d49+19]
+	ntdll!RtlInitializeExceptionChain [0x7736d81b+6b]
+	ntdll!RtlGetAppContainerNamedObjectPath [0x7736d7a1+231]
+
+2026-04-01 12:40:18,718 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:40:18,719 [INFO] Dang thuc hien doi IP: "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" connect
+2026-04-01 12:40:28,775 [INFO] Initializing browser...
+2026-04-01 12:40:28,775 [INFO] Using User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+2026-04-01 12:40:29,939 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:40:35,169 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:40:35,552 [INFO] Set window size to 1104x765
+2026-04-01 12:40:42,553 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:40:47,555 [INFO] Su dung email fextemp: viethoang198970@fextemp.com
+2026-04-01 12:40:47,555 [INFO] Attempting to register: User=9x0s11cz553, Email=viethoang198970@fextemp.com
+2026-04-01 12:40:58,483 [INFO] Da dien email va nhan TAB (Blur)
+2026-04-01 12:41:09,491 [INFO] Da mo phong di chuyen chuot ngau nhien
+2026-04-01 12:41:09,518 [INFO] Da Click GET CODE qua JavaScript
+2026-04-01 12:41:14,529 [INFO] Dang cho OTP qua Tab trình duyet...
+2026-04-01 12:41:43,089 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:41:43,089 [INFO] Dang thuc hien doi IP: "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" connect
+2026-04-01 12:41:53,143 [INFO] Initializing browser...
+2026-04-01 12:41:53,143 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36
+2026-04-01 12:41:54,390 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:41:59,052 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:41:59,420 [INFO] Set window size to 1333x802
+2026-04-01 12:42:05,421 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:42:12,381 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 12:42:13,394 [INFO] Su dung email fextemp: namtran199483@fextemp.com
+2026-04-01 12:42:13,394 [INFO] Attempting to register: User=cqywcv7w528, Email=namtran199483@fextemp.com
+2026-04-01 12:42:24,711 [INFO] Da dien email va nhan TAB (Blur)
+2026-04-01 12:42:36,413 [WARNING] Loi khi click GET CODE: Message: invalid session id: session deleted as the browser has closed the connection
+from disconnected: not connected to DevTools
+  (Session info: chrome=146.0.7680.167); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception
+Stacktrace:
+	undetected_chromedriver!GetHandleVerifier [0x4acdf3+10b03]
+	undetected_chromedriver!GetHandleVerifier [0x4acf24+10c34]
+	undetected_chromedriver!(No symbol) [0x292120]
+	undetected_chromedriver!(No symbol) [0x28108e]
+	undetected_chromedriver!(No symbol) [0x29fbe9]
+	undetected_chromedriver!(No symbol) [0x30450c]
+	undetected_chromedriver!(No symbol) [0x31a309]
+	undetected_chromedriver!(No symbol) [0x2fd8a6]
+	undetected_chromedriver!(No symbol) [0x2d0229]
+	undetected_chromedriver!(No symbol) [0x2d0fe4]
+	undetected_chromedriver!GetHandleVerifier [0x7148b9+2785c9]
+	undetected_chromedriver!GetHandleVerifier [0x70feb5+273bc5]
+	undetected_chromedriver!GetHandleVerifier [0x72e06b+291d7b]
+	undetected_chromedriver!GetHandleVerifier [0x4c5cc8+299d8]
+	undetected_chromedriver!GetHandleVerifier [0x4cd9fd+3170d]
+	undetected_chromedriver!GetHandleVerifier [0x4b58c8+195d8]
+	undetected_chromedriver!GetHandleVerifier [0x4b5a92+197a2]
+	undetected_chromedriver!GetHandleVerifier [0x49ee9a+2baa]
+	KERNEL32!BaseThreadInitThunk [0x75095d49+19]
+	ntdll!RtlInitializeExceptionChain [0x7736d81b+6b]
+	ntdll!RtlGetAppContainerNamedObjectPath [0x7736d7a1+231]
+
+2026-04-01 12:42:36,448 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 12:42:38,450 [INFO] Initializing browser...
+2026-04-01 12:42:38,450 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36
+2026-04-01 12:42:39,653 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:42:44,647 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:42:45,021 [INFO] Set window size to 1434x743
+2026-04-01 12:43:42,080 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:43:42,081 [INFO] Dang thuc hien doi IP: "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" connect
+2026-04-01 12:43:52,143 [INFO] Initializing browser...
+2026-04-01 12:43:52,143 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36
+2026-04-01 12:43:54,459 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:43:59,932 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:44:00,305 [INFO] Set window size to 1507x812
+2026-04-01 12:44:06,306 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:44:12,022 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 12:44:13,182 [INFO] Su dung email fextemp: minhvu198450@fextemp.com
+2026-04-01 12:44:13,182 [INFO] Attempting to register: User=eins2tash24, Email=minhvu198450@fextemp.com
+2026-04-01 12:44:29,050 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 12:44:31,052 [INFO] Initializing browser...
+2026-04-01 12:44:31,052 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36
+2026-04-01 12:44:33,079 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:44:37,551 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:44:37,964 [INFO] Set window size to 1510x877
+2026-04-01 12:44:43,966 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:44:52,704 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 12:44:52,942 [INFO] Su dung email fextemp: namdang200066@fextemp.com
+2026-04-01 12:44:52,943 [INFO] Attempting to register: User=yfc6laxcb82, Email=namdang200066@fextemp.com
+2026-04-01 12:45:17,729 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:45:23,359 [INFO] IP bat dau: 171.243.48.65
+2026-04-01 12:45:23,361 [INFO] Dang thuc hien doi IP: "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" connect
+2026-04-01 12:45:33,878 [INFO] IP hien tai sau khi doi: 171.243.48.65
+2026-04-01 12:45:40,143 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:45:40,642 [INFO] IP bat dau: 171.243.48.65
+2026-04-01 12:45:40,642 [INFO] Dang thuc hien doi IP: "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" disconnect && timeout /t 5 && "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" connect
+2026-04-01 12:45:51,420 [INFO] IP hien tai sau khi doi: 171.243.48.65
+2026-04-01 12:46:01,882 [INFO] IP sau khi doi: 171.243.48.65
+2026-04-01 12:46:01,883 [INFO] Initializing browser...
+2026-04-01 12:46:01,883 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+2026-04-01 12:46:03,954 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:46:09,215 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:49:32,694 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:49:33,219 [INFO] IP bat dau: 171.243.48.65
+2026-04-01 12:49:33,219 [INFO] Dang thuc hien doi IP: warp-cli disconnect && timeout /t 3 && warp-cli connect
+2026-04-01 12:49:47,816 [INFO] IP hien tai sau khi doi: 171.243.48.65
+2026-04-01 12:49:58,287 [INFO] IP sau khi doi: 171.243.48.65
+2026-04-01 12:49:58,287 [INFO] Initializing browser...
+2026-04-01 12:49:58,288 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+2026-04-01 12:50:00,398 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:50:05,136 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:50:05,501 [INFO] Set window size to 1472x760
+2026-04-01 12:50:15,503 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:50:22,954 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 12:50:23,970 [INFO] Su dung email fextemp: tuandang199862@fextemp.com
+2026-04-01 12:50:23,970 [INFO] Attempting to register: User=hqjnpgrcs52, Email=tuandang199862@fextemp.com
+2026-04-01 12:50:43,208 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 12:50:45,210 [INFO] Initializing browser...
+2026-04-01 12:50:45,210 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+2026-04-01 12:50:47,559 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:51:10,000 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:51:10,732 [INFO] IP bat dau: 171.224.115.205
+2026-04-01 12:51:10,732 [INFO] Dang thuc hien doi IP: warp-cli disconnect && timeout /t 3 && warp-cli connect
+2026-04-01 12:51:23,783 [INFO] IP hien tai sau khi doi: 171.224.115.205
+2026-04-01 12:51:34,501 [INFO] IP sau khi doi: 171.224.115.205
+2026-04-01 12:51:34,501 [INFO] Initializing browser...
+2026-04-01 12:51:34,502 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36
+2026-04-01 12:51:35,606 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:51:36,046 [INFO] Set window size to 1216x752
+2026-04-01 12:51:46,047 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:51:51,249 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 12:51:52,633 [INFO] Su dung email fextemp: tuanvu199249@fextemp.com
+2026-04-01 12:51:52,633 [INFO] Attempting to register: User=ifegricyf90, Email=tuanvu199249@fextemp.com
+2026-04-01 12:52:08,243 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 12:53:57,426 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:53:57,975 [INFO] IP bat dau: 171.224.115.205
+2026-04-01 12:53:57,975 [INFO] Dang thuc hien doi IP: warp-cli disconnect && timeout /t 3 && warp-cli connect
+2026-04-01 12:54:11,813 [INFO] IP hien tai sau khi doi: 171.224.115.205
+2026-04-01 12:54:22,374 [INFO] IP sau khi doi: 171.224.115.205
+2026-04-01 12:54:22,374 [INFO] Initializing browser...
+2026-04-01 12:54:22,374 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+2026-04-01 12:54:47,486 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:54:52,120 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:54:52,497 [INFO] Set window size to 1385x839
+2026-04-01 12:54:58,498 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:55:10,586 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 12:55:12,961 [INFO] Su dung email fextemp: vietbui199070@fextemp.com
+2026-04-01 12:55:12,962 [INFO] Attempting to register: User=1qkiik4r281, Email=vietbui199070@fextemp.com
+2026-04-01 12:55:44,475 [INFO] Da dien email va nhan TAB (Blur)
+2026-04-01 12:56:17,522 [WARNING] Loi khi klick GET CODE: Message: 
+Stacktrace:
+	undetected_chromedriver!GetHandleVerifier [0xd5cdf3+10b03]
+	undetected_chromedriver!GetHandleVerifier [0xd5cf24+10c34]
+	undetected_chromedriver!(No symbol) [0xb42120]
+	undetected_chromedriver!(No symbol) [0xb8abca]
+	undetected_chromedriver!(No symbol) [0xb8ae6b]
+	undetected_chromedriver!(No symbol) [0xbcd0b2]
+	undetected_chromedriver!(No symbol) [0xbadb54]
+	undetected_chromedriver!(No symbol) [0xbca9a5]
+	undetected_chromedriver!(No symbol) [0xbad8a6]
+	undetected_chromedriver!(No symbol) [0xb80229]
+	undetected_chromedriver!(No symbol) [0xb80fe4]
+	undetected_chromedriver!GetHandleVerifier [0xfc48b9+2785c9]
+	undetected_chromedriver!GetHandleVerifier [0xfbfeb5+273bc5]
+	undetected_chromedriver!GetHandleVerifier [0xfde06b+291d7b]
+	undetected_chromedriver!GetHandleVerifier [0xd75cc8+299d8]
+	undetected_chromedriver!GetHandleVerifier [0xd7d9fd+3170d]
+	undetected_chromedriver!GetHandleVerifier [0xd658c8+195d8]
+	undetected_chromedriver!GetHandleVerifier [0xd65a92+197a2]
+	undetected_chromedriver!GetHandleVerifier [0xd4ee9a+2baa]
+	KERNEL32!BaseThreadInitThunk [0x75095d49+19]
+	ntdll!RtlInitializeExceptionChain [0x7736d81b+6b]
+	ntdll!RtlGetAppContainerNamedObjectPath [0x7736d7a1+231]
+
+2026-04-01 12:56:43,042 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 12:56:45,044 [INFO] Initializing browser...
+2026-04-01 12:56:45,044 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+2026-04-01 12:57:48,814 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:57:49,442 [INFO] IP bat dau: 171.224.115.205
+2026-04-01 12:57:49,442 [INFO] Dang thuc hien doi IP: warp-cli disconnect && timeout /t 3 && warp-cli connect
+2026-04-01 12:58:02,796 [INFO] IP hien tai sau khi doi: 171.224.115.205
+2026-04-01 12:58:13,401 [INFO] IP sau khi doi: 171.224.115.205
+2026-04-01 12:58:13,401 [INFO] Initializing browser...
+2026-04-01 12:58:13,403 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36
+2026-04-01 12:58:38,243 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 12:58:42,698 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 12:58:43,059 [INFO] Set window size to 1563x760
+2026-04-01 12:58:51,062 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 12:58:56,410 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 12:58:57,491 [INFO] Su dung email fextemp: thanhvu198677@fextemp.com
+2026-04-01 12:58:57,492 [INFO] Attempting to register: User=0z7mymjo487, Pass=Rc5f4i^cOGHo
+2026-04-01 12:59:11,079 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 12:59:13,080 [INFO] Initializing browser...
+2026-04-01 12:59:13,080 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36
+2026-04-01 12:59:20,532 [INFO] --- Creating account 1/1 ---
+2026-04-01 12:59:21,256 [INFO] IP bat dau: 171.224.115.205
+2026-04-01 12:59:21,256 [INFO] Dang thuc hien doi IP: warp-cli disconnect && timeout /t 3 && warp-cli connect
+2026-04-01 12:59:34,826 [INFO] IP hien tai sau khi doi: 171.224.115.205
+2026-04-01 12:59:45,436 [INFO] IP sau khi doi: 171.224.115.205
+2026-04-01 12:59:45,437 [INFO] Initializing browser...
+2026-04-01 12:59:45,437 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+2026-04-01 13:00:16,092 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 13:00:20,511 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 13:00:20,874 [INFO] Set window size to 1477x740
+2026-04-01 13:00:26,875 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 13:00:33,402 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 13:00:34,497 [INFO] Su dung email fextemp: namhoang198688@fextemp.com
+2026-04-01 13:00:34,498 [INFO] Attempting to register: User=rp2xtt5oo52, Pass=^EQGvM6wb7qB
+2026-04-01 13:00:46,926 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 13:40:44,624 [INFO] --- Creating account 1/1 ---
+2026-04-01 13:40:45,138 [INFO] IP bat dau: 171.243.48.65
+2026-04-01 13:40:45,138 [INFO] Dang thuc hien doi IP: warp-cli disconnect && timeout /t 3 && warp-cli connect
+2026-04-01 13:40:58,617 [INFO] IP hien tai sau khi doi: 171.243.48.65
+2026-04-01 13:41:09,067 [INFO] IP sau khi doi: 171.243.48.65
+2026-04-01 13:41:09,067 [INFO] Initializing browser...
+2026-04-01 13:41:09,068 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36
+2026-04-01 13:41:10,136 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 13:41:14,957 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 13:41:15,325 [INFO] Set window size to 1139x838
+2026-04-01 13:41:20,326 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 13:41:28,133 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 13:41:29,161 [INFO] Su dung email fextemp: vietpham198834@fextemp.com
+2026-04-01 13:41:29,161 [INFO] Attempting to register: User=x9iq61bsd26, Pass=A5U5d$7vvHzg
+2026-04-01 13:41:44,701 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 13:41:46,702 [INFO] Initializing browser...
+2026-04-01 13:41:46,702 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+2026-04-01 13:41:47,993 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 13:41:52,338 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 13:41:52,723 [INFO] Set window size to 1403x821
+2026-04-01 13:41:58,724 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 13:42:04,993 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 13:42:05,240 [INFO] Su dung email fextemp: ducdang199550@fextemp.com
+2026-04-01 13:42:05,240 [INFO] Attempting to register: User=ia0vlouhb57, Pass=FEbMd!EWK6nV
+2026-04-01 13:42:13,668 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 13:42:15,672 [INFO] Initializing browser...
+2026-04-01 13:42:15,672 [INFO] Using Stealth Profile & UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+2026-04-01 13:42:16,883 [INFO] patching driver executable C:\Users\Hp\appdata\roaming\undetected_chromedriver\undetected_chromedriver.exe
+2026-04-01 13:42:21,274 [INFO] Undetected ChromeDriver started (Version 146)
+2026-04-01 13:42:21,641 [INFO] Set window size to 1342x783
+2026-04-01 13:42:27,644 [INFO] Navigating to https://sso.garena.com/universal/register
+2026-04-01 13:42:33,856 [INFO] Da mo phong hanh vi cuon trang (Scroll)
+2026-04-01 13:42:34,104 [INFO] Su dung email fextemp: hungtran200272@fextemp.com
+2026-04-01 13:42:34,104 [INFO] Attempting to register: User=bgjeo0wth42, Pass=^WQi63U79XxW
+2026-04-01 13:42:47,049 [WARNING]   Registration failed for unknown reason. Retrying...
+2026-04-01 13:42:49,050 [INFO] Bulk registration process finished. Total success: 0
