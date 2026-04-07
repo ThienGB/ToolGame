@@ -624,6 +624,7 @@ class AutoClickerInstance:
         # 1. GIAI ĐOẠN LOGIN
         login_script = [
             
+
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.8},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
             {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "timeout": 60, "confidence": 0.9},
@@ -720,11 +721,14 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/thoat_sk_tan_thu.png", "timeout": 10, "confidence": 0.9},
             {"action": "wait", "timeout": 10},
             {"action": "click_image", "target": "images/dau_hang_button.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_any", "wait": 10},
+            
             {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target": "images/quay_lai_dau_hang_button.png", "timeout": 20, "confidence": 0.9},
+            {"action": "press_esc", "wait": 2} ,
+
+            
             {"action": "click_image", "target": "images/event.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/qua_tan_thu.png", "target": "images/skttt.png","timeout": 30, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/qua_tan_thu.png", "target": "images/skttt.png","timeout": 10, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/qua_tan_thu.png", "target": "images/skttt.png","timeout": 5, "confidence": 0.9},
             {"action": "wait", "timeout": 5},
             {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.2, "duration": 600},
             {"action": "wait", "timeout": 3},
@@ -741,7 +745,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/ok.png","target2": "images/ok1.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             
-            {"action": "click_image", "target1": "images/quay_lai_tui_do_button.png", "target2": "images/quaylaituido.png" , "target3": "images/quaylaituido1.png","timeout" : 5, "confidence": 0.9},
+            {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/shop.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/vat_pham_shop.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/shopruby.png", "timeout": 20, "confidence": 0.9},
@@ -753,9 +757,9 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 5},
-            {"action": "click_image_if", "target": "images/quay_lai_shop_button.png", "target2": "images/quaylaisop.png" ,"timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/quaylaisop3.png", "target2": "images/quaylaisop.png" ,"target3": "images/quaylaisop2.png" ,"timeout": 15 , "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            {"action": "press_esc", "wait": 2} ,
+            
             {"action": "click_image", "target": "images/dauthuong.png", "timeout": 60, "confidence": 0.9},
             {"action": "click_image", "target": "images/logo.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
@@ -784,36 +788,18 @@ class AutoClickerInstance:
 
             },
 
-            {"action": "click_image_if", "target": "images/logo.png","target2": "images/logo1.png","target3": "images/logo2.png", "timeout": 7, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/logo.png","target2": "images/logo1.png","target3": "images/logo2.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
              {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 20},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 6},
-            {"action": "click_image", "target": "images/tiep_tuc1.png", "timeout": 120, "confidence": 0.9},
-            {"action": "wait", "timeout": 6},
-            {"action": "click_image", "target": "images/tiep_tuc2.png", "timeout": 120, "confidence": 0.9},
-            {"action": "click_any", "wait": 6},
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target": "images/sanh.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
+            {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/nhansolanlammoi.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/lv1capthuong.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/any1.png","target2": "images/lamoi.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/trangphuc.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/hopqua.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/x.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/quaylaisk.png", "timeout": 20, "confidence": 0.9},
+            {"action": "press_esc", "wait": 2} ,
+            {"action": "wait", "timeout": 7},
+            
 
 
         ]
@@ -898,7 +884,7 @@ class AutoClickerInstance:
 
             {"action": "wait", "timeout": 6},
             {"action": "sync_autowin", "timeout": 120},
-            {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
+            
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 20},
@@ -927,11 +913,15 @@ class AutoClickerInstance:
         
         # GIAI ĐĂNG XUẤT - XUẤT FILE
         uplevel_script = [
-            {"action": "press_esc", "wait": 2} 
+            {"action": "click_image", "target": "images/logo.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/autowin.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 30, "confidence": 0.9},
+            {"action": "wait", "timeout": 5},
+            
         ]
 
         # GHÉP SCRIPT DỰA TRÊN LỰA CHỌN
