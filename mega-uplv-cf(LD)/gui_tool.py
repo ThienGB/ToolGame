@@ -16,6 +16,9 @@ import base64
 import uuid
 import urllib.request
 import re
+import imaplib
+import email
+from email.header import decode_header
 try:
     import winreg
 except ImportError:
@@ -117,6 +120,10 @@ ACCENT_GREEN = "#00D2FF"
 ACCENT_PURPLE = "#A855F7"
 ACCENT_RED = "#EF4444"
 
+# --- GMAIL DOT TRICK CONFIG ---
+GMAIL_USER = "hoangcongthien1612@gmail.com"
+GMAIL_PASS = "lztmjrkwhfuwkzii" # Mật khẩu ứng dụng của bạn
+
 # --- Logic Backend (AutoClicker - Hỗ trợ Single Instance) ---
 
 class AutoClickerInstance:
@@ -134,10 +141,20 @@ class AutoClickerInstance:
         self.codes_queue = [] 
         self.current_code_index = 0
         self.current_email = None
+        self.mail_tm_token = None
 
     def log(self, msg):
-        # self.log_func(f"[{self.device_id}] {msg}")
-        pass # Tạm tắt log chi tiết để tối ưu hiệu năng khi có nhiều máy
+        self.log_func(f"[{self.device_id}] {msg}")
+
+    def escape_adb_text(self, text):
+        if not text: return ""
+        chars_to_escape = ['\\', '"', "'", '&', '>', '<', '|', ';', '(', ')', '*', '?', '$', '!', '#', '%', '{', '}', '~', '[', ']', '^', '@']
+        escaped_text = ""
+        for char in text:
+            if char == ' ': escaped_text += "%s"
+            elif char in chars_to_escape: escaped_text += f"\\{char}"
+            else: escaped_text += char
+        return escaped_text
 
     def update_status(self, status, is_lagging=False):
         self.status = status
@@ -295,18 +312,39 @@ class AutoClickerInstance:
 
         screen = self.get_screenshot()
         if screen is None: return False
+        
+        h, w = screen.shape[:2]
+        self.log(f"DEBUG: Giải Captcha - Màn hình: {w}x{h}")
+        if h > w:
+            self.log("THÔNG BÁO: Đang xử lý Captcha ở màn hình DỌC.")
 
         try:
-            # 1. Trích xuất hình mẫu
+            # 1. Trích xuất hình mẫu (Cắt ảnh an toàn)
             sx, sy, sw, sh = sample_roi
-            sample_img = screen[sy:sy+sh, sx:sx+sw]
+            sx1, sy1 = max(0, sx), max(0, sy)
+            sx2, sy2 = min(w, sx+sw), min(h, sy+sh)
+            sample_img = screen[sy1:sy2, sx1:sx2]
+            
+            if sample_img is None or sample_img.size == 0:
+                self.log(f"LỖI: Vùng mẫu Captcha ({sx},{sy}) nằm ngoài màn hình ({w}x{h}).")
+                return False
+                
+            # Lưu ảnh mẫu để bạn kiểm tra (Debug)
+            cv2.imwrite(f"debug_sample_{self.device_id}.png", sample_img)
             
             # 2. Chia lưới và tìm hình khớp nhất
             gx, gy, gw, gh = grid_roi
             cell_w, cell_h = gw // cols, gh // rows
             
+            # Lưu vùng lưới để bạn kiểm tra (Debug)
+            grid_full = screen[gy:gy+gh, gx:gx+gw]
+            cv2.imwrite(f"debug_grid_{self.device_id}.png", grid_full)
+            
             best_val = -1
             best_idx = -1
+            
+            # Chuyển mẫu sang ảnh xám
+            sample_gray = cv2.cvtColor(sample_img, cv2.COLOR_BGR2GRAY)
             
             total_cells = rows * cols
             for i in range(total_cells):
@@ -314,23 +352,39 @@ class AutoClickerInstance:
                 cx, cy = gx + col * cell_w, gy + row * cell_h
                 choice_img = screen[cy:cy+cell_h, cx:cx+cell_w]
                 
-                # Resize mẫu về kích thước ô để so sánh
-                resized_sample = cv2.resize(sample_img, (cell_w, cell_h))
-                res = cv2.matchTemplate(choice_img, resized_sample, cv2.TM_CCOEFF_NORMED)
+                if choice_img is None or choice_img.size == 0: continue
+                
+                # Resize mẫu về kích thước ô và chuyển sang ảnh xám
+                resized_sample = cv2.resize(sample_gray, (cell_w, cell_h))
+                choice_gray = cv2.cvtColor(choice_img, cv2.COLOR_BGR2GRAY)
+                
+                res = cv2.matchTemplate(choice_gray, resized_sample, cv2.TM_CCOEFF_NORMED)
                 _, max_val, _, _ = cv2.minMaxLoc(res)
                 
                 if max_val > best_val:
                     best_val = max_val
                     best_idx = i
             
-            if best_idx != -1 and best_val >= confidence:
-                # Click vào hình tốt nhất
-                row, col = best_idx // cols, best_idx % cols
-                tap_x = gx + col * cell_w + cell_w // 2
-                tap_y = gy + row * cell_h + cell_h // 2
-                
-                self.call_adb(["shell", "input", "tap", str(tap_x), str(tap_y)])
-                self.log(f"CAPTCHA: Đã chọn hình vị trí {best_idx+1} (Khớp: {best_val:.2f})")
+            if best_idx != -1:
+                if best_val >= confidence:
+                    # Click vào hình tốt nhất
+                    row, col = best_idx // cols, best_idx % cols
+                    tap_x = gx + col * cell_w + cell_w // 2
+                    tap_y = gy + row * cell_h + cell_h // 2
+                    
+                    self.call_adb(["shell", "input", "tap", str(tap_x), str(tap_y)])
+                    self.log(f"CAPTCHA: Đã chọn hình {best_idx+1} (Khớp: {best_val:.2f})")
+                    
+                    # Chụp hình vùng OK để bạn kiểm tra tọa độ (Debug)
+                    if isinstance(ok_target, list):
+                        ox, oy = ok_target
+                        ok_region = screen[max(0, oy-40):min(h, oy+40), max(0, ox-60):min(w, ox+60)]
+                        if ok_region.size > 0:
+                            cv2.imwrite(f"debug_ok_{self.device_id}.png", ok_region)
+                    
+                    return True
+                else:
+                    self.log(f"CAPTCHA: Không tìm thấy hình đủ tin cậy (Max: {best_val:.2f})")
                 time.sleep(1.5)
                 
                 # 3. Bấm nút OK
@@ -359,14 +413,28 @@ class AutoClickerInstance:
 
     def generate_temp_email_logic(self):
         try:
-            url = "https://www.1secmail.com/api/v1/?action=genEmail&count=1"
-            with urllib.request.urlopen(url) as response:
-                emails = json.loads(response.read().decode())
-                self.current_email = emails[0]
-                self.log(f"EMAIL: Đã tạo mail mới: {self.current_email}")
-                return True
+            # Gmail Dot Trick Implementation
+            user_part, domain_part = GMAIL_USER.split('@')
+            
+            # Chọn ngẫu nhiên số lượng dấu chấm và vị trí (không ở đầu/cuối/cạnh nhau)
+            # Một cách đơn giản: tung đồng xu cho mỗi khoảng trống giữa các chữ cái
+            while True:
+                new_user = ""
+                for i in range(len(user_part) - 1):
+                    new_user += user_part[i]
+                    if random.choice([True, False]):
+                        new_user += "."
+                new_user += user_part[-1]
+                
+                # Đảm bảo không trùng với mail gốc (tùy chọn)
+                if new_user != user_part:
+                    self.current_email = f"{new_user}@{domain_part}"
+                    break
+                    
+            self.log(f"GMAIL DOT: Đã tạo mail con: {self.current_email}")
+            return True
         except Exception as e:
-            self.log(f"LỖI TẠO EMAIL: {str(e)}")
+            self.log(f"LỖI TẠO GMAIL: {str(e)}")
             return False
 
     def input_temp_email_logic(self):
@@ -374,56 +442,77 @@ class AutoClickerInstance:
             if not self.generate_temp_email_logic(): return False
         
         # Xóa trắng trước khi nhập
-        for _ in range(35): self.call_adb(["shell", "input", "keyevent", "67"])
-        self.call_adb(["shell", "input", "text", f"'{self.current_email}'"])
+        for _ in range(40): self.call_adb(["shell", "input", "keyevent", "67"])
+        escaped_email = self.escape_adb_text(self.current_email)
+        self.call_adb(["shell", "input", "text", escaped_email])
+        self.log(f"EMAIL: Đã nhập {self.current_email}")
         return True
 
     def wait_for_email_code_logic(self, step):
         if not self.current_email: return False
         
-        user, domain = self.current_email.split('@')
-        timeout = step.get("timeout", 120)
-        self.log(f"EMAIL: Đang chờ mã code đến {self.current_email}...")
+        timeout = step.get("timeout", 150) # Gmail đôi khi delay nhẹ nên tăng timeout
+        self.log(f"GMAIL: Đang quét hộp thâm nick chính để tìm code cho {self.current_email}...")
         
         start_time = time.time()
         while time.time() - start_time < timeout and self.running:
             try:
-                list_url = f"https://www.1secmail.com/api/v1/?action=getMessages&login={user}&domain={domain}"
-                with urllib.request.urlopen(list_url) as response:
-                    messages = json.loads(response.read().decode())
-                    if messages:
-                        # Thử tìm code trong list messages (thường là cái mới nhất)
-                        msg_id = messages[0]['id']
-                        read_url = f"https://www.1secmail.com/api/v1/?action=readMessage&login={user}&domain={domain}&id={msg_id}"
-                        with urllib.request.urlopen(read_url) as read_res:
-                            content = json.loads(read_res.read().decode())
-                            # Tìm mã 4-6 chữ số trong Body hoặc Subject
-                            text_to_search = f"{content.get('subject', '')} {content.get('body', '')}"
-                            # Loại bỏ tag HTML nếu có
-                            text_to_search = re.sub('<[^<]+?>', '', text_to_search)
+                # Kết nối IMAP Gmail
+                mail = imaplib.IMAP4_SSL("imap.gmail.com")
+                mail.login(GMAIL_USER, GMAIL_PASS)
+                mail.select("inbox")
+                
+                # Tìm thư gửi đến địa chỉ "chấm" cụ thể
+                # Gmail coi a.b@gmail.com và ab@gmail.com là 1, nhưng Header 'To' vẫn giữ dấu chấm
+                status, messages = mail.search(None, f'(TO "{self.current_email}")')
+                
+                if status == "OK" and messages[0]:
+                    # Lấy ID thư mới nhất
+                    mail_ids = messages[0].split()
+                    latest_email_id = mail_ids[-1]
+                    
+                    status, data = mail.fetch(latest_email_id, "(RFC822)")
+                    if status == "OK":
+                        raw_email = data[0][1]
+                        msg = email.message_from_bytes(raw_email)
+                        
+                        # Lấy nội dung
+                        body = ""
+                        if msg.is_multipart():
+                            for part in msg.walk():
+                                if part.get_content_type() == "text/plain":
+                                    body = part.get_payload(decode=True).decode()
+                                    break
+                        else:
+                            body = msg.get_payload(decode=True).decode()
                             
-                            # Tìm mã code (thông thường là 4 hoặc 6 số)
-                            codes = re.findall(r'\b\d{4,6}\b', text_to_search)
-                            if codes:
-                                # Lấy mã cuối cùng hoặc duy nhất (thường mã code nằm sau cùng)
-                                code = codes[0]
-                                self.log(f"EMAIL: Đã nhận mã code: {code}")
-                                # Click vào ô nhập (thường user đã click trước đó hoặc ta click lại)
-                                # Nhập mã
-                                for _ in range(10): self.call_adb(["shell", "input", "keyevent", "67"])
-                                self.call_adb(["shell", "input", "text", f"'{code}'"])
-                                return True
+                        # Tìm mã code 4-6 số
+                        text_to_search = f"{msg['Subject']} {body}"
+                        codes = re.findall(r'\b\d{4,6}\b', text_to_search)
+                        
+                        if codes:
+                            code = codes[-1]
+                            self.log(f"GMAIL: Đã lấy được mã từ nick chính: {code}")
+                            mail.logout()
+                            
+                            for _ in range(10): self.call_adb(["shell", "input", "keyevent", "67"])
+                            self.call_adb(["shell", "input", "text", str(code)])
+                            return True
+                
+                mail.logout()
             except Exception as e:
+                # self.log(f"DEBUG IMAP: {e}")
                 pass
-            time.sleep(5)
-        
-        self.log("EMAIL: Quá thời gian chờ mã code.")
+            time.sleep(10)
+            
+        self.log("GMAIL: Quá thời gian chờ mã code từ nick chính.")
         return False
 
     def input_name_logic(self):
         for _ in range(20): self.call_adb(["shell", "input", "keyevent", "67"])
         name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(7)) + ''.join(random.choice("!@#%&*+-") for _ in range(3))
-        self.call_adb(["shell", "input", "text", f"'{name}'"])
+        escaped_name = self.escape_adb_text(name)
+        self.call_adb(["shell", "input", "text", escaped_name])
         return True
 
     def input_text_logic(self, step):
@@ -437,8 +526,9 @@ class AutoClickerInstance:
                 else: return False
             else: return False
 
-        for _ in range(20): self.call_adb(["shell", "input", "keyevent", "67"])
-        self.call_adb(["shell", "input", "text", f"'{content}'"])
+        for _ in range(30): self.call_adb(["shell", "input", "keyevent", "67"])
+        escaped_content = self.escape_adb_text(content)
+        self.call_adb(["shell", "input", "text", escaped_content])
         return True
 
     def run(self, codes):
@@ -513,23 +603,26 @@ class AutoClickerInstance:
             # {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
             # {"action": "click_image", "target": "images/confirm_invite.png", "timeout": 20, "confidence": 0.9},
             # {"action": "press_esc", "wait": 1},
-            {"action": "click_image", "target": "images/setting.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/other.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/link_account.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/lipass.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/link_btn.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/email_input.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "input_temp_email"},
-            {"action": "click_image", "target": "images/get_code.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 5},
+            # {"action": "click_image", "target": "images/setting.jpg", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/other.jpg", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/link_account.jpg", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/lipass.jpg", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image_if", "target": "images/link_btn.png", "timeout": 10, "confidence": 0.9},
+  
+            # {"action": "click_image", "target": "images/email_input.jpg", "timeout": 20, "confidence": 0.9},
+            # {"action": "input_temp_email"},
+            # {"action": "click_image", "target": "images/get_code.jpg", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/get_code.jpg", "timeout": 20, "confidence": 0.9},   
+            # {"action": "wait", "timeout": 5},
             {"action": "solve_captcha",
-                "sample_roi": [588, 161, 67, 52],
-                "grid_roi": [291, 230, 378, 232],
+                "sample_roi": [355, 300, 65, 65],
+                "grid_roi": [75, 375, 380, 260],
                 "rows": 2,
                 "cols": 3,
-                "ok_target": [656, 497],
+                "ok_target": [400, 610],
                 "confidence": 0.5
             },
+            {"action": "click_image", "target": "images/ok_capcha.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/email_validation_code.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "wait_for_email_code", "timeout": 120},
             {"action": "click_image", "target": "images/link.jpg", "timeout": 20, "confidence": 0.9},
@@ -583,7 +676,7 @@ class MultiPremiumApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("MegaUpLvCFTool(LD)")
-        self.geometry("1100x750")
+        self.geometry("1100x850")
         self.configure(fg_color=BG_COLOR)
         
         self.codes_data = [] 
@@ -685,7 +778,8 @@ class MultiPremiumApp(ctk.CTk):
         self.mid_grid = ctk.CTkFrame(self.main_content, fg_color="transparent")
         self.mid_grid.pack(fill="both", expand=True)
         self.mid_grid.grid_columnconfigure((0, 1), weight=1)
-        self.mid_grid.grid_rowconfigure(0, weight=1)
+        self.mid_grid.grid_rowconfigure(0, weight=1) # Stats/Queue
+        self.mid_grid.grid_rowconfigure(1, weight=1) # Log
 
         # Stats Card (Left side now as requested "log bên trái")
         self.stats_card = ctk.CTkFrame(self.mid_grid, fg_color=CARD_COLOR, corner_radius=15)
@@ -712,6 +806,14 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(self.queue_card, text="MÃ GIFTCODE ĐANG CHỜ", font=ctk.CTkFont(weight="bold")).pack(pady=5)
         self.scroll_q = ctk.CTkScrollableFrame(self.queue_card, fg_color="transparent")
         self.scroll_q.pack(fill="both", expand=True)
+
+        # Log Card (Full width at bottom row)
+        self.log_card = ctk.CTkFrame(self.mid_grid, fg_color=CARD_COLOR, corner_radius=15)
+        self.log_card.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(15, 0))
+        ctk.CTkLabel(self.log_card, text="NHẬT KÝ HOẠT ĐỘNG", font=ctk.CTkFont(weight="bold")).pack(pady=5)
+        self.log_box = ctk.CTkTextbox(self.log_card, fg_color="#000", font=("Consolas", 11), text_color="#AAA")
+        self.log_box.pack(fill="both", expand=True, padx=10, pady=10)
+        self.log_box.configure(state="disabled")
 
     def create_stat_item(self, parent, title, value, row, col, color):
         frame = ctk.CTkFrame(parent, fg_color="#252525", corner_radius=12)
@@ -850,8 +952,13 @@ class MultiPremiumApp(ctk.CTk):
             self.refresh_list()
 
     def add_log(self, text):
-        # We still keep this for internal console/debugging or if we ever want to bring it back
-        # but for now it does nothing as self.log_box is removed.
+        def _log():
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            self.log_box.configure(state="normal")
+            self.log_box.insert("end", f"[{timestamp}] {text}\n")
+            self.log_box.see("end")
+            self.log_box.configure(state="disabled")
+        self.after(0, _log)
         print(f"DEBUG: {text}")
 
     def start_all(self):
