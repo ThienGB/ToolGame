@@ -719,19 +719,18 @@ class AutoClickerInstance:
             {"action": "click_any", "wait": 4},
             {"action": "wait", "timeout": 5},
             {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 10, "confidence": 0.9},
+            {"action": "press_esc", "wait": 2} ,
             {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 10, "confidence": 0.9},
+            {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/thoat_5v5.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_image", "target": "images/thoat_sk_tan_thu1.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_any", "wait": 10},
-            {"action": "click_image", "target": "images/thoat_sk_tan_thu.png", "timeout": 10, "confidence": 0.9},
-            {"action": "wait", "timeout": 10},
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "wait", "timeout": 7},
             {"action": "click_image", "target": "images/dau_hang_button.png", "timeout": 20, "confidence": 0.9},
-            
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2} ,
-
-            
             {"action": "click_image", "target": "images/event.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/qua_tan_thu.png", "target": "images/skttt.png","timeout": 10, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/qua_tan_thu.png", "target": "images/skttt.png","timeout": 5, "confidence": 0.9},
@@ -767,6 +766,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2} ,
+            {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/dauthuong.png", "timeout": 60, "confidence": 0.9},
             {"action": "click_image", "target": "images/logo.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
@@ -777,6 +777,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/sansang5v5.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images/ok3.png", "timeout": 15, "confidence": 0.9},
+            {"action": "wait", "timeout": 5},
             {"action": "click_image_if", "target": "images/tuong1.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/tuong2.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/tuong3.png", "timeout": 3, "confidence": 0.9},
@@ -805,6 +806,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
             {"action": "press_esc", "wait": 2},
+            {"action": "wait", "timeout": 5},
             
             
 
@@ -812,7 +814,7 @@ class AutoClickerInstance:
         ]
 
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)
-        
+         
         teamup_host_script = [
             {"action": "click_image", "target": "images/team5.png", "timeout": 60},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.9},
@@ -906,7 +908,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
+            {"action": "wait", "timeout": 10},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
@@ -927,7 +929,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
-            {"action": "wait", "timeout": 5},
+            {"action": "wait", "timeout": 25},
             
         ]
 
@@ -946,7 +948,11 @@ class AutoClickerInstance:
             else:
                 self.script += teamup_guest_script
                 
-            # Thực hiện logic đánh trận lặp lại N lần (Dùng chung cho cả Host và Guest sau khi đã vào phòng)
+            # Đợi cả 5 người vào phòng
+            wait_step = {"action": "wait_for_players", "count": 4, "timeout": 300}
+            self.script.append(wait_step)
+            
+            # Thực hiện logic đánh trận lặp lại N lần
             battle_loop = {
                 "action": "loop", 
                 "count": self.modes.get("battle_count", 2),
