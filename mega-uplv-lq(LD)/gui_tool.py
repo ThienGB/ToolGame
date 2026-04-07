@@ -195,6 +195,8 @@ class AutoClickerInstance:
             res = self.click_any_logic(step)
         elif action == "swipe":
             res = self.swipe_logic(step)
+        elif action == "press_esc":
+            res = self.press_esc_logic(step)
         elif action == "sync_autowin":
             res = self.sync_autowin_logic(step)
         elif action == "loop":
@@ -344,6 +346,18 @@ class AutoClickerInstance:
 
         self.call_adb(["shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), str(duration)])
         self.log(f"==> SWIPE: ({x1}, {y1}) -> ({x2}, {y2}) trong {duration}ms")
+        return True
+
+    def press_esc_logic(self, step):
+        wait_time = step.get("wait") or 0
+        if wait_time > 0:
+            self.log(f"Đang đợi {wait_time}s trước khi bấm ESC...")
+            time.sleep(wait_time)
+        
+        # Sử dụng keyevent 111 cho ESCAPE. 
+        # Nếu muốn dùng phím Back của Android thì đổi thành 4.
+        self.call_adb(["shell", "input", "keyevent", "111"])
+        self.log("==> PRESS ESC (Keyevent 111)")
         return True
 
     def input_name_logic(self):
@@ -804,13 +818,6 @@ class AutoClickerInstance:
 
         ]
 
-        # 3. GIAI ĐOẠN UP LEVEL
-        uplevel_script = [
-            # {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 30, "confidence": 0.9},
-        ]
-
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)
         
         teamup_host_script = [
@@ -918,7 +925,14 @@ class AutoClickerInstance:
             
         ]
         
-
+        # GIAI ĐĂNG XUẤT - XUẤT FILE
+        uplevel_script = [
+            {"action": "press_esc", "wait": 2} 
+            {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 30, "confidence": 0.9},
+        ]
 
         # GHÉP SCRIPT DỰA TRÊN LỰA CHỌN
         self.script = []
