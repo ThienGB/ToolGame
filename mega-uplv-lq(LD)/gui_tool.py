@@ -938,29 +938,31 @@ class AutoClickerInstance:
         if self.modes.get("tutorial"):
             self.script += tutorial_script
         
-        # Thêm logic GHÉP ĐỘI nếu được chọn (Chạy trước khi xuất file)
+        # 3. GIAI ĐOẠN GHÉP ĐỘI & ĐÁNH TRẬN
         if self.modes.get("teamup"):
+            # Thêm script Ghép đội (Host hoặc Guest)
             if self.worker_index % 5 == 0:
                 self.script += teamup_host_script
             else:
                 self.script += teamup_guest_script
                 
-        # CUỐI CÙNG: UpLevel (Xuất file và Đăng xuất)
-        if self.modes.get("uplevel"):
-            self.script += uplevel_script
-            
-            # Wait chỉ 1 lần sau teamup scripts, trước khi loop
+            # Đợi cả 5 người vào phòng
             wait_step = {"action": "wait_for_players", "count": 4, "timeout": 300}
             self.script.append(wait_step)
             
-            # Sau khi cả 5 người vào phòng, thực hiện logic trận đấu lặp lại N lần
-            self.script += [
-                {
-                    "action": "loop", 
-                    "count": self.modes.get("battle_count", 2), # Lấy từ UI
-                    "steps": shared_battle_script
-                }
-            ]
+            # Thực hiện logic đánh trận lặp lại N lần
+            battle_loop = {
+                "action": "loop", 
+                "count": self.modes.get("battle_count", 2),
+                "steps": shared_battle_script
+            }
+            self.script.append(battle_loop)
+
+        # 4. GIAI ĐOẠN XUẤT FILE & ĐĂNG XUẤT (CHẠY CUỐI CÙNG SAU KHI XONG HẾT)
+        if self.modes.get("uplevel"):
+            self.script += uplevel_script
+            # Hành động xuất file thành công vào TXT
+            self.script.append({"action": "export_success"})
 
         while self.running:
             # Tìm tài khoản chưa dùng
