@@ -1031,6 +1031,7 @@ class MultiPremiumApp(ctk.CTk):
             "joined_counts": {},
             "lock": threading.Lock()
         }
+        self.device_map = {} # serial -> absolute_index (0, 1, 2...)
 
         # Assets (Sử dụng resource_path để đóng gói)
         self.logo_img = ctk.CTkImage(Image.open(resource_path("logo.png")), size=(64, 64))
@@ -1240,6 +1241,23 @@ class MultiPremiumApp(ctk.CTk):
                         self.ld_path_entry.insert(0, path)
             except: pass
 
+    def get_absolute_index(self, serial):
+        """Xác định số thứ tự máy (0, 1, 2...) dựa trên port ADB"""
+        port = None
+        if "emulator-" in serial:
+            try: port = int(serial.split("-")[1])
+            except: pass
+        elif ":" in serial:
+            try: port = int(serial.split(":")[1])
+            except: pass
+            
+        if port is not None:
+            # LDPlayer logic: port 5554/5555 là máy 0 (máy 1), 5556/5557 là máy 1...
+            if port >= 5554:
+                if port % 2 == 0: return (port - 5554) // 2
+                else: return (port - 5555) // 2
+        return -1
+
     def scan_devices(self):
         base_path = self.ld_path_entry.get().strip()
         self.adb_path = os.path.join(base_path, "adb.exe")
@@ -1247,46 +1265,74 @@ class MultiPremiumApp(ctk.CTk):
         for w in self.device_list_frame.winfo_children(): w.destroy()
         self.device_cards = {}
         self.team_frames = {}
+        self.device_map = {}
         try:
             res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
             lines = res.stdout.strip().split('\n')[1:]
             device_serials = [line.split('\t')[0] for line in lines if "device" in line]
-            num_devices = len(device_serials)
-            num_teams = (num_devices + 4) // 5
-            for team_idx in range(num_teams):
+            
+            # Mapping serial -> absolute index
+            for serial in device_serials:
+                idx = self.get_absolute_index(serial)
+                if idx == -1:
+                    # Nếu không xác định được qua port, gán index tạm dựa trên số lượng adb
+                    idx = len(self.device_map) + 100 
+                self.device_map[serial] = idx
+            
+            if not self.device_map:
+                self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào.")
+                return
+
+            # Gom nhóm theo Team (0-4: Team 1, 5-9: Team 2...)
+            teams_data = {}
+            for serial, abs_idx in self.device_map.items():
+                team_idx = abs_idx // 5
+                if team_idx not in teams_data: teams_data[team_idx] = []
+                teams_data[team_idx].append(serial)
+                
+            # Hiển thị các Team đã gom nhóm
+            for team_idx in sorted(teams_data.keys()):
                 team_frame = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=8, border_width=1, border_color="#333")
                 team_frame.pack(pady=4, padx=5, fill="x")
+                
+                # Header cho Team
+                team_title = ctk.CTkLabel(team_frame, text=f"TEAM {team_idx + 1}", font=ctk.CTkFont(size=12, weight="bold"), text_color=ACCENT_GREEN)
+                team_title.pack(pady=(5, 0))
+
                 devices_frame = ctk.CTkFrame(team_frame, fg_color="transparent")
                 devices_frame.pack(fill="x", padx=5, pady=2)
                 devices_frame.columnconfigure(list(range(5)), weight=1)
                 
-                team_devices = []
-                for i in range(5):
-                    device_idx = team_idx * 5 + i
-                    if device_idx >= num_devices: break
-                    serial = device_serials[device_idx]
+                current_team_devices = sorted(teams_data[team_idx], key=lambda s: self.device_map[s])
+                
+                for i, serial in enumerate(current_team_devices):
+                    abs_idx = self.device_map[serial]
+                    machine_num = abs_idx + 1
+                    is_host = (abs_idx % 5 == 0)
                     
-                    card = ctk.CTkFrame(devices_frame, fg_color="#252525", corner_radius=4, border_width=1, border_color="#383838", height=25)
-                    card.grid(row=0, column=i, padx=2, pady=2, sticky="nsew"); card.grid_propagate(False)
-                    ctk.CTkLabel(card, text=serial.split(":")[-1] if ":" in serial else serial, font=ctk.CTkFont(size=9)).pack(expand=True)
+                    card_color = "#2d3748" if is_host else "#252525"
+                    border_color = ACCENT_GREEN if is_host else "#383838"
+                    
+                    card = ctk.CTkFrame(devices_frame, fg_color=card_color, corner_radius=4, border_width=1, border_color=border_color, height=35)
+                    card.grid(row=0, column=abs_idx % 5, padx=2, pady=2, sticky="nsew"); card.grid_propagate(False)
+                    
+                    lbl_text = f"M{machine_num}\n{serial.split(':')[-1] if ':' in serial else serial}"
+                    ctk.CTkLabel(card, text=lbl_text, font=ctk.CTkFont(size=9, weight="bold" if is_host else "normal")).pack(expand=True)
                     
                     status_lbl = ctk.CTkLabel(card, text="", font=ctk.CTkFont(size=1))
                     self.device_cards[serial] = {"card": card, "status": status_lbl}
-                    team_devices.append(serial)
                 
                 btns_frame = ctk.CTkFrame(team_frame, fg_color="transparent")
                 btns_frame.pack(fill="x", padx=5, pady=(0, 5))
-                btn_start_team = ctk.CTkButton(btns_frame, text=f"Team {team_idx + 1}", image=self.start_icon, compound="left", command=lambda t=team_idx: self.start_team(t), height=24, font=ctk.CTkFont(size=11, weight="bold"))
+                btn_start_team = ctk.CTkButton(btns_frame, text=f"Chạy Team {team_idx + 1}", image=self.start_icon, compound="left", command=lambda t=team_idx: self.start_team(t), height=24, font=ctk.CTkFont(size=11, weight="bold"))
                 btn_start_team.pack(side="left", padx=2, expand=True, fill="x")
-                btn_stop_team = ctk.CTkButton(btns_frame, text="Stop", image=self.stop_icon, compound="left", command=lambda t=team_idx: self.stop_team(t), fg_color="#333", height=24, font=ctk.CTkFont(size=11))
+                btn_stop_team = ctk.CTkButton(btns_frame, text="Dừng", image=self.stop_icon, compound="left", command=lambda t=team_idx: self.stop_team(t), fg_color="#333", height=24, font=ctk.CTkFont(size=11))
                 btn_stop_team.pack(side="right", padx=2, expand=True, fill="x")
-                self.team_frames[team_idx] = {"frame": team_frame, "devices": team_devices, "start_btn": btn_start_team, "stop_btn": btn_stop_team}
+                self.team_frames[team_idx] = {"frame": team_frame, "devices": current_team_devices, "start_btn": btn_start_team, "stop_btn": btn_stop_team}
             
-            if not self.device_cards:
-                self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào.")
             self.update_stats_ui()
-        except:
-            self.add_log("LỖI: Không thể quét thiết bị.")
+        except Exception as e:
+            self.add_log(f"LỖI: Không thể quét thiết bị: {e}")
 
     def load_accounts(self):
         file_path = fd.askopenfilename(filetypes=[("Text Files", "*.txt")])
@@ -1379,9 +1425,9 @@ class MultiPremiumApp(ctk.CTk):
             "uplevel": self.mode_uplevel.get(),
         }
 
-        # Chạy đa luồng cho team
-        for j, serial in enumerate(devices):
-            worker_index = team_idx * 5 + j
+        # Chạy đa luồng cho các máy trong team
+        for serial in devices:
+            worker_index = self.device_map.get(serial, 0) # Lấy absolute index đã lưu
             worker = AutoClickerInstance(serial, self.adb_path, self.add_log, self.update_all_ui, self.report_stats)
             self.active_workers.append(worker)
             t = threading.Thread(target=worker.run, args=(self.accounts_data, modes, worker_index, self.shared_data), daemon=True)

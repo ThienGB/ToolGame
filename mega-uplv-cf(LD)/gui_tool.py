@@ -423,14 +423,28 @@ class AutoClickerInstance:
             return False
 
     def input_temp_email_logic(self):
-        if not self.current_email:
+        if not self.current_email: 
             if not self.generate_temp_email_logic(): return False
-        
-        # Xóa trắng trước khi nhập
-        for _ in range(40): self.call_adb(["shell", "input", "keyevent", "67"])
+        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
         escaped_email = self.escape_adb_text(self.current_email)
         self.call_adb(["shell", "input", "text", escaped_email])
         self.log(f"EMAIL: Đã nhập {self.current_email}")
+        return True
+
+    def input_account_logic(self):
+        if not self.current_account: return False
+        content = self.current_account.get("tk", "")
+        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
+        safe_content = self.escape_adb_text(content)
+        self.call_adb(["shell", "input", "text", safe_content])
+        return True
+
+    def input_password_logic(self):
+        if not self.current_account: return False
+        content = self.current_account.get("mk", "")
+        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
+        safe_content = self.escape_adb_text(content)
+        self.call_adb(["shell", "input", "text", safe_content])
         return True
 
     def wait_for_email_code_logic(self, step):
@@ -499,8 +513,8 @@ class AutoClickerInstance:
                 if code_found:
                     self.log(f"GMAIL: Đã lấy được mã OTP ({code_found})")
                     self.current_otp = code_found
-                    # Xóa trắng ô nhập code (nhấn lùi 10 lần)
-                    for _ in range(10): self.call_adb(["shell", "input", "keyevent", "67"])
+                    # Xóa trắng ô nhập code nhanh
+                    self.call_adb(["shell", "input", "keyevent"] + ["67"] * 10)
                     self.call_adb(["shell", "input", "text", code_found])
                     mail.logout()
                     return True
@@ -600,14 +614,14 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/use_all.jpg", "timeout": 10, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/use.jpg", "timeout": 10, "confidence": 0.9},
             {"action": "click_image", "target": "images/exit1.jpg", "timeout": 60, "confidence": 0.9},
-            {"action": "click_image", "target": "images/event_center.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/event_center.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/limited_time.png", "timeout": 20, "confidence": 0.9},
-             {"action": "click_image", "target": "images/invite.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/input_code.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/invite.jpg", "target2": "images/invite_friend.jpg", "target3": "images/invite_friend1.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/gift_code_input.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/name_input2.png", "timeout": 20, "confidence": 0.9},
             {"action": "input_text", "content": "USE_GIFTCODE"},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/confirm_invite.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/confirm_giftcode.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "press_esc", "wait": 1},
 
             {"action": "click_image", "target": "images/setting.jpg", "timeout": 20, "confidence": 0.9},

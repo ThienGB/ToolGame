@@ -443,3 +443,6 @@ def main():
 if __name__ == "__main__":
     main()
 
+
+
+# pyinstaller --noconfirm --onefile --windowed --name "MegaUpLvCF" --add-data "images;images" --add-data "logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool.py
