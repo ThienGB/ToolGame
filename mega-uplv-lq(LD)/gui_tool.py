@@ -937,17 +937,17 @@ class AutoClickerInstance:
             self.script += login_script
         if self.modes.get("tutorial"):
             self.script += tutorial_script
-        if self.modes.get("uplevel"):
-            self.script += uplevel_script
         
-        # Thêm logic GHÉP ĐỘI nếu được chọn
+        # Thêm logic GHÉP ĐỘI nếu được chọn (Chạy trước khi xuất file)
         if self.modes.get("teamup"):
-            # Chọn host cho mỗi nhóm 5 cửa sổ
-            # Nếu host là ld1, ld6, ld11, ld16 thì dùng điều kiện % 5 == 0
             if self.worker_index % 5 == 0:
                 self.script += teamup_host_script
             else:
                 self.script += teamup_guest_script
+                
+        # CUỐI CÙNG: UpLevel (Xuất file và Đăng xuất)
+        if self.modes.get("uplevel"):
+            self.script += uplevel_script
             
             # Wait chỉ 1 lần sau teamup scripts, trước khi loop
             wait_step = {"action": "wait_for_players", "count": 4, "timeout": 300}
