@@ -13,6 +13,13 @@ from PIL import Image
 import sys
 import os
 
+# Ensure console output uses UTF-8 to avoid UnicodeEncodeError on Windows console
+try:
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
+
 # --- Fix WinError 1114 for torch/easyocr in PyInstaller ---
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
@@ -84,8 +91,9 @@ ACCENT_RED = "#EF4444"
 # --- Logic Backend (AutoClicker - Hỗ trợ Single Instance) ---
 
 class AutoClickerInstance:
-    def __init__(self, device_id, adb_path, log_func, update_ui_func, report_stats_func):
+    def __init__(self, device_id,  adb_path, log_func, update_ui_func, report_stats_func):
         self.device_id = device_id
+        
         self.adb_path = adb_path
         self.log_func = log_func
         self.update_ui_func = update_ui_func
@@ -187,6 +195,8 @@ class AutoClickerInstance:
             res = self.click_any_logic(step)
         elif action == "swipe":
             res = self.swipe_logic(step)
+        elif action == "sync_autowin":
+            res = self.sync_autowin_logic(step)
         elif action == "loop":
             # Lặp lại một nhóm hành động N lần
             count = step.get("count", 1)
@@ -218,9 +228,16 @@ class AutoClickerInstance:
         
         timeout = step.get("timeout", 10)
         confidence = step.get("confidence", 0.8)
-        
+
+        # Ưu tiên chọn hình của mỗi worker để giảm chọn trùng cùng lúc
+        ordered_targets = list(targets)
+        if len(targets) > 1 and hasattr(self, 'worker_index'):
+            idx = self.worker_index % len(targets)
+            ordered_targets = targets[idx:] + targets[:idx]
+            self.log(f"[Worker {self.worker_index}] Ưu tiên chọn: {ordered_targets[0]}")
+
         target_imgs = []
-        for t_path in targets:
+        for t_path in ordered_targets:
             real_path = resource_path(t_path)
             if os.path.exists(real_path):
                 # Đọc ảnh ở dạng xám (grayscale) để giảm ảnh hưởng của màu nền
@@ -440,8 +457,12 @@ class AutoClickerInstance:
 
             if res_id and room_id_min <= len(res_id) <= room_id_max:
                 with self.shared_data["lock"]:
-                    self.shared_data["room_id"]      = res_id
-                    self.shared_data["joined_count"]  = 1  # Host tính là 1
+                    if "room_ids" not in self.shared_data:
+                        self.shared_data["room_ids"] = {}
+                    if "joined_counts" not in self.shared_data:
+                        self.shared_data["joined_counts"] = {}
+                    self.shared_data["room_ids"][self.group_id] = res_id
+                    self.shared_data["joined_counts"][self.group_id] = 1  # Host tính là 1
                 self.log(f"==> QUÉT ĐƯỢC ID PHÒNG: [{res_id}] ({len(res_id)} ký tự) ✓")
                 return True
             elif len(res_id) > room_id_max:
@@ -460,14 +481,14 @@ class AutoClickerInstance:
         start = time.time()
         while time.time() - start < timeout and self.running:
             with self.shared_data["lock"]:
-                if self.shared_data["room_id"]:
+                if self.shared_data.get("room_ids", {}).get(self.group_id):
                     return True
             time.sleep(2)
         return False
 
     def input_room_id_logic(self):
         with self.shared_data["lock"]:
-            rid = self.shared_data["room_id"]
+            rid = self.shared_data.get("room_ids", {}).get(self.group_id, "")
         if not rid:
             self.log("LỖI: Chưa có mã phòng để nhập.")
             return False
@@ -522,7 +543,9 @@ class AutoClickerInstance:
         time.sleep(0.5)
         
         with self.shared_data["lock"]:
-            self.shared_data["joined_count"] += 1
+            if self.group_id not in self.shared_data["joined_counts"]:
+                self.shared_data["joined_counts"][self.group_id] = 0
+            self.shared_data["joined_counts"][self.group_id] += 1
         return True
 
     def wait_for_players_logic(self, step):
@@ -531,7 +554,7 @@ class AutoClickerInstance:
         start = time.time()
         while time.time() - start < timeout and self.running:
             with self.shared_data["lock"]:
-                current = self.shared_data["joined_count"]
+                current = self.shared_data.get("joined_counts", {}).get(self.group_id, 0)
             if current >= target_count:
                 self.log(f"ĐỦ ĐỘI ({current}/{target_count}). BẮT ĐẦU!")
                 return True
@@ -540,32 +563,80 @@ class AutoClickerInstance:
                 time.sleep(2)
         return False
 
+    def sync_autowin_logic(self, step):
+        timeout = step.get("timeout", 120)
+        start = time.time()
+
+        with self.shared_data["lock"]:
+            if "autowin_barrier" not in self.shared_data:
+                self.shared_data["autowin_barrier"] = {}
+            if self.group_id not in self.shared_data["autowin_barrier"]:
+                self.shared_data["autowin_barrier"][self.group_id] = 0
+            self.shared_data["autowin_barrier"][self.group_id] += 1
+            self.log(f"Đã vào hàng chờ auto win: {self.shared_data['autowin_barrier'][self.group_id]}/5")
+
+        while time.time() - start < timeout and self.running:
+            with self.shared_data["lock"]:
+                current = self.shared_data.get("autowin_barrier", {}).get(self.group_id, 0)
+            if current >= 5:
+                break
+            time.sleep(0.5)
+
+        if not self.running:
+            return False
+
+        with self.shared_data["lock"]:
+            current = self.shared_data.get("autowin_barrier", {}).get(self.group_id, 0)
+            if current < 5:
+                self.log(f"!! Hết thời gian chờ auto win đồng bộ ({current}/5)")
+                return False
+
+        # Nhấn auto win đồng thời khi cả 5 tab đều cùng tới hàng chờ
+        self.click_image_logic({"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9})
+
+        with self.shared_data["lock"]:
+            self.shared_data["autowin_barrier"][self.group_id] = 0
+
+        return True
+
     def run(self, accounts, modes, worker_index, shared_data):
         self.accounts_list = accounts
         self.modes = modes
         self.worker_index = worker_index
+        self.group_id = self.worker_index // 5
         self.shared_data = shared_data
         self.running = True
         
         # 1. GIAI ĐOẠN LOGIN
         login_script = [
-            {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 30, "confidence": 0.8},
+            
+            {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.8},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
             {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "timeout": 60, "confidence": 0.9},
             {"action": "input_account"},
             {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "timeout": 60, "confidence": 0.9},
             {"action": "input_password"},
             {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 30, "confidence": 0.9},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok2.png", "timeout": 30, "confidence": 0.9},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.9},
             {
                 "action": "click_image_if", 
                 "target": "images/vao_tran_button_1.png", 
                 "timeout": 20, 
                 "confidence": 0.9,
                 "then": [
-                    {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 5, "confidence": 0.9},
-                    {"action": "wait", "timeout": 7},
-                    {"action": "click_image", "target": "images/vao_tran_button_2.png", "timeout": 30, "confidence": 0.9}
+                    {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.9},
+                    {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.9},
+                    {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.9},
+                    {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.9},
+                    {"action": "wait", "timeout": 5},
+                    {"action": "click_image", "target": "images/vao_tran_button_2.png", "timeout": 30, "confidence": 0.9},
+                    {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 4, "confidence": 0.9}
                 ]
             },
             {"action": "click_image_if", "target": "images/skip.png", "timeout": 45, "confidence": 0.9},
@@ -583,6 +654,8 @@ class AutoClickerInstance:
                    {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.9},
                    {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
                    {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
+                   {"action": "click_any", "wait": 10},
+                   
                 ]
             },
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
@@ -598,7 +671,9 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target1": "images/tuong1.png", "target2": "images/tuong2.png", "target3": "images/tuong3.png", "target4": "images/tuong4.png", "target5": "images/tuong5.png", "target6": "images/tuong6.png", "target7": "images/tuong7.png", "target8": "images/tuong8.png", "target9": "images/tuong9.png", "target10": "images/tuong10.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/tuong2.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 20},
@@ -607,7 +682,9 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 5},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target1": "images/tuong1.png", "target2": "images/tuong2.png", "target3": "images/tuong3.png", "target4": "images/tuong4.png", "target5": "images/tuong5.png", "target6": "images/tuong6.png", "target7": "images/tuong7.png", "target8": "images/tuong8.png", "target9": "images/tuong9.png", "target10": "images/tuong10.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/tuong2.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 20},
@@ -617,10 +694,10 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/nhan_sktt.png", "timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/krixi.png", "timeout": 10, "confidence": 0.9},
-            {"action": "click_any", "wait": 10},
-            {"action": "click_any", "wait": 10},
+            {"action": "click_any", "wait": 4},
+            {"action": "click_any", "wait": 4},
             {"action": "wait", "timeout": 5},
-            {"action": "click_image", "target": "images/lam_event.png", "timeout": 10, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_image", "target": "images/thoat_5v5.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_image", "target": "images/thoat_sk_tan_thu1.png", "timeout": 10, "confidence": 0.9},
@@ -633,31 +710,98 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/quay_lai_dau_hang_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/event.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/qua_tan_thu.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/qua_tan_thu.png", "target": "images/skttt.png","timeout": 30, "confidence": 0.9},
             {"action": "wait", "timeout": 5},
             {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.2, "duration": 600},
+            {"action": "wait", "timeout": 3},
             {"action": "click_image", "target1": "images/sktt.jpg", "target2": "images/sktt1.jpg", "target3": "images/sktt2.jpg", "target4": "images/sktt3.jpg", "target5": "images/sktt4.jpg", "target6": "images/sktt5.jpg", "target7": "images/sktt6.jpg", "target8": "images/sktt7.jpg", "target9": "images/sktt8.jpg", "target10": "images/sktt9.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/nhan_ruby_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/any.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/thoat_sk.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 10, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image", "target": "images/vat_pham.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/su_dung_button.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image", "target": "images/ok.png","target2": "images/ok1.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target": "images/quay_lai_tui_do_button.png", "timeout": 20, "confidence": 0.9},
+            
+            {"action": "click_image", "target1": "images/quay_lai_tui_do_button.png", "target2": "images/quaylaituido.png" , "target3": "images/quaylaituido1.png","timeout" : 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/shop.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/vat_pham_shop.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/shopruby.png", "timeout": 20, "confidence": 0.9},
             {"action": "swipe", "x1": 0.5, "y1": 0.8, "x2": 0.5, "y2": 0.4, "duration": 600},
+            {"action": "wait", "timeout": 2},
+            {"action": "swipe", "x1": 0.5, "y1": 0.8, "x2": 0.5, "y2": 0.4, "duration": 600},
+            {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/10_win_x2_exp1.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_image_if", "target": "images/quay_lai_shop_button.png", "target2": "images/quaylaisop.png" ,"timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/quaylaisop3.png", "target2": "images/quaylaisop.png" ,"target3": "images/quaylaisop2.png" ,"timeout": 15 , "confidence": 0.9},
+            {"action": "click_image", "target": "images/dauthuong.png", "timeout": 60, "confidence": 0.9},
+            {"action": "click_image", "target": "images/logo.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target": "images/quay_lai_shop_button.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/sansang5v5.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 7},
+            {"action": "click_image_if", "target": "images/ok3.png", "timeout": 15, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/tuong1.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/tuong2.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/tuong3.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/tuong4.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/tuong5.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 10, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 50, "confidence": 0.9},
+        
+            {
+                "action": "loop",
+                "count": 4,
+                "steps": [
+                    {"action": "click_image", "target": "images/ban_do.png", "timeout": 200, "confidence": 0.9},
+                    {"action": "wait", "timeout": 15}
+                ]
+
+            },
+
+            {"action": "click_image_if", "target": "images/logo.png","target2": "images/logo1.png","target3": "images/logo2.png", "timeout": 7, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
+             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
+            {"action": "wait", "timeout": 20},
+            {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 6},
+            {"action": "click_image", "target": "images/tiep_tuc1.png", "timeout": 120, "confidence": 0.9},
+            {"action": "wait", "timeout": 6},
+            {"action": "click_image", "target": "images/tiep_tuc2.png", "timeout": 120, "confidence": 0.9},
+            {"action": "click_any", "wait": 6},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image", "target": "images/sanh.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/nhansolanlammoi.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/lv1capthuong.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image", "target": "images/any1.png","target2": "images/lamoi.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image", "target": "images/trangphuc.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image", "target": "images/hopqua.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image", "target": "images/x.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image", "target": "images/quaylaisk.png", "timeout": 20, "confidence": 0.9},
+
+
         ]
 
         # 3. GIAI ĐOẠN UP LEVEL
@@ -668,8 +812,12 @@ class AutoClickerInstance:
         ]
 
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)
+        
         teamup_host_script = [
             {"action": "click_image", "target": "images/team5.png", "timeout": 30},
+            {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
             {
                 "action": "get_room_id",
                 "timeout": 30,
@@ -682,10 +830,16 @@ class AutoClickerInstance:
                 "confidence": 0.88,
                 "min_gap": 8,
             },
+            
+            
             {"action": "wait_for_players", "count": 4, "timeout": 300}, # Chờ 4 người khác vào
-            {"action": "click_image", "target": "images/ok.png", "timeout": 30},
+           
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/da_ro.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image", "target": "images/pve.png", "timeout": 30},
             {"action": "click_image", "target": "images/ready.png", "timeout": 30},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.9},
         ]
         
         teamup_guest_script = [
@@ -693,42 +847,78 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/idphong.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait_for_room", "timeout": 300}, # Chờ Host quét xong ID
             {"action": "input_room_id"},
-            {"action": "click_image", "target": "images/vao.png", "timeout": 30}
+            {"action": "click_image", "target": "images/vao.png", "timeout": 30},
+            {"action": "click_image", "target": "images/da_ro.png", "timeout": 300},
+
         ]
 
         # 5. CÁC HÀNH ĐỘNG LẶP LẠI SAU KHI VÀO PHÒNG (SHARED BATTLE LOGIC)
         # Thiết kế dạng list để bạn có thể gọi lại nhiều lần hoặc dùng trong action 'loop'
+        tuong_target = f"images/tuong{(self.worker_index % 5) + 1}.png"
         shared_battle_script = [
-            {"action": "wait_for_players", "count": 4, "timeout": 300}, # Hành động này chỉ thực hiện khi đã có đủ 5 người
-            {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/logo1.png", "timeout": 50, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/ready.png", "timeout": 15},
-            {"action": "click_image", "target": "images/san_sang_5v5_button.png", "timeout": 20},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/ready.png", "timeout": 2, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/sansang5v5.png", "timeout": 50, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok3.png", "timeout": 25, "confidence": 0.9},
+            
+            
 
             # Ví dụ các hành động sau khi vào phòng thành công:
-            {"action": "click_image", "target1": "images/tuong1.png", "target2": "images/tuong2.png", "target3": "images/tuong3.png", "target4": "images/tuong4.png", "target5": "images/tuong5.png", "target6": "images/tuong6.png", "target7": "images/tuong7.png", "target8": "images/tuong8.png", "target9": "images/tuong9.png", "target10": "images/tuong10.png", "timeout": 60, "confidence": 0.9},
-            {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
+            {
+                "action": "loop",
+                "count": 2,
+                "steps": [
+                    {"action": "click_image_if", "target": tuong_target, "timeout": 2, "confidence": 0.7},
+                ]
+            },
             
+            {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 7},
+            {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 30, "confidence": 0.9},
+            {"action": "wait", "timeout": 10},
             # Lặp lại click bản đồ 18 lần, mỗi lần cách nhau khoảng 10 giây
             {
                 "action": "loop",
-                "count": 18,
+                "count": 11,
                 "steps": [
-                    {"action": "click_image", "target": "images/ban_do.png", "timeout": 10, "confidence": 0.9},
-                    {"action": "wait", "timeout": 10}
+                    {"action": "click_image", "target": "images/bienve.png", "timeout": 200, "confidence": 0.9},
+                    {"action": "wait", "timeout": 15}
                 ]
             },
-            {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.9},
+
+            {"action": "wait", "timeout": 6},
+            {"action": "sync_autowin", "timeout": 120},
             {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 20},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 10, "confidence": 0.9},
-            {"action": "wait", "timeout": 5},
+            {"action": "wait", "timeout": 6},
+            {"action": "click_image", "target": "images/tiep_tuc1.png", "timeout": 120, "confidence": 0.9},
+            {"action": "wait", "timeout": 6},
+            {"action": "click_image", "target": "images/tiep_tuc2.png", "timeout": 120, "confidence": 0.9},
+            {"action": "click_any", "wait": 6},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 2, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            
         ]
+        
+
 
         # GHÉP SCRIPT DỰA TRÊN LỰA CHỌN
         self.script = []
@@ -741,16 +931,22 @@ class AutoClickerInstance:
         
         # Thêm logic GHÉP ĐỘI nếu được chọn
         if self.modes.get("teamup"):
+            # Chọn host cho mỗi nhóm 5 cửa sổ
+            # Nếu host là ld1, ld6, ld11, ld16 thì dùng điều kiện % 5 == 0
             if self.worker_index % 5 == 0:
                 self.script += teamup_host_script
             else:
                 self.script += teamup_guest_script
             
+            # Wait chỉ 1 lần sau teamup scripts, trước khi loop
+            wait_step = {"action": "wait_for_players", "count": 4, "timeout": 300}
+            self.script.append(wait_step)
+            
             # Sau khi cả 5 người vào phòng, thực hiện logic trận đấu lặp lại N lần
             self.script += [
                 {
                     "action": "loop", 
-                    "count": self.modes.get("battle_count", 5), # Lấy từ UI
+                    "count": self.modes.get("battle_count", 2), # Lấy từ UI
                     "steps": shared_battle_script
                 }
             ]
@@ -822,6 +1018,8 @@ class MultiPremiumApp(ctk.CTk):
         self.shared_data = {
             "room_id": None,
             "joined_count": 0,
+            "room_ids": {},
+            "joined_counts": {},
             "lock": threading.Lock()
         }
 
@@ -860,7 +1058,7 @@ class MultiPremiumApp(ctk.CTk):
         self.path_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR, corner_radius=10)
         self.path_card.pack(padx=20, pady=5, fill="x")
         ctk.CTkLabel(self.path_card, text="ĐƯỜNG DẪN LDPLAYER", font=ctk.CTkFont(size=10, weight="bold")).pack(pady=(5, 0))
-        self.ld_path_entry = ctk.CTkEntry(self.path_card, placeholder_text="Ví dụ: C:\LDPlayer\LDPlayer9", height=28)
+        self.ld_path_entry = ctk.CTkEntry(self.path_card, placeholder_text=r"Ví dụ: C:\LDPlayer\LDPlayer9", height=28)
         self.ld_path_entry.pack(padx=10, pady=5, fill="x")
         self.ld_path_entry.insert(0, r"C:\LDPlayer\LDPlayer9")
         ctk.CTkButton(self.path_card, text="Lưu Đường Dẫn", command=self.save_config, height=22, font=ctk.CTkFont(size=11)).pack(padx=10, pady=(0, 5), fill="x")
@@ -905,17 +1103,18 @@ class MultiPremiumApp(ctk.CTk):
         for col in range(10): 
             self.device_list_frame.grid_columnconfigure(col, weight=1)
         self.device_cards = {}
+        self.team_frames = {}
 
 
         # Queue and Logs
         self.mid_grid = ctk.CTkFrame(self.main_content, fg_color="transparent")
         self.mid_grid.pack(fill="both", expand=True)
-        self.mid_grid.grid_columnconfigure((0, 1), weight=1)
+        self.mid_grid.grid_columnconfigure(0, weight=1)
         self.mid_grid.grid_rowconfigure(0, weight=1)
 
         # Stats Dashboard
         self.stats_card = ctk.CTkFrame(self.mid_grid, fg_color=CARD_COLOR, corner_radius=15)
-        self.stats_card.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        self.stats_card.grid(row=0, column=0, sticky="nsew")
         
         # Mode Selection (Moved from Sidebar)
         modes_title = ctk.CTkLabel(self.stats_card, text="CHẾ ĐỘ HOẠT ĐỘNG", font=ctk.CTkFont(size=12, weight="bold"), text_color=ACCENT_GREEN)
@@ -943,27 +1142,26 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(self.battle_count_frame, text="Số trận Battle:", font=ctk.CTkFont(size=11, weight="bold")).pack(side="left", padx=(5, 10))
         self.battle_count_entry = ctk.CTkEntry(self.battle_count_frame, width=60, height=24, corner_radius=6)
         self.battle_count_entry.pack(side="left")
-        self.battle_count_entry.insert(0, "5")
+        self.battle_count_entry.insert(0, "2")
 
         ctk.CTkLabel(self.stats_card, text="THÔNG SỐ THỜI GIAN THỰC", font=ctk.CTkFont(size=12, weight="bold"), text_color="#888").pack(pady=(15, 5))
         
         self.stats_inner = ctk.CTkFrame(self.stats_card, fg_color="transparent")
         self.stats_inner.pack(fill="both", expand=True, padx=15, pady=(0, 10))
         self.stats_inner.columnconfigure((0, 1, 2), weight=1)
-        self.stats_inner.rowconfigure(0, weight=1)
+        self.stats_inner.rowconfigure((0, 1), weight=1)
 
         self.active_device_val = self.create_stat_item(self.stats_inner, "ĐANG CHẠY", "0", 0, 0, ACCENT_PURPLE)
         self.success_val = self.create_stat_item(self.stats_inner, "THÀNH CÔNG", "0", 0, 1, "#4ADE80")
         self.lag_val = self.create_stat_item(self.stats_inner, "LỖI/LAG", "0", 0, 2, "#FB923C")
 
+        self.total_devices_val = self.create_stat_item(self.stats_inner, "TỔNG THIẾT BỊ", "0", 1, 0, "#888")
+        self.total_accounts_val = self.create_stat_item(self.stats_inner, "TỔNG TÀI KHOẢN", "0", 1, 1, "#888")
 
 
-        # Accounts List View
-        self.acc_card = ctk.CTkFrame(self.mid_grid, fg_color=CARD_COLOR, corner_radius=15)
-        self.acc_card.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
-        ctk.CTkLabel(self.acc_card, text="DANH SÁCH TÀI KHOẢN", font=ctk.CTkFont(weight="bold")).pack(pady=5)
-        self.scroll_acc = ctk.CTkScrollableFrame(self.acc_card, fg_color="transparent")
-        self.scroll_acc.pack(fill="both", expand=True)
+
+        # Device Log Tabs (True Tabview, each device has separate tab)
+        # Removed log card as per user request
 
     def create_stat_item(self, parent, title, value, row, col, color):
         frame = ctk.CTkFrame(parent, fg_color="#252525", corner_radius=12)
@@ -991,10 +1189,30 @@ class MultiPremiumApp(ctk.CTk):
         lags = sum(1 for w in self.active_workers if w.is_lagging)
         self.lag_val.configure(text=str(lags))
 
+        self.total_devices_val.configure(text=str(len(self.device_cards)))
+        self.total_accounts_val.configure(text=str(len(self.accounts_data)))
+
+    def update_team_status(self, team_idx):
+        if team_idx not in self.team_frames:
+            return
+        team_data = self.team_frames[team_idx]
+        devices = team_data["devices"]
+        active_in_team = sum(1 for w in self.active_workers if w.running and hasattr(w, 'device_id') and w.device_id in devices)
+        lagging_in_team = sum(1 for w in self.active_workers if w.is_lagging and hasattr(w, 'device_id') and w.device_id in devices)
+        total_in_team = len(devices)
+        
+        if active_in_team > 0:
+            status_text = f"Running ({active_in_team}/{total_in_team})"
+            if lagging_in_team > 0:
+                status_text += f" - Lag: {lagging_in_team}"
+            team_data["start_btn"].configure(text=status_text, state="disabled", fg_color="#FFA500")  # Orange for running
+            team_data["stop_btn"].configure(state="normal", fg_color=ACCENT_RED)
+        else:
+            team_data["start_btn"].configure(text="Start Team", state="normal", fg_color="#1F6AA5")
+            team_data["stop_btn"].configure(state="disabled", fg_color="#333")
+
     def update_all_ui(self):
         def _update():
-            # Cập nhật danh sách account
-            self.refresh_accounts_list()
             # Cập nhật trạng thái từng máy trên card
             for worker in self.active_workers:
                 if worker.device_id in self.device_cards:
@@ -1008,6 +1226,9 @@ class MultiPremiumApp(ctk.CTk):
                     )
             # Cập nhật thông số tổng quát
             self.update_stats_ui()
+            # Cập nhật trạng thái teams
+            for team_idx in self.team_frames:
+                self.update_team_status(team_idx)
         self.after(0, _update)
 
 
@@ -1035,26 +1256,58 @@ class MultiPremiumApp(ctk.CTk):
         
         for w in self.device_list_frame.winfo_children(): w.destroy()
         self.device_cards = {}
+        self.team_frames = {}
         
         try:
             res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
             lines = res.stdout.strip().split('\n')[1:]
             device_serials = [line.split('\t')[0] for line in lines if "device" in line]
             
-            for i, serial in enumerate(device_serials):
-                # Card siêu nhỏ gọn (Compact UI)
-                card = ctk.CTkFrame(self.device_list_frame, fg_color="#252525", corner_radius=6, border_width=1, border_color="#383838")
-                card.grid(row=i // 10, column=i % 10, padx=3, pady=3, sticky="nsew")
+            num_devices = len(device_serials)
+            num_teams = (num_devices + 4) // 5  # Round up
+            
+            for team_idx in range(num_teams):
+                # Team Frame
+                team_frame = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=10, border_width=2, border_color="#444")
+                team_frame.pack(pady=10, padx=10, fill="x")
                 
-                # Chỉ hiển thị phần ID cuối của device cho gọn
-                display_name = serial.split(":")[-1] if ":" in serial else serial
-                name_lbl = ctk.CTkLabel(card, text=display_name, font=ctk.CTkFont(size=10, weight="bold"))
-                name_lbl.pack(pady=(5, 0))
+                # Devices in team
+                devices_frame = ctk.CTkFrame(team_frame, fg_color="transparent")
+                devices_frame.pack(fill="x", padx=10, pady=(0, 10))
+                devices_frame.columnconfigure(list(range(5)), weight=1)
                 
-                status_lbl = ctk.CTkLabel(card, text="Sẵn sàng", font=ctk.CTkFont(size=9), text_color="#666")
-                status_lbl.pack(pady=(0, 5))
+                team_devices = []
+                for i in range(5):
+                    device_idx = team_idx * 5 + i
+                    if device_idx >= num_devices:
+                        break
+                    serial = device_serials[device_idx]
+                    
+                    # Device Card
+                    card = ctk.CTkFrame(devices_frame, fg_color="#252525", corner_radius=6, border_width=1, border_color="#383838")
+                    card.grid(row=0, column=i, padx=3, pady=3, sticky="nsew")
+                    
+                    display_name = serial.split(":")[-1] if ":" in serial else serial
+                    name_lbl = ctk.CTkLabel(card, text=display_name, font=ctk.CTkFont(size=10, weight="bold"))
+                    name_lbl.pack(pady=(5, 0))
+                    
+                    status_lbl = ctk.CTkLabel(card, text="Sẵn sàng", font=ctk.CTkFont(size=9), text_color="#666")
+                    status_lbl.pack(pady=(0, 5))
+
+                    self.device_cards[serial] = {"card": card, "status": status_lbl}
+                    team_devices.append(serial)
                 
-                self.device_cards[serial] = {"card": card, "status": status_lbl}
+                # Team Control Buttons
+                btns_frame = ctk.CTkFrame(team_frame, fg_color="transparent")
+                btns_frame.pack(fill="x", padx=10, pady=(0, 10))
+                
+                btn_start_team = ctk.CTkButton(btns_frame, text=f"{team_idx + 1} Start Team", image=self.start_icon, compound="left", command=lambda t=team_idx: self.start_team(t), height=30, corner_radius=8)
+                btn_start_team.pack(side="left", padx=5, expand=True, fill="x")
+                
+                btn_stop_team = ctk.CTkButton(btns_frame, text="Stop Team", image=self.stop_icon, compound="left", command=lambda t=team_idx: self.stop_team(t), fg_color="#333", height=30, corner_radius=8)
+                btn_stop_team.pack(side="right", padx=5, expand=True, fill="x")
+                
+                self.team_frames[team_idx] = {"frame": team_frame, "devices": team_devices, "start_btn": btn_start_team, "stop_btn": btn_stop_team}
 
             if not self.device_cards:
                 self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào.")
@@ -1076,56 +1329,30 @@ class MultiPremiumApp(ctk.CTk):
                     if len(parts) >= 2:
                         self.accounts_data.append({"tk": parts[0], "mk": parts[1], "used": False})
             
-            self.refresh_accounts_list()
+            self.update_stats_ui()
             self.add_log(f"HỆ THỐNG: Đã nạp {len(self.accounts_data)} tài khoản từ file .txt.")
         except Exception as e:
             self.add_log(f"LỖI ĐỌC FILE: {e}")
 
-    def refresh_accounts_list(self):
-        def _refresh():
-            for widget in self.scroll_acc.winfo_children(): widget.destroy()
-            for i, acc in enumerate(self.accounts_data):
-                f = ctk.CTkFrame(self.scroll_acc, fg_color="#282828" if not acc["used"] else "#1A1A1A", corner_radius=8)
-                f.pack(fill="x", pady=3, padx=5)
-                f.grid_columnconfigure(0, weight=1)
-                
-                color = "#DDD" if not acc["used"] else "#555"
-                status_text = "Đã dùng" if acc["used"] else "Sẵn sàng"
-                status_color = "#888" if acc["used"] else ACCENT_GREEN
-                
-                ctk.CTkLabel(f, text=acc["tk"], font=ctk.CTkFont(size=12, weight="bold"), text_color=color, anchor="w").grid(row=0, column=0, padx=15, pady=5, sticky="w")
-                ctk.CTkLabel(f, text=status_text, font=ctk.CTkFont(size=10), text_color=status_color).grid(row=0, column=1, padx=10, sticky="e")
-                ctk.CTkButton(f, text="X", width=25, height=25, fg_color="#444", text_color="#AAA", hover_color=ACCENT_RED, command=lambda idx=i: self.remove_account(idx)).grid(row=0, column=2, padx=10)
-        self.after(0, _refresh)
-
-    def remove_account(self, index):
-        if not self.active_workers:
-            del self.accounts_data[index]
-            self.refresh_accounts_list()
-
-    # Gỡ bỏ hàm select_all_devices vì không dùng checkbox nữa
+    # Removed refresh_accounts_list and remove_account as accounts list is no longer displayed
 
 
     def add_log(self, text):
-        # We still keep this for internal console/debugging or if we ever want to bring it back
-        # but for now it does nothing as self.log_box is removed.
-        print(f"DEBUG: {text}")
+        # Only print to console, no UI log
+        try:
+            print(f"DEBUG: {text}")
+        except UnicodeEncodeError:
+            print(f"DEBUG: {text.encode('utf-8', errors='replace').decode('utf-8')}")
+
+    # Removed open_device_log as log UI is removed
 
     def start_all(self):
-        selected_serials = list(self.device_cards.keys()) # Chạy tất cả máy được tìm thấy
-        if not selected_serials:
-            self.add_log("LỖI: Không tìm thấy thiết bị nào để chạy.")
+        if not self.team_frames:
+            self.add_log("LỖI: Không tìm thấy team nào. Hãy quét thiết bị trước.")
             return
         if not self.accounts_data:
             self.add_log("LỖI: Danh sách tài khoản đang trống.")
             return
-
-        # Removed script.json loading as script is now hardcoded in AutoClickerInstance.run
-        # try:
-        #     with open("script.json", "r") as f: script_data = json.load(f)
-        # except:
-        #     self.add_log("LỖI: Không thấy script.json")
-        #     return
 
         self.btn_start.configure(state="disabled", text=" ĐANG CHẠY...")
         self.btn_stop.configure(state="normal", fg_color=ACCENT_RED)
@@ -1135,6 +1362,35 @@ class MultiPremiumApp(ctk.CTk):
         self.failure_count = 0
         self.start_timestamp = time.time()
         self.update_stats_ui()
+
+        # Start all teams
+        for team_idx in self.team_frames:
+            self.start_team(team_idx)
+
+    def stop_all(self):
+        self.btn_start.configure(state="normal", text=" CHẠY TẤT CẢ")
+        self.btn_stop.configure(state="disabled", fg_color="#333")
+        
+        # Stop all teams
+        for team_idx in self.team_frames:
+            self.stop_team(team_idx)
+        
+        self.add_log("!!! ĐANG DỪNG TẤT CẢ CÁC MÁY...")
+
+    def start_team(self, team_idx):
+        if team_idx not in self.team_frames:
+            return
+        team_data = self.team_frames[team_idx]
+        devices = team_data["devices"]
+        if not devices:
+            self.add_log(f"LỖI: Team {team_idx + 1} không có thiết bị.")
+            return
+        if not self.accounts_data:
+            self.add_log("LỖI: Danh sách tài khoản đang trống.")
+            return
+
+        team_data["start_btn"].configure(state="disabled")
+        team_data["stop_btn"].configure(state="normal", fg_color=ACCENT_RED)
 
         # Get modes from UI
         try:
@@ -1150,25 +1406,32 @@ class MultiPremiumApp(ctk.CTk):
             "battle_count": b_count
         }
 
-        # Reset shared data
-        with self.shared_data["lock"]:
-            self.shared_data["room_id"] = None
-            self.shared_data["joined_count"] = 0
-
-        # Chạy đa luồng
-        self.active_workers = []
-        for i, serial in enumerate(selected_serials):
+        # Chạy đa luồng cho team
+        for j, serial in enumerate(devices):
+            worker_index = team_idx * 5 + j
             worker = AutoClickerInstance(serial, self.adb_path, self.add_log, self.update_all_ui, self.report_stats)
             self.active_workers.append(worker)
-            t = threading.Thread(target=worker.run, args=(self.accounts_data, modes, i, self.shared_data), daemon=True)
+            t = threading.Thread(target=worker.run, args=(self.accounts_data, modes, worker_index, self.shared_data), daemon=True)
             t.start()
 
-    def stop_all(self):
-        for w in self.active_workers: w.running = False
-        self.active_workers = []
-        self.btn_start.configure(state="normal", text=" CHẠY TẤT CẢ")
-        self.btn_stop.configure(state="disabled", fg_color="#333")
-        self.add_log("!!! ĐANG DỪNG TẤT CẢ CÁC MÁY...")
+        self.add_log(f"!!! ĐANG KHỞI ĐỘNG TEAM {team_idx + 1}...")
+        self.update_team_status(team_idx)
+
+    def stop_team(self, team_idx):
+        if team_idx not in self.team_frames:
+            return
+        team_data = self.team_frames[team_idx]
+        team_data["start_btn"].configure(state="normal")
+        team_data["stop_btn"].configure(state="disabled", fg_color="#333")
+        
+        # Stop workers in this team
+        for w in self.active_workers[:]:  # Copy list to avoid modification during iteration
+            if hasattr(w, 'group_id') and w.group_id == team_idx:
+                w.running = False
+                self.active_workers.remove(w)
+        
+        self.add_log(f"!!! ĐANG DỪNG TEAM {team_idx + 1}...")
+        self.update_team_status(team_idx)
 
 if __name__ == "__main__":
     app = MultiPremiumApp()
