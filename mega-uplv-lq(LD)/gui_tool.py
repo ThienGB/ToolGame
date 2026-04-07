@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import json
 import time
 import os
@@ -87,6 +89,8 @@ CARD_COLOR = "#1D1D1D"
 ACCENT_GREEN = "#00D2FF"
 ACCENT_PURPLE = "#A855F7"
 ACCENT_RED = "#EF4444"
+
+FILE_LOCK = threading.Lock()
 
 # --- Logic Backend (AutoClicker - Hỗ trợ Single Instance) ---
 
@@ -986,7 +990,7 @@ class AutoClickerInstance:
             
             if success and self.running:
                 self.update_ui_func()
-                self.report_stats_func(True) # Report Success
+                self.report_stats_func(True, self.current_account) # Report Success
                 
                 # NẾU CHỈ CHỌN LOGIN: Dừng luôn, không đổi tài khoản tiếp theo
                 if self.modes.get("login") and not self.modes.get("tutorial") and not self.modes.get("uplevel"):
@@ -994,7 +998,7 @@ class AutoClickerInstance:
                     self.running = False
                     break
             elif not success and self.running:
-                self.report_stats_func(False) # Report Failure
+                self.report_stats_func(False, self.current_account) # Report Failure
             
             time.sleep(1)
         
@@ -1136,12 +1140,12 @@ class MultiPremiumApp(ctk.CTk):
         
         self.mode_tutorial = ctk.CTkCheckBox(self.mode_frame, text="TÂN THỦ", font=ctk.CTkFont(size=11))
         self.mode_tutorial.grid(row=0, column=1); self.mode_tutorial.select()
-        
-        self.mode_uplevel = ctk.CTkCheckBox(self.mode_frame, text="UP LEVEL", font=ctk.CTkFont(size=11))
-        self.mode_uplevel.grid(row=0, column=2); self.mode_uplevel.select()
-        
+
         self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI", font=ctk.CTkFont(size=11), text_color=ACCENT_GREEN)
-        self.mode_teamup.grid(row=0, column=3); self.mode_teamup.select()
+        self.mode_teamup.grid(row=0, column=2); self.mode_teamup.select()
+        
+        self.mode_uplevel = ctk.CTkCheckBox(self.mode_frame, text="XUẤT FILE", font=ctk.CTkFont(size=11))
+        self.mode_uplevel.grid(row=0, column=3); self.mode_uplevel.select()
 
         # Số trận Battle (Battle Loop Count)
         self.battle_count_frame = ctk.CTkFrame(self.stats_card, fg_color="transparent")
@@ -1155,89 +1159,71 @@ class MultiPremiumApp(ctk.CTk):
         
         self.stats_inner = ctk.CTkFrame(self.stats_card, fg_color="transparent")
         self.stats_inner.pack(fill="both", expand=True, padx=15, pady=(0, 10))
-        self.stats_inner.columnconfigure((0, 1, 2), weight=1)
-        self.stats_inner.rowconfigure((0, 1), weight=1)
+        self.stats_inner.columnconfigure(0, weight=1)
 
         self.active_device_val = self.create_stat_item(self.stats_inner, "ĐANG CHẠY", "0", 0, 0, ACCENT_PURPLE)
-        self.success_val = self.create_stat_item(self.stats_inner, "THÀNH CÔNG", "0", 0, 1, "#4ADE80")
-        self.lag_val = self.create_stat_item(self.stats_inner, "LỖI/LAG", "0", 0, 2, "#FB923C")
-
-        self.total_devices_val = self.create_stat_item(self.stats_inner, "TỔNG THIẾT BỊ", "0", 1, 0, "#888")
-        self.total_accounts_val = self.create_stat_item(self.stats_inner, "TỔNG TÀI KHOẢN", "0", 1, 1, "#888")
-
-
-
-        # Device Log Tabs (True Tabview, each device has separate tab)
-        # Removed log card as per user request
+        self.success_val = self.create_stat_item(self.stats_inner, "THÀNH CÔNG", "0", 1, 0, "#4ADE80")
+        self.lag_val = self.create_stat_item(self.stats_inner, "LỖI/LAG", "0", 2, 0, "#FB923C")
+        self.total_devices_val = self.create_stat_item(self.stats_inner, "TỔNG MÁY", "0", 3, 0, "#888")
+        self.total_accounts_val = self.create_stat_item(self.stats_inner, "TỔNG ACC", "0", 4, 0, "#888")
 
     def create_stat_item(self, parent, title, value, row, col, color):
-        frame = ctk.CTkFrame(parent, fg_color="#252525", corner_radius=12)
-        frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
-        ctk.CTkLabel(frame, text=title, font=ctk.CTkFont(size=11, weight="bold"), text_color="#888").pack(pady=(15, 0))
-        val_label = ctk.CTkLabel(frame, text=value, font=ctk.CTkFont(size=24, weight="bold"), text_color=color)
-        val_label.pack(pady=(5, 15))
+        frame = ctk.CTkFrame(parent, fg_color="#252525", corner_radius=8, height=35)
+        frame.grid(row=row, column=col, padx=5, pady=2, sticky="nsew")
+        frame.grid_propagate(False)
+        
+        ctk.CTkLabel(frame, text=title, font=ctk.CTkFont(size=10, weight="bold"), text_color="#888").pack(side="left", padx=15)
+        val_label = ctk.CTkLabel(frame, text=value, font=ctk.CTkFont(size=14, weight="bold"), text_color=color)
+        val_label.pack(side="right", padx=15)
         return val_label
 
-    def report_stats(self, success=True):
+    def report_stats(self, success=True, account=None):
         def _update():
             if success:
                 self.success_count += 1
+                if account: self.export_account(account, "SUCCESS_ACC.txt")
             else:
                 self.failure_count += 1
+                if account: self.export_account(account, "FAILED_ACC.txt")
             self.update_stats_ui()
         self.after(0, _update)
 
+    def export_account(self, account, filename):
+        try:
+            with FILE_LOCK:
+                with open(filename, "a", encoding="utf-8") as f:
+                    f.write(f"{account['tk']}|{account['mk']}\n")
+        except Exception as e:
+            self.add_log(f"LỖI XUẤT FILE: {e}")
+
     def update_stats_ui(self):
         self.success_val.configure(text=str(self.success_count))
-        
         active = sum(1 for w in self.active_workers if w.running)
         self.active_device_val.configure(text=str(active))
-        
         lags = sum(1 for w in self.active_workers if w.is_lagging)
         self.lag_val.configure(text=str(lags))
-
         self.total_devices_val.configure(text=str(len(self.device_cards)))
         self.total_accounts_val.configure(text=str(len(self.accounts_data)))
 
     def update_team_status(self, team_idx):
-        if team_idx not in self.team_frames:
-            return
+        if team_idx not in self.team_frames: return
         team_data = self.team_frames[team_idx]
         devices = team_data["devices"]
         active_in_team = sum(1 for w in self.active_workers if w.running and hasattr(w, 'device_id') and w.device_id in devices)
-        lagging_in_team = sum(1 for w in self.active_workers if w.is_lagging and hasattr(w, 'device_id') and w.device_id in devices)
         total_in_team = len(devices)
-        
         if active_in_team > 0:
-            status_text = f"Running ({active_in_team}/{total_in_team})"
-            if lagging_in_team > 0:
-                status_text += f" - Lag: {lagging_in_team}"
-            team_data["start_btn"].configure(text=status_text, state="disabled", fg_color="#FFA500")  # Orange for running
+            team_data["start_btn"].configure(text=f"Running ({active_in_team}/{total_in_team})", state="disabled", fg_color="#FFA500")
             team_data["stop_btn"].configure(state="normal", fg_color=ACCENT_RED)
         else:
-            team_data["start_btn"].configure(text="Start Team", state="normal", fg_color="#1F6AA5")
+            team_data["start_btn"].configure(text=f"Team {team_idx + 1}", state="normal", fg_color="#1F6AA5")
             team_data["stop_btn"].configure(state="disabled", fg_color="#333")
 
     def update_all_ui(self):
         def _update():
-            # Cập nhật trạng thái từng máy trên card
-            for worker in self.active_workers:
-                if worker.device_id in self.device_cards:
-                    color = "#22D3EE" if worker.running else "#888" # Cyan for running
-                    if worker.is_lagging: color = "#FB923C" # Orange for lag
-                    if worker.status == "Xong": color = "#4ADE80" # Green for done
-                    
-                    self.device_cards[worker.device_id]["status"].configure(
-                        text=worker.status, 
-                        text_color=color
-                    )
-            # Cập nhật thông số tổng quát
             self.update_stats_ui()
-            # Cập nhật trạng thái teams
             for team_idx in self.team_frames:
                 self.update_team_status(team_idx)
         self.after(0, _update)
-
 
     def save_config(self):
         config = {"ld_path": self.ld_path_entry.get().strip()}
@@ -1260,62 +1246,44 @@ class MultiPremiumApp(ctk.CTk):
         base_path = self.ld_path_entry.get().strip()
         self.adb_path = os.path.join(base_path, "adb.exe")
         if not os.path.exists(self.adb_path): self.adb_path = "adb"
-        
         for w in self.device_list_frame.winfo_children(): w.destroy()
         self.device_cards = {}
         self.team_frames = {}
-        
         try:
             res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
             lines = res.stdout.strip().split('\n')[1:]
             device_serials = [line.split('\t')[0] for line in lines if "device" in line]
-            
             num_devices = len(device_serials)
-            num_teams = (num_devices + 4) // 5  # Round up
-            
+            num_teams = (num_devices + 4) // 5
             for team_idx in range(num_teams):
-                # Team Frame
-                team_frame = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=10, border_width=2, border_color="#444")
-                team_frame.pack(pady=10, padx=10, fill="x")
-                
-                # Devices in team
+                team_frame = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=8, border_width=1, border_color="#333")
+                team_frame.pack(pady=4, padx=5, fill="x")
                 devices_frame = ctk.CTkFrame(team_frame, fg_color="transparent")
-                devices_frame.pack(fill="x", padx=10, pady=(0, 10))
+                devices_frame.pack(fill="x", padx=5, pady=2)
                 devices_frame.columnconfigure(list(range(5)), weight=1)
                 
                 team_devices = []
                 for i in range(5):
                     device_idx = team_idx * 5 + i
-                    if device_idx >= num_devices:
-                        break
+                    if device_idx >= num_devices: break
                     serial = device_serials[device_idx]
                     
-                    # Device Card
-                    card = ctk.CTkFrame(devices_frame, fg_color="#252525", corner_radius=6, border_width=1, border_color="#383838")
-                    card.grid(row=0, column=i, padx=3, pady=3, sticky="nsew")
+                    card = ctk.CTkFrame(devices_frame, fg_color="#252525", corner_radius=4, border_width=1, border_color="#383838", height=25)
+                    card.grid(row=0, column=i, padx=2, pady=2, sticky="nsew"); card.grid_propagate(False)
+                    ctk.CTkLabel(card, text=serial.split(":")[-1] if ":" in serial else serial, font=ctk.CTkFont(size=9)).pack(expand=True)
                     
-                    display_name = serial.split(":")[-1] if ":" in serial else serial
-                    name_lbl = ctk.CTkLabel(card, text=display_name, font=ctk.CTkFont(size=10, weight="bold"))
-                    name_lbl.pack(pady=(5, 0))
-                    
-                    status_lbl = ctk.CTkLabel(card, text="Sẵn sàng", font=ctk.CTkFont(size=9), text_color="#666")
-                    status_lbl.pack(pady=(0, 5))
-
+                    status_lbl = ctk.CTkLabel(card, text="", font=ctk.CTkFont(size=1))
                     self.device_cards[serial] = {"card": card, "status": status_lbl}
                     team_devices.append(serial)
                 
-                # Team Control Buttons
                 btns_frame = ctk.CTkFrame(team_frame, fg_color="transparent")
-                btns_frame.pack(fill="x", padx=10, pady=(0, 10))
-                
-                btn_start_team = ctk.CTkButton(btns_frame, text=f"{team_idx + 1} Start Team", image=self.start_icon, compound="left", command=lambda t=team_idx: self.start_team(t), height=30, corner_radius=8)
-                btn_start_team.pack(side="left", padx=5, expand=True, fill="x")
-                
-                btn_stop_team = ctk.CTkButton(btns_frame, text="Stop Team", image=self.stop_icon, compound="left", command=lambda t=team_idx: self.stop_team(t), fg_color="#333", height=30, corner_radius=8)
-                btn_stop_team.pack(side="right", padx=5, expand=True, fill="x")
-                
+                btns_frame.pack(fill="x", padx=5, pady=(0, 5))
+                btn_start_team = ctk.CTkButton(btns_frame, text=f"Team {team_idx + 1}", image=self.start_icon, compound="left", command=lambda t=team_idx: self.start_team(t), height=24, font=ctk.CTkFont(size=11, weight="bold"))
+                btn_start_team.pack(side="left", padx=2, expand=True, fill="x")
+                btn_stop_team = ctk.CTkButton(btns_frame, text="Stop", image=self.stop_icon, compound="left", command=lambda t=team_idx: self.stop_team(t), fg_color="#333", height=24, font=ctk.CTkFont(size=11))
+                btn_stop_team.pack(side="right", padx=2, expand=True, fill="x")
                 self.team_frames[team_idx] = {"frame": team_frame, "devices": team_devices, "start_btn": btn_start_team, "stop_btn": btn_stop_team}
-
+            
             if not self.device_cards:
                 self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào.")
             self.update_stats_ui()

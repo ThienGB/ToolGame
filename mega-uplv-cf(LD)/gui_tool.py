@@ -14,6 +14,8 @@ import sys
 import hashlib
 import base64
 import uuid
+import urllib.request
+import re
 try:
     import winreg
 except ImportError:
@@ -131,6 +133,7 @@ class AutoClickerInstance:
         self.script = []
         self.codes_queue = [] 
         self.current_code_index = 0
+        self.current_email = None
 
     def log(self, msg):
         # self.log_func(f"[{self.device_id}] {msg}")
@@ -183,6 +186,16 @@ class AutoClickerInstance:
             res = self.input_text_logic(step)
         elif action == "search":
             res = self.search_logic(step)
+        elif action == "solve_captcha":
+            res = self.solve_captcha_logic(step)
+        elif action == "press_esc":
+            res = self.press_esc_logic(step)
+        elif action == "generate_temp_email":
+            res = self.generate_temp_email_logic()
+        elif action == "input_temp_email":
+            res = self.input_temp_email_logic()
+        elif action == "wait_for_email_code":
+            res = self.wait_for_email_code_logic(step)
         
         # Kiểm tra lag: Nếu 1 bước mất hơn 35s
         duration = time.time() - self.last_step_time
@@ -262,6 +275,151 @@ class AutoClickerInstance:
             time.sleep(1)
         return False
 
+    def solve_captcha_logic(self, step):
+        # sample_roi: [x, y, w, h] - Vùng chứa hình mẫu
+        # grid_roi: [x, y, w, h] - Vùng chứa lưới các hình lựa chọn
+        # rows, cols: số hàng và cột của lưới (mặc định 2x3 theo ảnh bạn gửi)
+        # ok_target: "path/to/ok.png" hoặc [x, y] tọa độ
+        # confidence: mức độ khớp tối thiểu (mặc định 0.6)
+
+        sample_roi = step.get("sample_roi")
+        grid_roi = step.get("grid_roi")
+        rows = step.get("rows", 2)
+        cols = step.get("cols", 3)
+        ok_target = step.get("ok_target")
+        confidence = step.get("confidence", 0.6)
+
+        if not sample_roi or not grid_roi:
+            self.log("LỖI CAPTCHA: Thiếu sample_roi hoặc grid_roi.")
+            return False
+
+        screen = self.get_screenshot()
+        if screen is None: return False
+
+        try:
+            # 1. Trích xuất hình mẫu
+            sx, sy, sw, sh = sample_roi
+            sample_img = screen[sy:sy+sh, sx:sx+sw]
+            
+            # 2. Chia lưới và tìm hình khớp nhất
+            gx, gy, gw, gh = grid_roi
+            cell_w, cell_h = gw // cols, gh // rows
+            
+            best_val = -1
+            best_idx = -1
+            
+            total_cells = rows * cols
+            for i in range(total_cells):
+                row, col = i // cols, i % cols
+                cx, cy = gx + col * cell_w, gy + row * cell_h
+                choice_img = screen[cy:cy+cell_h, cx:cx+cell_w]
+                
+                # Resize mẫu về kích thước ô để so sánh
+                resized_sample = cv2.resize(sample_img, (cell_w, cell_h))
+                res = cv2.matchTemplate(choice_img, resized_sample, cv2.TM_CCOEFF_NORMED)
+                _, max_val, _, _ = cv2.minMaxLoc(res)
+                
+                if max_val > best_val:
+                    best_val = max_val
+                    best_idx = i
+            
+            if best_idx != -1 and best_val >= confidence:
+                # Click vào hình tốt nhất
+                row, col = best_idx // cols, best_idx % cols
+                tap_x = gx + col * cell_w + cell_w // 2
+                tap_y = gy + row * cell_h + cell_h // 2
+                
+                self.call_adb(["shell", "input", "tap", str(tap_x), str(tap_y)])
+                self.log(f"CAPTCHA: Đã chọn hình vị trí {best_idx+1} (Khớp: {best_val:.2f})")
+                time.sleep(1.5)
+                
+                # 3. Bấm nút OK
+                if isinstance(ok_target, str):
+                    return self.click_image_logic({"target": ok_target, "timeout": 10})
+                elif isinstance(ok_target, list) and len(ok_target) == 2:
+                    self.call_adb(["shell", "input", "tap", str(ok_target[0]), str(ok_target[1])])
+                    return True
+                else:
+                    self.log("CAPTCHA: Đã chọn hình, chờ bạn bấm OK hoặc cấu hình ok_target.")
+                    return True
+            else:
+                self.log(f"CAPTCHA: Không tìm thấy hình đủ tin cậy (Max: {best_val:.2f})")
+                return False
+        except Exception as e:
+            self.log(f"LỖI GIẢI CAPTCHA: {str(e)}")
+            return False
+
+    def press_esc_logic(self, step):
+        wait_time = step.get("wait", 0)
+        if wait_time > 0: time.sleep(wait_time)
+        # Sử dụng keyevent 4 (Back/ESC) phổ biến cho game mobile
+        self.call_adb(["shell", "input", "keyevent", "4"])
+        self.log(f"KEY: Đã bấm ESC (Gửi keyevent 4, chờ {wait_time}s)")
+        return True
+
+    def generate_temp_email_logic(self):
+        try:
+            url = "https://www.1secmail.com/api/v1/?action=genEmail&count=1"
+            with urllib.request.urlopen(url) as response:
+                emails = json.loads(response.read().decode())
+                self.current_email = emails[0]
+                self.log(f"EMAIL: Đã tạo mail mới: {self.current_email}")
+                return True
+        except Exception as e:
+            self.log(f"LỖI TẠO EMAIL: {str(e)}")
+            return False
+
+    def input_temp_email_logic(self):
+        if not self.current_email:
+            if not self.generate_temp_email_logic(): return False
+        
+        # Xóa trắng trước khi nhập
+        for _ in range(35): self.call_adb(["shell", "input", "keyevent", "67"])
+        self.call_adb(["shell", "input", "text", f"'{self.current_email}'"])
+        return True
+
+    def wait_for_email_code_logic(self, step):
+        if not self.current_email: return False
+        
+        user, domain = self.current_email.split('@')
+        timeout = step.get("timeout", 120)
+        self.log(f"EMAIL: Đang chờ mã code đến {self.current_email}...")
+        
+        start_time = time.time()
+        while time.time() - start_time < timeout and self.running:
+            try:
+                list_url = f"https://www.1secmail.com/api/v1/?action=getMessages&login={user}&domain={domain}"
+                with urllib.request.urlopen(list_url) as response:
+                    messages = json.loads(response.read().decode())
+                    if messages:
+                        # Thử tìm code trong list messages (thường là cái mới nhất)
+                        msg_id = messages[0]['id']
+                        read_url = f"https://www.1secmail.com/api/v1/?action=readMessage&login={user}&domain={domain}&id={msg_id}"
+                        with urllib.request.urlopen(read_url) as read_res:
+                            content = json.loads(read_res.read().decode())
+                            # Tìm mã 4-6 chữ số trong Body hoặc Subject
+                            text_to_search = f"{content.get('subject', '')} {content.get('body', '')}"
+                            # Loại bỏ tag HTML nếu có
+                            text_to_search = re.sub('<[^<]+?>', '', text_to_search)
+                            
+                            # Tìm mã code (thông thường là 4 hoặc 6 số)
+                            codes = re.findall(r'\b\d{4,6}\b', text_to_search)
+                            if codes:
+                                # Lấy mã cuối cùng hoặc duy nhất (thường mã code nằm sau cùng)
+                                code = codes[0]
+                                self.log(f"EMAIL: Đã nhận mã code: {code}")
+                                # Click vào ô nhập (thường user đã click trước đó hoặc ta click lại)
+                                # Nhập mã
+                                for _ in range(10): self.call_adb(["shell", "input", "keyevent", "67"])
+                                self.call_adb(["shell", "input", "text", f"'{code}'"])
+                                return True
+            except Exception as e:
+                pass
+            time.sleep(5)
+        
+        self.log("EMAIL: Quá thời gian chờ mã code.")
+        return False
+
     def input_name_logic(self):
         for _ in range(20): self.call_adb(["shell", "input", "keyevent", "67"])
         name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(7)) + ''.join(random.choice("!@#%&*+-") for _ in range(3))
@@ -290,70 +448,92 @@ class AutoClickerInstance:
         
         # BẢO MẬT: Nhúng kịch bản mới nhất từ script.json
         self.script = [
-            {"action": "clear_android_data", "package": "com.tencent.stc.cfl"},
-            {"action": "click_image", "target": "images/game_logo.png", "timeout": 30, "confidence": 0.8},
-            {"action": "click_image", "target": "images/guest.png", "timeout": 420, "confidence": 0.9},
-            {"action": "click_image", "target1": "images/agree.png","target2": "images/agree1.png", "timeout": 60, "confidence": 0.9},
-            {"action": "click_image", "target": "images/agree_btn.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/name_input1.png", "timeout": 120, "confidence": 0.9},
-            {"action": "click_image", "target": "images/name_input2.png", "timeout": 30, "confidence": 0.9},
-            {"action": "input_name", "timeout": 120},
-            {"action": "click_image", "target": "images/name_input1.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/veteran.png", "timeout": 200, "confidence": 0.9},
-            {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/any_where.png", "timeout": 200, "confidence": 0.9},
-            {"action": "click_image", "target1": "images/setting.png", "target2": "images/setting1.png", "target3": "images/setting2.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/exit_btn.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/key_binding.png", "timeout": 400, "confidence": 0.9},
-            {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target1": "images/inventory.png", "target2": "images/inventory1.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/equip.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target1": "images/slot_3.png", "target2": "images/slot_3(2).jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/quick_equip.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/exit_inventory.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "clear_android_data", "package": "com.tencent.stc.cfl"},
+            # {"action": "click_image", "target": "images/game_logo.png", "timeout": 30, "confidence": 0.8},
+            # {"action": "click_image", "target": "images/guest.png", "timeout": 420, "confidence": 0.9},
+            # {"action": "click_image", "target1": "images/agree.png","target2": "images/agree1.png", "timeout": 60, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/agree_btn.png", "timeout": 30, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/name_input1.png", "timeout": 120, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/name_input2.png", "timeout": 30, "confidence": 0.9},
+            # {"action": "input_name", "timeout": 120},
+            # {"action": "click_image", "target": "images/name_input1.png", "timeout": 30, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 30, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/veteran.png", "timeout": 200, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 30, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/any_where.png", "timeout": 200, "confidence": 0.9},
+            # {"action": "click_image", "target1": "images/setting.png", "target2": "images/setting1.png", "target3": "images/setting2.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/exit_btn.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/key_binding.png", "timeout": 400, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/confirm_name_btn.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target1": "images/inventory.png", "target2": "images/inventory1.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/equip.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target1": "images/slot_3.png", "target2": "images/slot_3(2).jpg", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/quick_equip.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/exit_inventory.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "wait", "timeout": 5},
+            # {"action": "click_image", "target": "images/random_map5.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target1": "images/match.png", "target2": "images/match1.png", "target3": "images/match2.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/exit.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/exit.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/close_event.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/supply.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/skip_animation.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/draw_free.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "search", "target": "images/exp.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/confirm_draw.png", "timeout": 200, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/exit.png", "timeout": 10, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/close_event.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/inventory2.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image_if", "target": "images/cancel.png", "timeout": 10, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/items.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/search.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/name_input2.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "input_text", "content": "card"},
+            # {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "search", "target": "images/5.jpg", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/5.jpg", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image_if", "target": "images/use_all.jpg", "timeout": 10, "confidence": 0.9},
+            # {"action": "click_image_if", "target": "images/use.jpg", "timeout": 10, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/exit1.jpg", "timeout": 60, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/event_center.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/limited_time.png", "timeout": 20, "confidence": 0.9},
+            #  {"action": "click_image", "target": "images/invite.jpg", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/input_code.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/name_input2.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "input_text", "content": "USE_GIFTCODE"},
+            # {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/confirm_invite.png", "timeout": 20, "confidence": 0.9},
+            # {"action": "press_esc", "wait": 1},
+            {"action": "click_image", "target": "images/setting.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/other.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/link_account.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/lipass.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/link_btn.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/email_input.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "input_temp_email"},
+            {"action": "click_image", "target": "images/get_code.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 5},
-            {"action": "click_image", "target": "images/random_map5.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target1": "images/match.png", "target2": "images/match1.png", "target3": "images/match2.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/exit.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/exit.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/any_where.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/close_event.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/supply.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/skip_animation.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/draw_free.png", "timeout": 20, "confidence": 0.9},
-            {"action": "search", "target": "images/exp.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/confirm_draw.png", "timeout": 200, "confidence": 0.9},
-            {"action": "click_image", "target": "images/exit.png", "timeout": 10, "confidence": 0.9},
-            {"action": "click_image", "target": "images/close_event.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/inventory2.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/cancel.png", "timeout": 10, "confidence": 0.9},
-            {"action": "click_image", "target": "images/items.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/search.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/name_input2.png", "timeout": 20, "confidence": 0.9},
-            {"action": "input_text", "content": "card"},
-            {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
-            {"action": "search", "target": "images/5.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/5.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/use_all.jpg", "timeout": 10, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/use.jpg", "timeout": 10, "confidence": 0.9},
-            {"action": "click_image", "target": "images/exit1.jpg", "timeout": 60, "confidence": 0.9},
-            {"action": "click_image", "target": "images/event_center.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/limited_time.png", "timeout": 20, "confidence": 0.9},
-             {"action": "click_image", "target": "images/invite.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/input_code.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/name_input2.png", "timeout": 20, "confidence": 0.9},
-            {"action": "input_text", "content": "USE_GIFTCODE"},
-            {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/confirm_invite.png", "timeout": 20, "confidence": 0.9}
+            {"action": "solve_captcha",
+                "sample_roi": [588, 161, 67, 52],
+                "grid_roi": [291, 230, 378, 232],
+                "rows": 2,
+                "cols": 3,
+                "ok_target": [656, 497],
+                "confidence": 0.5
+            },
+            {"action": "click_image", "target": "images/email_validation_code.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "wait_for_email_code", "timeout": 120},
+            {"action": "click_image", "target": "images/link.jpg", "timeout": 20, "confidence": 0.9},
+
         ]
 
         while self.running:
