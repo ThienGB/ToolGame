@@ -946,11 +946,7 @@ class AutoClickerInstance:
             else:
                 self.script += teamup_guest_script
                 
-            # Đợi cả 5 người vào phòng
-            wait_step = {"action": "wait_for_players", "count": 4, "timeout": 300}
-            self.script.append(wait_step)
-            
-            # Thực hiện logic đánh trận lặp lại N lần
+            # Thực hiện logic đánh trận lặp lại N lần (Dùng chung cho cả Host và Guest sau khi đã vào phòng)
             battle_loop = {
                 "action": "loop", 
                 "count": self.modes.get("battle_count", 2),

@@ -293,115 +293,100 @@ class AutoClickerInstance:
         return False
 
     def solve_captcha_logic(self, step):
-        # sample_roi: [x, y, w, h] - Vùng chứa hình mẫu
-        # grid_roi: [x, y, w, h] - Vùng chứa lưới các hình lựa chọn
-        # rows, cols: số hàng và cột của lưới (mặc định 2x3 theo ảnh bạn gửi)
-        # ok_target: "path/to/ok.png" hoặc [x, y] tọa độ
-        # confidence: mức độ khớp tối thiểu (mặc định 0.6)
-
         sample_roi = step.get("sample_roi")
         grid_roi = step.get("grid_roi")
         rows = step.get("rows", 2)
         cols = step.get("cols", 3)
-        ok_target = step.get("ok_target")
-        confidence = step.get("confidence", 0.6)
+        confidence = step.get("confidence", 0.3)
+        timeout = step.get("timeout_loop", 300) 
 
         if not sample_roi or not grid_roi:
             self.log("LỖI CAPTCHA: Thiếu sample_roi hoặc grid_roi.")
             return False
 
-        screen = self.get_screenshot()
-        if screen is None: return False
+        self.log("CAPTCHA: Bắt đầu chu kỳ tìm và chọn hình...")
+        start_loop = time.time()
         
-        h, w = screen.shape[:2]
-        self.log(f"DEBUG: Giải Captcha - Màn hình: {w}x{h}")
-        if h > w:
-            self.log("THÔNG BÁO: Đang xử lý Captcha ở màn hình DỌC.")
+        while time.time() - start_loop < timeout and self.running:
+            screen = self.get_screenshot()
+            if screen is None: break
+            
+            h, w = screen.shape[:2]
+            # Nếu màn hình đã về hướng NGANG -> Coi như đã giải xong hoặc trình duyệt đã đóng
+            if w > h:
+                self.log("CAPTCHA: Đã quay về màn hình NGANG. Kết thúc bước giải.")
+                return True
 
-        try:
-            # 1. Trích xuất hình mẫu (Cắt ảnh an toàn)
-            sx, sy, sw, sh = sample_roi
-            sx1, sy1 = max(0, sx), max(0, sy)
-            sx2, sy2 = min(w, sx+sw), min(h, sy+sh)
-            sample_img = screen[sy1:sy2, sx1:sx2]
-            
-            if sample_img is None or sample_img.size == 0:
-                self.log(f"LỖI: Vùng mẫu Captcha ({sx},{sy}) nằm ngoài màn hình ({w}x{h}).")
-                return False
+            try:
+                # 1. Trích xuất hình mẫu (Cắt ảnh an toàn)
+                sx, sy, sw, sh = sample_roi
+                sx1, sy1 = max(0, sx), max(0, sy)
+                sx2, sy2 = min(w, sx+sw), min(h, sy+sh)
+                sample_img = screen[sy1:sy2, sx1:sx2]
                 
-            # Lưu ảnh mẫu để bạn kiểm tra (Debug)
-            cv2.imwrite(f"debug_sample_{self.device_id}.png", sample_img)
-            
-            # 2. Chia lưới và tìm hình khớp nhất
-            gx, gy, gw, gh = grid_roi
-            cell_w, cell_h = gw // cols, gh // rows
-            
-            # Lưu vùng lưới để bạn kiểm tra (Debug)
-            grid_full = screen[gy:gy+gh, gx:gx+gw]
-            cv2.imwrite(f"debug_grid_{self.device_id}.png", grid_full)
-            
-            best_val = -1
-            best_idx = -1
-            
-            # Chuyển mẫu sang ảnh xám
-            sample_gray = cv2.cvtColor(sample_img, cv2.COLOR_BGR2GRAY)
-            
-            total_cells = rows * cols
-            for i in range(total_cells):
-                row, col = i // cols, i % cols
-                cx, cy = gx + col * cell_w, gy + row * cell_h
-                choice_img = screen[cy:cy+cell_h, cx:cx+cell_w]
-                
-                if choice_img is None or choice_img.size == 0: continue
-                
-                # Resize mẫu về kích thước ô và chuyển sang ảnh xám
-                resized_sample = cv2.resize(sample_gray, (cell_w, cell_h))
-                choice_gray = cv2.cvtColor(choice_img, cv2.COLOR_BGR2GRAY)
-                
-                res = cv2.matchTemplate(choice_gray, resized_sample, cv2.TM_CCOEFF_NORMED)
-                _, max_val, _, _ = cv2.minMaxLoc(res)
-                
-                if max_val > best_val:
-                    best_val = max_val
-                    best_idx = i
-            
-            if best_idx != -1:
-                if best_val >= confidence:
-                    # Click vào hình tốt nhất
-                    row, col = best_idx // cols, best_idx % cols
-                    tap_x = gx + col * cell_w + cell_w // 2
-                    tap_y = gy + row * cell_h + cell_h // 2
+                if sample_img is not None and sample_img.size > 0:
+                    cv2.imwrite(f"debug_sample_{self.device_id}.png", sample_img)
+                    sample_gray = cv2.cvtColor(sample_img, cv2.COLOR_BGR2GRAY)
                     
-                    self.call_adb(["shell", "input", "tap", str(tap_x), str(tap_y)])
-                    self.log(f"CAPTCHA: Đã chọn hình {best_idx+1} (Khớp: {best_val:.2f})")
+                    # 2. Chia lưới và tìm hình khớp nhất
+                    gx, gy, gw, gh = grid_roi
+                    cell_w, cell_h = gw // cols, gh // rows
                     
-                    # Chụp hình vùng OK để bạn kiểm tra tọa độ (Debug)
-                    if isinstance(ok_target, list):
-                        ox, oy = ok_target
-                        ok_region = screen[max(0, oy-40):min(h, oy+40), max(0, ox-60):min(w, ox+60)]
-                        if ok_region.size > 0:
-                            cv2.imwrite(f"debug_ok_{self.device_id}.png", ok_region)
+                    # Lưu ảnh vùng lưới để debug
+                    grid_view = screen[gy:gy+gh, gx:gx+gw]
+                    cv2.imwrite(f"debug_grid_{self.device_id}.png", grid_view)
                     
-                    return True
-                else:
-                    self.log(f"CAPTCHA: Không tìm thấy hình đủ tin cậy (Max: {best_val:.2f})")
-                time.sleep(1.5)
+                    # Resize mẫu 1 lần duy nhất
+                    resized_sample = cv2.resize(sample_gray, (cell_w, cell_h))
+                    
+                    best_val, best_idx = -1, -1
+                    scores = []
+                    
+                    total_cells = rows * cols
+                    for i in range(total_cells):
+                        row_idx, col_idx = i // cols, i % cols
+                        cx, cy = gx + col_idx * cell_w, gy + row_idx * cell_h
+                        choice_img = screen[cy:cy+cell_h, cx:cx+cell_w]
+                        if choice_img is None or choice_img.size == 0: continue
+                        
+                        choice_gray = cv2.cvtColor(choice_img, cv2.COLOR_BGR2GRAY)
+                        res = cv2.matchTemplate(choice_gray, resized_sample, cv2.TM_CCOEFF_NORMED)
+                        _, max_val, _, _ = cv2.minMaxLoc(res)
+                        scores.append(f"{i+1}:{max_val:.2f}")
+                        if max_val > best_val:
+                            best_val, best_idx = max_val, i
+                    
+                    self.log(f"CAPTCHA SCORE: {' | '.join(scores)}")
+                    
+                    if best_idx != -1:
+                        # 1. Click chọn hình (Luôn chọn thằng cao nhất)
+                        final_row, final_col = best_idx // cols, best_idx % cols
+                        tx, ty = gx + final_col * cell_w + cell_w // 2, gy + final_row * cell_h + cell_h // 2
+                        self.call_adb(["shell", "input", "tap", str(tx), str(ty)])
+                        self.log(f"CAPTCHA: Đã chọn hình {best_idx+1} (Khớp: {best_val:.2f})")
+                        
+                        # 2. Tìm và nhấn nút OK bằng hình ảnh ok_capcha.png
+                        time.sleep(2)
+                        ok_path = resource_path("images/ok_capcha.png")
+                        if os.path.exists(ok_path):
+                            ok_template = cv2.imread(ok_path)
+                            if ok_template is not None:
+                                scr_ok = self.get_screenshot()
+                                if scr_ok is not None:
+                                    res_ok = cv2.matchTemplate(scr_ok, ok_template, cv2.TM_CCOEFF_NORMED)
+                                    _, mv_ok, _, ml_ok = cv2.minMaxLoc(res_ok)
+                                    if mv_ok >= 0.8:
+                                        oh, ow = ok_template.shape[:2]
+                                        ox, oy = ml_ok[0] + ow//2, ml_ok[1] + oh//2
+                                        self.call_adb(["shell", "input", "tap", str(ox), str(oy)])
+                                        self.log(f"CAPTCHA: Đã nhấn nút OK (Khớp: {mv_ok:.2f})")
                 
-                # 3. Bấm nút OK
-                if isinstance(ok_target, str):
-                    return self.click_image_logic({"target": ok_target, "timeout": 10})
-                elif isinstance(ok_target, list) and len(ok_target) == 2:
-                    self.call_adb(["shell", "input", "tap", str(ok_target[0]), str(ok_target[1])])
-                    return True
-                else:
-                    self.log("CAPTCHA: Đã chọn hình, chờ bạn bấm OK hoặc cấu hình ok_target.")
-                    return True
-            else:
-                self.log(f"CAPTCHA: Không tìm thấy hình đủ tin cậy (Max: {best_val:.2f})")
-                return False
-        except Exception as e:
-            self.log(f"LỖI GIẢI CAPTCHA: {str(e)}")
-            return False
+                time.sleep(4)
+                
+            except Exception as e:
+                time.sleep(2)
+        
+        return False
 
     def press_esc_logic(self, step):
         wait_time = step.get("wait", 0)
@@ -449,64 +434,85 @@ class AutoClickerInstance:
         return True
 
     def wait_for_email_code_logic(self, step):
-        if not self.current_email: return False
+        if not self.current_email: 
+            self.log("LỖI: Chưa có Email.")
+            return False
         
-        timeout = step.get("timeout", 150) # Gmail đôi khi delay nhẹ nên tăng timeout
-        self.log(f"GMAIL: Đang quét hộp thâm nick chính để tìm code cho {self.current_email}...")
+        timeout = step.get("timeout", 180) 
+        self.log(f"GMAIL SEARCH: Đang lùng mã cho [{self.current_email}] ở Inbox, Spam & Quảng cáo...")
         
         start_time = time.time()
         while time.time() - start_time < timeout and self.running:
             try:
-                # Kết nối IMAP Gmail
                 mail = imaplib.IMAP4_SSL("imap.gmail.com")
                 mail.login(GMAIL_USER, GMAIL_PASS)
-                mail.select("inbox")
                 
-                # Tìm thư gửi đến địa chỉ "chấm" cụ thể
-                # Gmail coi a.b@gmail.com và ab@gmail.com là 1, nhưng Header 'To' vẫn giữ dấu chấm
-                status, messages = mail.search(None, f'(TO "{self.current_email}")')
+                # Quét mọi ngõ ngách: Inbox, Spam, Quảng cáo, Tất cả thư
+                # Gmail dùng tên quốc tế [Gmail]/...
+                folders = ["INBOX", "[Gmail]/Promotions", "[Gmail]/Spam", "[Gmail]/All Mail"]
+                code_found = None
                 
-                if status == "OK" and messages[0]:
-                    # Lấy ID thư mới nhất
-                    mail_ids = messages[0].split()
-                    latest_email_id = mail_ids[-1]
-                    
-                    status, data = mail.fetch(latest_email_id, "(RFC822)")
-                    if status == "OK":
-                        raw_email = data[0][1]
-                        msg = email.message_from_bytes(raw_email)
+                for fld in folders:
+                    try:
+                        status, _ = mail.select(fld, readonly=True)
+                        if status != 'OK': 
+                            # Dự phòng cho Gmail tiếng Việt
+                            if "Promotions" in fld: mail.select('"[Gmail]/Quảng cáo"', readonly=True)
+                            elif "Spam" in fld: mail.select('"[Gmail]/Thư rác"', readonly=True)
+                            elif "All Mail" in fld: mail.select('"[Gmail]/Tất cả Thư"', readonly=True)
                         
-                        # Lấy nội dung
-                        body = ""
-                        if msg.is_multipart():
-                            for part in msg.walk():
-                                if part.get_content_type() == "text/plain":
-                                    body = part.get_payload(decode=True).decode()
+                        # Tìm thư gửi đến mail ảo này hoặc từ Level Infinite
+                        typ, msg_ids = mail.search(None, f'(TO "{self.current_email}")')
+                        if typ != 'OK' or not msg_ids[0]:
+                            typ, msg_ids = mail.search(None, '(FROM "levelinfinite.com" UNSEEN)')
+                            
+                        if typ == 'OK' and msg_ids[0]:
+                            for num in reversed(msg_ids[0].split()):
+                                typ, data = mail.fetch(num, '(RFC822)')
+                                if typ != 'OK': continue
+                                
+                                msg = email.message_from_bytes(data[0][1])
+                                sender = str(msg.get("From", "")).lower()
+                                subject = str(msg.get("Subject", "")).lower()
+                                
+                                body = ""
+                                if msg.is_multipart():
+                                    for part in msg.walk():
+                                        if part.get_content_type() == "text/plain":
+                                            body = part.get_payload(decode=True).decode()
+                                            break
+                                else:
+                                    body = msg.get_payload(decode=True).decode()
+                                
+                                # Tìm mã OTP 5 chữ số (Ưu tiên Level Infinite)
+                                import re
+                                text_to_check = f"{subject} {body}"
+                                codes = re.findall(r'\b\d{5}\b', text_to_check)
+                                if not codes: codes = re.findall(r'\b\d{4,6}\b', text_to_check)
+                                
+                                if codes:
+                                    code_found = codes[-1]
                                     break
-                        else:
-                            body = msg.get_payload(decode=True).decode()
-                            
-                        # Tìm mã code 4-6 số
-                        text_to_search = f"{msg['Subject']} {body}"
-                        codes = re.findall(r'\b\d{4,6}\b', text_to_search)
-                        
-                        if codes:
-                            code = codes[-1]
-                            self.log(f"GMAIL: Đã lấy được mã từ nick chính: {code}")
-                            mail.logout()
-                            
-                            for _ in range(10): self.call_adb(["shell", "input", "keyevent", "67"])
-                            self.call_adb(["shell", "input", "text", str(code)])
-                            return True
+                        if code_found: break
+                    except: continue
+                
+                if code_found:
+                    self.log(f"GMAIL: Đã lấy được mã OTP ({code_found})")
+                    self.current_otp = code_found
+                    # Xóa trắng ô nhập code (nhấn lùi 10 lần)
+                    for _ in range(10): self.call_adb(["shell", "input", "keyevent", "67"])
+                    self.call_adb(["shell", "input", "text", code_found])
+                    mail.logout()
+                    return True
                 
                 mail.logout()
+                time.sleep(15) 
             except Exception as e:
-                # self.log(f"DEBUG IMAP: {e}")
-                pass
-            time.sleep(10)
-            
-        self.log("GMAIL: Quá thời gian chờ mã code từ nick chính.")
+                self.log(f"CHỜ MAIL: {str(e)}")
+                time.sleep(10)
+        
         return False
+
 
     def input_name_logic(self):
         for _ in range(20): self.call_adb(["shell", "input", "keyevent", "67"])
@@ -603,29 +609,29 @@ class AutoClickerInstance:
             # {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
             # {"action": "click_image", "target": "images/confirm_invite.png", "timeout": 20, "confidence": 0.9},
             # {"action": "press_esc", "wait": 1},
-            # {"action": "click_image", "target": "images/setting.jpg", "timeout": 20, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/other.jpg", "timeout": 20, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/link_account.jpg", "timeout": 20, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/lipass.jpg", "timeout": 20, "confidence": 0.9},
-            # {"action": "click_image_if", "target": "images/link_btn.png", "timeout": 10, "confidence": 0.9},
+            {"action": "click_image", "target": "images/setting.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/other.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/link_account.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/lipass.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/link_btn.png", "timeout": 10, "confidence": 0.9},
   
-            # {"action": "click_image", "target": "images/email_input.jpg", "timeout": 20, "confidence": 0.9},
-            # {"action": "input_temp_email"},
-            # {"action": "click_image", "target": "images/get_code.jpg", "timeout": 20, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/get_code.jpg", "timeout": 20, "confidence": 0.9},   
-            # {"action": "wait", "timeout": 5},
+            {"action": "click_image", "target": "images/email_input.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "input_temp_email"},
+            {"action": "click_image", "target": "images/get_code.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/get_code.jpg", "timeout": 20, "confidence": 0.9},   
+            {"action": "wait", "timeout": 5},
             {"action": "solve_captcha",
                 "sample_roi": [355, 300, 65, 65],
                 "grid_roi": [75, 375, 380, 260],
                 "rows": 2,
                 "cols": 3,
                 "ok_target": [400, 610],
-                "confidence": 0.5
+                "confidence": 0.35
             },
-            {"action": "click_image", "target": "images/ok_capcha.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/email_validation_code.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/email_validation_code.jpg", "timeout": 20, "confidence": 0.8},
             {"action": "wait_for_email_code", "timeout": 120},
             {"action": "click_image", "target": "images/link.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/link.jpg", "timeout": 5, "confidence": 0.9},
 
         ]
 
@@ -646,6 +652,10 @@ class AutoClickerInstance:
             current_item = self.codes_queue[self.current_code_index]
             self.log(f">> BẮT ĐẦU VÒNG: Mã {current_item['code']} (Đang chạy...)")
             
+            # Reset dữ liệu cho acc mới
+            self.current_email = None
+            self.current_otp = None
+            
             success = True
             for step in self.script:
                 if not self.running: break
@@ -655,17 +665,19 @@ class AutoClickerInstance:
                     break
             
             if success and self.running:
-                # Đồng bộ giảm số lượt (Thread-safe)
+                self.log(f">> THÀNH CÔNG: Email {self.current_email} đã hoàn tất.")
                 with threading.Lock():
-                    if current_item['count'] > 0:
-                        current_item['count'] -= 1
-                        self.update_ui_func()
-                        self.report_stats_func(True) # Report Success
-                        # self.log(f"THÀNH CÔNG: Đã xong 1 vòng cho mã '{current_item['code']}'")
+                    with open("SUCCESS_ACC.txt", "a") as f:
+                        f.write(f"{self.current_email}|123456Aa\n")
+                    current_item['count'] -= 1
+                
+                self.report_stats_func(True)
+                self.update_ui_func()
             elif not success and self.running:
-                self.report_stats_func(False) # Report Failure
+                self.log(f"!! THẤT BẠI: Mã {current_item['code']} không hoàn tất.")
+                self.report_stats_func(False)
             
-            time.sleep(1)
+            time.sleep(5)
         
         self.update_status("Xong")
         self.running = False
