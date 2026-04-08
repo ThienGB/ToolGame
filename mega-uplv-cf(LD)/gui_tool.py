@@ -127,13 +127,15 @@ GMAIL_PASS = "lztmjrkwhfuwkzii" # Mật khẩu ứng dụng của bạn
 # --- Logic Backend (AutoClicker - Hỗ trợ Single Instance) ---
 
 class AutoClickerInstance:
-    def __init__(self, device_id, adb_path, log_func, update_ui_func, report_stats_func):
+    def __init__(self, device_id, adb_path, log_func, update_ui_func, report_stats_func, gmail_user=None, gmail_pass=None):
         self.device_id = device_id
         self.adb_path = adb_path
         self.log_func = log_func
         self.update_ui_func = update_ui_func
         self.report_stats_func = report_stats_func
         self.running = False
+        self.gmail_user = gmail_user or GMAIL_USER
+        self.gmail_pass = gmail_pass or GMAIL_PASS
         self.status = "Đang chờ" # Đang chờ, Đang chạy, Lag, Xong
         self.last_step_time = time.time()
         self.is_lagging = False
@@ -274,22 +276,26 @@ class AutoClickerInstance:
         
         real_path = resource_path(target)
         if not os.path.exists(real_path): return False
-        t_img = cv2.imread(real_path)
+        t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
         if t_img is None: return False
+        
         start = time.time()
+        last_log_time = 0
         while time.time() - start < timeout and self.running:
+            if time.time() - last_log_time > 5:
+                self.log(f"Đang tìm kiếm (đã chờ {(time.time() - start):.1f}s/{timeout}s)...")
+                last_log_time = time.time()
+                
             screen = self.get_screenshot()
             if screen is not None:
-                res = cv2.matchTemplate(screen, t_img, cv2.TM_CCOEFF_NORMED)
+                screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                res = cv2.matchTemplate(screen_gray, t_img, cv2.TM_CCOEFF_NORMED)
                 _, max_val, _, _ = cv2.minMaxLoc(res)
                 if max_val >= conf:
-                    self.log(f"TÌM THẤY: {os.path.basename(target)} (Khớp: {max_val:.2f})")
+                    self.log(f"==> TÌM THẤY: {os.path.basename(target)} (Khớp: {max_val:.2f})")
                     return True
-                
-                # Log phụ nếu không tìm thấy cho hành động Search
-                if max_val > 0.4:
-                    self.log(f"SEARCH: {os.path.basename(target)} khớp {max_val:.2f}")
             time.sleep(1)
+        self.log(f"!! KHÔNG TÌM THẤY: {os.path.basename(target)} sau {timeout}s")
         return False
 
     def solve_captcha_logic(self, step):
@@ -299,12 +305,14 @@ class AutoClickerInstance:
         cols = step.get("cols", 3)
         confidence = step.get("confidence", 0.3)
         timeout = step.get("timeout_loop", 300) 
+        
+        last_success_check = time.time() # Thời điểm cuối cùng thấy dấu hiệu captcha đúng dạng
 
         if not sample_roi or not grid_roi:
             self.log("LỖI CAPTCHA: Thiếu sample_roi hoặc grid_roi.")
             return False
 
-        self.log("CAPTCHA: Bắt đầu chu kỳ tìm và chọn hình...")
+        self.log("CAPTCHA: Bắt đầu chu kỳ giải và tự động đổi dạng nếu cần...")
         start_loop = time.time()
         
         while time.time() - start_loop < timeout and self.running:
@@ -317,8 +325,32 @@ class AutoClickerInstance:
                 self.log("CAPTCHA: Đã quay về màn hình NGANG. Kết thúc bước giải.")
                 return True
 
+            # 1. KIỂM TRA DẠNG CAPTCHA SAI (loại "Click in this order")
+            # Nếu tìm thấy marker này -> đây là loại không giải được -> Back & GetCode lại
+            bad_type_path = resource_path("images/capcha_order_type.jpg")
+            is_wrong_type = False
+            if os.path.exists(bad_type_path):
+                bad_temp = cv2.imread(bad_type_path)
+                if bad_temp is not None:
+                    res_bad = cv2.matchTemplate(screen, bad_temp, cv2.TM_CCOEFF_NORMED)
+                    _, mv_bad, _, _ = cv2.minMaxLoc(res_bad)
+                    if mv_bad >= 0.75:
+                        is_wrong_type = True
+                        self.log(f"CAPTCHA: Phát hiện loại 'Click in order' (Khớp: {mv_bad:.2f}). Đang Back & GetCode lại...")
+
+            if is_wrong_type:
+                self.call_adb(["shell", "input", "keyevent", "4"])
+                time.sleep(2)
+                # Click Get Code lại để nhận captcha mới
+                self.click_image_logic({"target": "images/get_code.jpg", "timeout": 10, "confidence": 0.8})
+                time.sleep(1)
+                self.click_image_logic({"target": "images/get_code.jpg", "timeout": 5, "confidence": 0.8})
+                time.sleep(5)
+                last_success_check = time.time()
+                continue
+
             try:
-                # 1. Trích xuất hình mẫu (Cắt ảnh an toàn)
+                # 2. Trích xuất hình mẫu (Cắt ảnh an toàn)
                 sx, sy, sw, sh = sample_roi
                 sx1, sy1 = max(0, sx), max(0, sy)
                 sx2, sy2 = min(w, sx+sw), min(h, sy+sh)
@@ -328,7 +360,7 @@ class AutoClickerInstance:
                     cv2.imwrite(f"debug_sample_{self.device_id}.png", sample_img)
                     sample_gray = cv2.cvtColor(sample_img, cv2.COLOR_BGR2GRAY)
                     
-                    # 2. Chia lưới và tìm hình khớp nhất
+                    # 3. Chia lưới và tìm hình khớp nhất
                     gx, gy, gw, gh = grid_roi
                     cell_w, cell_h = gw // cols, gh // rows
                     
@@ -358,14 +390,14 @@ class AutoClickerInstance:
                     
                     self.log(f"CAPTCHA SCORE: {' | '.join(scores)}")
                     
-                    if best_idx != -1:
-                        # 1. Click chọn hình (Luôn chọn thằng cao nhất)
+                    if best_idx != -1 and best_val >= confidence:
+                        # Click chọn hình
                         final_row, final_col = best_idx // cols, best_idx % cols
                         tx, ty = gx + final_col * cell_w + cell_w // 2, gy + final_row * cell_h + cell_h // 2
                         self.call_adb(["shell", "input", "tap", str(tx), str(ty)])
                         self.log(f"CAPTCHA: Đã chọn hình {best_idx+1} (Khớp: {best_val:.2f})")
                         
-                        # 2. Tìm và nhấn nút OK bằng hình ảnh ok_capcha.png
+                        # Tìm và nhấn nút OK
                         time.sleep(2)
                         ok_path = resource_path("images/ok_capcha.png")
                         if os.path.exists(ok_path):
@@ -384,11 +416,9 @@ class AutoClickerInstance:
                 time.sleep(4)
                 
             except Exception as e:
+                self.log(f"CAPTCHA ERROR: {str(e)}")
                 time.sleep(2)
         
-        return False
-
-    def press_esc_logic(self, step):
         wait_time = step.get("wait", 0)
         if wait_time > 0: time.sleep(wait_time)
         # Sử dụng keyevent 4 (Back/ESC) phổ biến cho game mobile
@@ -399,7 +429,7 @@ class AutoClickerInstance:
     def generate_temp_email_logic(self):
         try:
             # Gmail Dot Trick Implementation
-            user_part, domain_part = GMAIL_USER.split('@')
+            user_part, domain_part = self.gmail_user.split('@')
             
             # Chọn ngẫu nhiên số lượng dấu chấm và vị trí (không ở đầu/cuối/cạnh nhau)
             # Một cách đơn giản: tung đồng xu cho mỗi khoảng trống giữa các chữ cái
@@ -459,7 +489,7 @@ class AutoClickerInstance:
         while time.time() - start_time < timeout and self.running:
             try:
                 mail = imaplib.IMAP4_SSL("imap.gmail.com")
-                mail.login(GMAIL_USER, GMAIL_PASS)
+                mail.login(self.gmail_user, self.gmail_pass)
                 
                 # Quét mọi ngõ ngách: Inbox, Spam, Quảng cáo, Tất cả thư
                 # Gmail dùng tên quốc tế [Gmail]/...
@@ -742,6 +772,8 @@ class MultiPremiumApp(ctk.CTk):
         self.active_workers = [] # Các thread đang chạy
         self.adb_path = self.find_adb()
         self.ld_path = r"C:\LDPlayer\LDPlayer9\ldconsole.exe" # Mặc định
+        self.gmail_user = GMAIL_USER
+        self.gmail_pass = GMAIL_PASS
         
         # Stats Data
         self.success_count = 0
@@ -782,21 +814,37 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(self.path_card, text="ĐƯỜNG DẪN LDPLAYER", font=ctk.CTkFont(size=11, weight="bold")).pack(pady=(5, 0))
         self.ld_path_entry = ctk.CTkEntry(self.path_card, placeholder_text="Ví dụ: C:\LDPlayer\LDPlayer9", height=30)
         self.ld_path_entry.pack(padx=10, pady=5, fill="x")
-        # Nạp đường dẫn mặc định hoặc từ file cấu hình nếu có
         self.ld_path_entry.insert(0, r"C:\LDPlayer\LDPlayer9")
-        ctk.CTkButton(self.path_card, text="Lưu Đường Dẫn", command=self.save_config, height=25).pack(padx=10, pady=5, fill="x")
+
+        ctk.CTkLabel(self.path_card, text="GMAIL ĐĂNG NHẬP", font=ctk.CTkFont(size=11, weight="bold")).pack(pady=(10, 0))
+        self.gmail_fields_frame = ctk.CTkFrame(self.path_card, fg_color="transparent")
+        self.gmail_fields_frame.pack(fill="x", padx=10, pady=(5, 0))
+        self.gmail_user_entry = ctk.CTkEntry(self.gmail_fields_frame, placeholder_text="Gmail user", height=30)
+        self.gmail_user_entry.pack(padx=0, pady=5, fill="x")
+        self.gmail_pass_entry = ctk.CTkEntry(self.gmail_fields_frame, placeholder_text="App password", height=30, show="*")
+        self.gmail_pass_entry.pack(padx=0, pady=5, fill="x")
+        self.gmail_save_button = ctk.CTkButton(self.path_card, text="Lưu Cấu Hình", command=self.save_config, height=25)
+        self.gmail_save_button.pack(padx=10, pady=5, fill="x")
+
+        self.gmail_compact_frame = ctk.CTkFrame(self.path_card, fg_color="transparent")
+        self.gmail_summary_label = ctk.CTkLabel(self.gmail_compact_frame, text="Gmail đã cấu hình", anchor="w")
+        self.gmail_summary_label.pack(side="left", padx=(0, 10), pady=5, fill="x", expand=True)
+        self.gmail_edit_button = ctk.CTkButton(self.gmail_compact_frame, text="Sửa", command=lambda: self.show_gmail_fields(True), width=80, height=25)
+        self.gmail_edit_button.pack(side="right", pady=5)
 
 
         # Input Card
         self.input_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR, corner_radius=15, border_width=1, border_color="#333333")
         self.input_card.pack(padx=20, pady=10, fill="x")
         ctk.CTkLabel(self.input_card, text="THÊM MÃ GIFTCODE", font=ctk.CTkFont(weight="bold")).pack(pady=5)
-        self.code_input = ctk.CTkEntry(self.input_card, placeholder_text="Mã Code...", height=35)
-        self.code_input.pack(padx=15, pady=5, fill="x")
-        self.count_input = ctk.CTkEntry(self.input_card, placeholder_text="Số lượt...", height=35)
-        self.count_input.pack(padx=15, pady=5, fill="x")
+        code_row = ctk.CTkFrame(self.input_card, fg_color="transparent")
+        code_row.pack(padx=15, pady=5, fill="x")
+        self.code_input = ctk.CTkEntry(code_row, placeholder_text="Mã Code...", height=35)
+        self.code_input.pack(side="left", padx=(0, 8), pady=0, fill="x", expand=True)
+        self.count_input = ctk.CTkEntry(code_row, placeholder_text="Số lượt...", height=35, width=90)
+        self.count_input.pack(side="left", padx=(0, 8), pady=0)
         self.count_input.insert(0, "10")
-        ctk.CTkButton(self.input_card, text="THÊM VÀO LIST", command=self.add_item, fg_color=ACCENT_PURPLE, height=35).pack(padx=15, pady=10, fill="x")
+        ctk.CTkButton(code_row, text="THÊM", command=self.add_item, fg_color=ACCENT_PURPLE, height=35, width=90).pack(side="left", pady=0)
 
         # Control
         self.btn_start = ctk.CTkButton(self.sidebar, text=" CHẠY TẤT CẢ", image=self.start_icon, compound="left", command=self.start_all, height=50, corner_radius=10, font=ctk.CTkFont(size=16, weight="bold"))
@@ -865,13 +913,6 @@ class MultiPremiumApp(ctk.CTk):
         self.scroll_q = ctk.CTkScrollableFrame(self.queue_card, fg_color="transparent")
         self.scroll_q.pack(fill="both", expand=True)
 
-        # Log Card (Full width at bottom row)
-        self.log_card = ctk.CTkFrame(self.mid_grid, fg_color=CARD_COLOR, corner_radius=15)
-        self.log_card.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(15, 0))
-        ctk.CTkLabel(self.log_card, text="NHẬT KÝ HOẠT ĐỘNG", font=ctk.CTkFont(weight="bold")).pack(pady=5)
-        self.log_box = ctk.CTkTextbox(self.log_card, fg_color="#000", font=("Consolas", 11), text_color="#AAA")
-        self.log_box.pack(fill="both", expand=True, padx=10, pady=10)
-        self.log_box.configure(state="disabled")
 
     def create_stat_item(self, parent, title, value, row, col, color):
         frame = ctk.CTkFrame(parent, fg_color="#252525", corner_radius=12)
@@ -929,10 +970,25 @@ class MultiPremiumApp(ctk.CTk):
 
 
     def save_config(self):
-        config = {"ld_path": self.ld_path_entry.get().strip()}
+        ld_path = self.ld_path_entry.get().strip()
+        gmail_user = self.gmail_user_entry.get().strip()
+        gmail_pass = self.gmail_pass_entry.get().strip()
+        config = {
+            "ld_path": ld_path,
+            "gmail_user": gmail_user,
+            "gmail_pass": gmail_pass,
+        }
         with open("config.json", "w") as f:
             json.dump(config, f)
-        self.add_log("HỆ THỐNG: Đã lưu đường dẫn LDPlayer.")
+        if ld_path:
+            self.ld_path = ld_path
+        if gmail_user:
+            self.gmail_user = gmail_user
+        if gmail_pass:
+            self.gmail_pass = gmail_pass
+        self.add_log("HỆ THỐNG: Đã lưu cấu hình LDPlayer và Gmail.")
+        if self.gmail_user and self.gmail_pass:
+            self.show_gmail_fields(False)
 
     def load_config(self):
         if os.path.exists("config.json"):
@@ -940,10 +996,35 @@ class MultiPremiumApp(ctk.CTk):
                 with open("config.json", "r") as f:
                     config = json.load(f)
                     path = config.get("ld_path", "")
+                    gmail_user = config.get("gmail_user", "")
+                    gmail_pass = config.get("gmail_pass", "")
                     if path:
                         self.ld_path_entry.delete(0, "end")
                         self.ld_path_entry.insert(0, path)
+                        self.ld_path = path
+                    if gmail_user:
+                        self.gmail_user_entry.delete(0, "end")
+                        self.gmail_user_entry.insert(0, gmail_user)
+                        self.gmail_user = gmail_user
+                    if gmail_pass:
+                        self.gmail_pass_entry.delete(0, "end")
+                        self.gmail_pass_entry.insert(0, gmail_pass)
+                        self.gmail_pass = gmail_pass
+                    if self.gmail_user and self.gmail_pass:
+                        self.show_gmail_fields(False)
             except: pass
+
+    def show_gmail_fields(self, show=True):
+        if show:
+            self.gmail_compact_frame.pack_forget()
+            self.gmail_fields_frame.pack(fill="x", padx=10, pady=(5, 0))
+            self.gmail_save_button.pack(padx=10, pady=5, fill="x")
+        else:
+            self.gmail_fields_frame.pack_forget()
+            self.gmail_save_button.pack_forget()
+            summary = f"Gmail: {self.gmail_user} ••••••••"
+            self.gmail_summary_label.configure(text=summary)
+            self.gmail_compact_frame.pack(fill="x", padx=10, pady=(5, 0))
 
     def scan_devices(self):
         base_path = self.ld_path_entry.get().strip()
@@ -1010,14 +1091,8 @@ class MultiPremiumApp(ctk.CTk):
             self.refresh_list()
 
     def add_log(self, text):
-        def _log():
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            self.log_box.configure(state="normal")
-            self.log_box.insert("end", f"[{timestamp}] {text}\n")
-            self.log_box.see("end")
-            self.log_box.configure(state="disabled")
-        self.after(0, _log)
-        print(f"DEBUG: {text}")
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"[{timestamp}] {text}")
 
     def start_all(self):
         # Kiểm tra Hạn dùng trước khi chạy
@@ -1062,9 +1137,16 @@ class MultiPremiumApp(ctk.CTk):
         # Chạy đa luồng
         self.active_workers = []
         for serial in selected_serials:
-            worker = AutoClickerInstance(serial, self.adb_path, self.add_log, self.update_all_ui, self.report_stats)
+            worker = AutoClickerInstance(
+                serial,
+                self.adb_path,
+                self.add_log,
+                self.update_all_ui,
+                self.report_stats,
+                gmail_user=self.gmail_user,
+                gmail_pass=self.gmail_pass,
+            )
             self.active_workers.append(worker)
-            # Sửa lại cách truyền tham số chuẩn cho luồng chạy
             t = threading.Thread(target=worker.run, args=(self.codes_data,), daemon=True)
             t.start()
 
