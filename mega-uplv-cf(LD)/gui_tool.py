@@ -606,7 +606,7 @@ class AutoClickerInstance:
 
     def input_name_logic(self):
         for _ in range(20): self.call_adb(["shell", "input", "keyevent", "67"])
-        name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(7)) + ''.join(random.choice("!@#%&*+-") for _ in range(3))
+        name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8)) + ''.join(random.choice("!@#%&*+-") for _ in range(4))
         escaped_name = self.escape_adb_text(name)
         self.call_adb(["shell", "input", "text", escaped_name])
         return True
