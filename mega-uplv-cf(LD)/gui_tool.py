@@ -9,7 +9,8 @@ import cv2
 import numpy as np
 import customtkinter as ctk
 from PIL import Image
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import email.utils
 import sys
 import hashlib
 import base64
@@ -540,14 +541,16 @@ class AutoClickerInstance:
         timeout = step.get("timeout", 180) 
         self.log(f"GMAIL SEARCH: Đang lùng mã cho [{self.current_email}] ở Inbox, Spam & Quảng cáo...")
         
-        start_time = time.time()
-        while time.time() - start_time < timeout and self.running:
+        # Lấy mốc thời gian bắt đầu tìm (lùi 20 giây để bù trừ độ trễ server)
+        search_threshold = datetime.now(timezone.utc) - timedelta(seconds=20)
+        
+        start_wait = time.time()
+        while time.time() - start_wait < timeout and self.running:
             try:
                 mail = imaplib.IMAP4_SSL("imap.gmail.com")
                 mail.login(self.gmail_user, self.gmail_pass)
                 
                 # Quét mọi ngõ ngách: Inbox, Spam, Quảng cáo, Tất cả thư
-                # Gmail dùng tên quốc tế [Gmail]/...
                 folders = ["INBOX", "[Gmail]/Promotions", "[Gmail]/Spam", "[Gmail]/All Mail"]
                 code_found = None
                 
@@ -560,52 +563,76 @@ class AutoClickerInstance:
                             elif "Spam" in fld: mail.select('"[Gmail]/Thư rác"', readonly=True)
                             elif "All Mail" in fld: mail.select('"[Gmail]/Tất cả Thư"', readonly=True)
                         
-                        # Tìm thư gửi đến mail ảo này hoặc từ Level Infinite
-                        typ, msg_ids = mail.search(None, f'(TO "{self.current_email}")')
-                        if typ != 'OK' or not msg_ids[0]:
-                            typ, msg_ids = mail.search(None, '(FROM "levelinfinite.com" UNSEEN)')
-                            
+                        # Tìm các thư từ Level Infinite
+                        # Ta không chỉ tìm theo TO vì đôi khi IMAP search TO không nhạy với dấu chấm (dot trick)
+                        # Thay vào đó ta tìm theo người gửi và tự lọc chính xác theo TO trong code Python
+                        typ, msg_ids = mail.search(None, '(FROM "levelinfinite.com")')
+                        
                         if typ == 'OK' and msg_ids[0]:
-                            for num in reversed(msg_ids[0].split()):
+                            # msg_ids là danh sách các ID, mới nhất ở cuối
+                            ids = msg_ids[0].split()
+                            for num in reversed(ids):
+                                # Fetch nội dung để kiểm tra header To và Date
                                 typ, data = mail.fetch(num, '(RFC822)')
                                 if typ != 'OK': continue
                                 
                                 msg = email.message_from_bytes(data[0][1])
-                                sender = str(msg.get("From", "")).lower()
-                                subject = str(msg.get("Subject", "")).lower()
                                 
+                                # 1. KIỂM TRA NGƯỜI NHẬN (TO): Phải khớp chính xác địa chỉ ảo của instance này
+                                # Điều này cực kỳ quan trọng khi chạy nhiều máy/nhiều tab cùng lúc
+                                recipient = str(msg.get("To", "")).lower()
+                                if self.current_email.lower() not in recipient:
+                                    continue # Không phải thư cho mình, bỏ qua tìm thư tiếp theo
+                                
+                                # 2. KIỂM TRA THỜI GIAN: Chỉ chấp nhận thư mới
+                                date_header = msg.get("Date")
+                                if date_header:
+                                    msg_date = email.utils.parsedate_to_datetime(date_header)
+                                    if msg_date.tzinfo is None:
+                                        msg_date = msg_date.replace(tzinfo=timezone.utc)
+                                    else:
+                                        msg_date = msg_date.astimezone(timezone.utc)
+                                    
+                                    if msg_date < search_threshold:
+                                        # Nếu đã tới thư cũ hơn mốc bắt đầu, thì các thư sau đó còn cũ hơn nữa
+                                        break
+                                
+                                # 3. TÌM MÃ OTP TRONG THƯ
+                                subject = str(msg.get("Subject", "")).lower()
                                 body = ""
                                 if msg.is_multipart():
                                     for part in msg.walk():
                                         if part.get_content_type() == "text/plain":
-                                            body = part.get_payload(decode=True).decode()
+                                            payload = part.get_payload(decode=True)
+                                            if payload: body = payload.decode(errors='ignore')
                                             break
                                 else:
-                                    body = msg.get_payload(decode=True).decode()
+                                    payload = msg.get_payload(decode=True)
+                                    if payload: body = payload.decode(errors='ignore')
                                 
-                                # Tìm mã OTP 5 chữ số (Ưu tiên Level Infinite)
-                                import re
                                 text_to_check = f"{subject} {body}"
                                 codes = re.findall(r'\b\d{5}\b', text_to_check)
                                 if not codes: codes = re.findall(r'\b\d{4,6}\b', text_to_check)
                                 
                                 if codes:
                                     code_found = codes[-1]
+                                    self.log(f"GMAIL MATCH: Tìm thấy mã {code_found} gửi cho {self.current_email}")
                                     break
                         if code_found: break
-                    except: continue
-                
-                if code_found:
-                    self.log(f"GMAIL: Đã lấy được mã OTP ({code_found})")
-                    self.current_otp = code_found
-                    # Xóa trắng ô nhập code (nhấn lùi 10 lần)
-                    for _ in range(10): self.call_adb(["shell", "input", "keyevent", "67"])
-                    self.call_adb(["shell", "input", "text", code_found])
-                    mail.logout()
-                    return True
+                    except Exception as fe:
+                        continue
                 
                 mail.logout()
-                time.sleep(15) 
+
+                if code_found:
+                    self.current_otp = code_found
+                    # Xóa trắng ô nhập code (nhấn lùi 12 lần cho chắc)
+                    for _ in range(12): self.call_adb(["shell", "input", "keyevent", "67"])
+                    self.call_adb(["shell", "input", "text", code_found])
+                    return True
+                
+                # Nếu chưa thấy mã, chờ một chút rồi quét lại
+                time.sleep(12) 
             except Exception as e:
                 self.log(f"CHỜ MAIL: {str(e)}")
                 time.sleep(10)
