@@ -628,6 +628,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 4},
             {"action": "click_image", "target": "images/other.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 4},
+            {"action": "click_image_if", "target": "images/other.jpg", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/link_account.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/lipass.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/link_btn.png", "timeout": 10, "confidence": 0.9},
