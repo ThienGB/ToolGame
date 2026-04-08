@@ -692,7 +692,7 @@ class AutoClickerInstance:
              {"action": "click_image", "target": "images/exit1.jpg", "timeout": 60, "confidence": 0.9},
              {"action": "click_image", "target": "images/event_center.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/limited_time.png", "timeout": 20, "confidence": 0.9},
-              {"action": "click_image", "target": "images/invite1.jpg",  "target2": "images/invite2.jpg","timeout": 20, "confidence": 0.9},
+              {"action": "click_image", "target": "images/sk.png",  "target2": "images/sk1.png","timeout": 20, "confidence": 0.9},
              {"action": "click_image", "target": "images/invitefriend.png", "timeout": 20, "confidence": 0.9},
              {"action": "click_image", "target": "images/name_input2.png", "timeout": 20, "confidence": 0.9},
              {"action": "input_text", "content": "USE_GIFTCODE"},
