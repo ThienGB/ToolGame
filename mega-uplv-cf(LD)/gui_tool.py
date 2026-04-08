@@ -121,8 +121,8 @@ ACCENT_PURPLE = "#A855F7"
 ACCENT_RED = "#EF4444"
 
 # --- GMAIL DOT TRICK CONFIG ---
-GMAIL_USER = "hoangcongthien1612@gmail.com"
-GMAIL_PASS = "lztmjrkwhfuwkzii" # Mật khẩu ứng dụng của bạn
+GMAIL_USER = ""
+GMAIL_PASS = "" # Mật khẩu ứng dụng của bạn
 
 # --- Logic Backend (AutoClicker - Hỗ trợ Single Instance) ---
 
@@ -418,7 +418,9 @@ class AutoClickerInstance:
             except Exception as e:
                 self.log(f"CAPTCHA ERROR: {str(e)}")
                 time.sleep(2)
-        
+        return False
+    
+    def press_esc_logic(self, step):
         wait_time = step.get("wait", 0)
         if wait_time > 0: time.sleep(wait_time)
         # Sử dụng keyevent 4 (Back/ESC) phổ biến cho game mobile
