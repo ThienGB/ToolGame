@@ -33,6 +33,18 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
+IMAGE_CACHE = {}
+
+def get_cached_image(path, grayscale=False):
+    real_path = resource_path(path)
+    if not os.path.exists(real_path): return None
+    cache_key = path + ("_gray" if grayscale else "")
+    if cache_key not in IMAGE_CACHE:
+        import cv2
+        img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE if grayscale else cv2.IMREAD_COLOR)
+        IMAGE_CACHE[cache_key] = img
+    return IMAGE_CACHE[cache_key]
+
 # --- Security & Licensing ---
 SECRET_KEY = "RyoUTE_MegaUpLvCF_2026"
 LICENSE_FILE = "license.bin"
@@ -238,10 +250,9 @@ class AutoClickerInstance:
         
         target_imgs = []
         for t_path in targets:
-            real_path = resource_path(t_path)
-            if os.path.exists(real_path):
-                img = cv2.imread(real_path)
-                if img is not None: target_imgs.append((t_path, img))
+            img = get_cached_image(t_path, grayscale=False)
+            if img is not None: 
+                target_imgs.append((t_path, img))
             else:
                 self.log(f"LỖI: Không tìm thấy ảnh mẫu: {t_path}")
 
@@ -274,9 +285,7 @@ class AutoClickerInstance:
         timeout = step.get("timeout", 10)
         conf = step.get("confidence", 0.8)
         
-        real_path = resource_path(target)
-        if not os.path.exists(real_path): return False
-        t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
+        t_img = get_cached_image(target, grayscale=True)
         if t_img is None: return False
         
         start = time.time()
@@ -972,6 +981,7 @@ class MultiPremiumApp(ctk.CTk):
         def _update():
             if success:
                 self.success_count += 1
+                self.refresh_list() # Chỉ cập nhật lại UI khi số lượt thật sự giảm đi
             else:
                 self.failure_count += 1
             self.update_stats_ui()
@@ -997,8 +1007,7 @@ class MultiPremiumApp(ctk.CTk):
 
     def update_all_ui(self):
         def _update():
-            # Cập nhật danh sách giftcode
-            self.refresh_list()
+            # Không gọi self.refresh_list() ở đây để tránh RAM leak khi update/destroy widget liên tục
             # Cập nhật trạng thái từng máy trên card
             for worker in self.active_workers:
                 if worker.device_id in self.device_cards:

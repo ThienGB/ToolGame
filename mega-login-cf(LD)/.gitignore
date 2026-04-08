@@ -1,0 +1,7 @@
+SUCCESS_ACC.txt
+FAILED_ACC.txt
+license.bin
+config.json
+debug_*.png
+*.log
+__pycache__/
