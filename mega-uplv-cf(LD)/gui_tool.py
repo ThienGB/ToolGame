@@ -360,6 +360,11 @@ class AutoClickerInstance:
                     cv2.imwrite(f"debug_sample_{self.device_id}.png", sample_img)
                     sample_gray = cv2.cvtColor(sample_img, cv2.COLOR_BGR2GRAY)
                     
+                    # Cải thiện mẫu: Adaptive histogram equalization + denoise
+                    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+                    sample_enhanced = clahe.apply(sample_gray)
+                    sample_enhanced = cv2.GaussianBlur(sample_enhanced, (3, 3), 0)
+                    
                     # 3. Chia lưới và tìm hình khớp nhất
                     gx, gy, gw, gh = grid_roi
                     cell_w, cell_h = gw // cols, gh // rows
@@ -369,7 +374,7 @@ class AutoClickerInstance:
                     cv2.imwrite(f"debug_grid_{self.device_id}.png", grid_view)
                     
                     # Resize mẫu 1 lần duy nhất
-                    resized_sample = cv2.resize(sample_gray, (cell_w, cell_h))
+                    resized_sample = cv2.resize(sample_enhanced, (cell_w, cell_h))
                     
                     best_val, best_idx = -1, -1
                     scores = []
@@ -382,11 +387,36 @@ class AutoClickerInstance:
                         if choice_img is None or choice_img.size == 0: continue
                         
                         choice_gray = cv2.cvtColor(choice_img, cv2.COLOR_BGR2GRAY)
-                        res = cv2.matchTemplate(choice_gray, resized_sample, cv2.TM_CCOEFF_NORMED)
-                        _, max_val, _, _ = cv2.minMaxLoc(res)
-                        scores.append(f"{i+1}:{max_val:.2f}")
-                        if max_val > best_val:
-                            best_val, best_idx = max_val, i
+                        # Cải thiện hình lựa chọn: Adaptive histogram equalization + denoise
+                        choice_enhanced = clahe.apply(choice_gray)
+                        choice_enhanced = cv2.GaussianBlur(choice_enhanced, (3, 3), 0)
+                        
+                        # Thử nhiều phương pháp matching và lấy kết quả tốt nhất
+                        scores_list = []
+                        # Method 1: TM_CCOEFF_NORMED (hiệu quả nhất cho object recognition)
+                        res1 = cv2.matchTemplate(choice_enhanced, resized_sample, cv2.TM_CCOEFF_NORMED)
+                        _, val1, _, _ = cv2.minMaxLoc(res1)
+                        scores_list.append(val1)
+                        
+                        # Method 2: TM_CCORR_NORMED (tương quan)
+                        res2 = cv2.matchTemplate(choice_enhanced, resized_sample, cv2.TM_CCORR_NORMED)
+                        _, val2, _, _ = cv2.minMaxLoc(res2)
+                        scores_list.append(val2)
+                        
+                        # Method 3: TM_SQDIFF_NORMED (nhỏ = khớp)
+                        res3 = cv2.matchTemplate(choice_enhanced, resized_sample, cv2.TM_SQDIFF_NORMED)
+                        _, val3, _, _ = cv2.minMaxLoc(res3)
+                        scores_list.append(1 - val3)  # Đảo ngược để nhỏ = khớp
+                        
+                        # Lấy giá trị trung bình từ 3 phương pháp
+                        max_val = max(scores_list)
+                        avg_val = sum(scores_list) / len(scores_list)
+                        # Ưu tiên điểm cao nhất nhưng xem xét cả trung bình
+                        combined_score = max_val * 0.6 + avg_val * 0.4
+                        
+                        scores.append(f"{i+1}:{combined_score:.2f}")
+                        if combined_score > best_val:
+                            best_val, best_idx = combined_score, i
                     
                     self.log(f"CAPTCHA SCORE: {' | '.join(scores)}")
                     
@@ -412,8 +442,22 @@ class AutoClickerInstance:
                                         ox, oy = ml_ok[0] + ow//2, ml_ok[1] + oh//2
                                         self.call_adb(["shell", "input", "tap", str(ox), str(oy)])
                                         self.log(f"CAPTCHA: Đã nhấn nút OK (Khớp: {mv_ok:.2f})")
+                        
+                        # Sau khi bấm OK, chờ và kiểm tra xem captcha có còn không
+                        time.sleep(2)
+                        check_screen = self.get_screenshot()
+                        if check_screen is not None:
+                            ch, cw = check_screen.shape[:2]
+                            # Nếu vẫn dọc (captcha còn) thì continue vòng lặp để giải tiếp
+                            if cw <= ch:
+                                self.log("CAPTCHA: Giải xong nhưng captcha vẫn còn. Tiếp tục giải...")
+                                time.sleep(1)
+                                continue
+                            else:
+                                self.log("CAPTCHA: Giải thành công, quay về màn hình ngang.")
+                                return True
                 
-                time.sleep(4)
+                time.sleep(1)
                 
             except Exception as e:
                 self.log(f"CAPTCHA ERROR: {str(e)}")
@@ -676,7 +720,7 @@ class AutoClickerInstance:
                 "rows": 2,
                 "cols": 3,
                 "ok_target": [400, 610],
-                "confidence": 0.35
+                "confidence": 0.25
             },
             {"action": "click_image", "target": "images/email_validation_code.jpg", "timeout": 20, "confidence": 0.8},
             {"action": "wait_for_email_code", "timeout": 120},
@@ -697,7 +741,7 @@ class AutoClickerInstance:
                 "rows": 2,
                 "cols": 3,
                 "ok_target": [400, 610],
-                "confidence": 0.35
+                "confidence": 0.25
             },
             {"action": "click_image", "target": "images/email_validation_code.jpg", "timeout": 20, "confidence": 0.8},
             {"action": "wait_for_email_code", "timeout": 120},
@@ -746,7 +790,7 @@ class AutoClickerInstance:
                 self.log(f">> THÀNH CÔNG: Email {self.current_email} đã hoàn tất.")
                 with threading.Lock():
                     with open("SUCCESS_ACC.txt", "a") as f:
-                        f.write(f"{self.current_email}|123456Aa\n")
+                        f.write(f"{self.current_email}|123456Aa|{current_item['code']}\n")
                     current_item['count'] -= 1
                 
                 self.report_stats_func(True)
