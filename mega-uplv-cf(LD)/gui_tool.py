@@ -1090,16 +1090,41 @@ class MultiPremiumApp(ctk.CTk):
 
     def scan_devices(self):
         base_path = self.ld_path_entry.get().strip()
+        # Ưu tiên sử dụng adb.exe trong thư mục LDPlayer được chọn
         self.adb_path = os.path.join(base_path, "adb.exe")
-        if not os.path.exists(self.adb_path): self.adb_path = "adb"
+        if not os.path.exists(self.adb_path): 
+            # Dự phòng nếu user trỏ vào thư mục cha
+            alt_path = os.path.join(base_path, "LDPlayer9", "adb.exe")
+            if os.path.exists(alt_path):
+                self.adb_path = alt_path
+            else:
+                self.adb_path = "adb"
+                self.add_log(f"CẢNH BÁO: Không tìm thấy adb.exe tại '{base_path}'. Dùng lệnh adb hệ thống.")
+        else:
+            self.add_log(f"HỆ THỐNG: Đã tìm thấy ADB tại: {self.adb_path}")
         
         for w in self.device_list_frame.winfo_children(): w.destroy()
         self.device_cards = {}
         
         try:
+            # Tự động khởi động lại server để đảm bảo kết nối ổn định với LDPlayer
+            subprocess.run([self.adb_path, "kill-server"], creationflags=subprocess.CREATE_NO_WINDOW)
+            subprocess.run([self.adb_path, "start-server"], creationflags=subprocess.CREATE_NO_WINDOW)
+
             res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            lines = res.stdout.strip().split('\n')[1:]
-            device_serials = [line.split('\t')[0] for line in lines if "device" in line]
+            lines = res.stdout.strip().split('\n')
+            device_serials = []
+            
+            # Parsing chuẩn hơn để loại bỏ dòng "List of devices attached" và các text thừa của daemon
+            for line in lines:
+                line = line.strip()
+                if not line or "List of devices attached" in line or "* daemon" in line:
+                    continue
+                
+                # Format dòng thiết bị: "serial_id\tdevice"
+                parts = line.split('\t')
+                if len(parts) >= 2 and parts[1].strip() == "device":
+                    device_serials.append(parts[0].strip())
             
             for i, serial in enumerate(device_serials):
                 # Card siêu nhỏ gọn (Compact UI)
@@ -1117,10 +1142,12 @@ class MultiPremiumApp(ctk.CTk):
                 self.device_cards[serial] = {"card": card, "status": status_lbl}
 
             if not self.device_cards:
-                self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào.")
+                self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào đang chạy. Vui lòng kiểm tra đã Mở LDPlayer và bật 'Gỡ lỗi ADB' trong Cài đặt LDPlayer.")
+            else:
+                self.add_log(f"HỆ THỐNG: Đã tìm thấy {len(self.device_cards)} thiết bị.")
             self.update_stats_ui()
-        except:
-            self.add_log("LỖI: Không thể quét thiết bị.")
+        except Exception as e:
+            self.add_log(f"LỖI: Không thể quét thiết bị hoặc khởi động server: {str(e)}")
 
     # Gỡ bỏ hàm select_all_devices vì không dùng checkbox nữa
 
