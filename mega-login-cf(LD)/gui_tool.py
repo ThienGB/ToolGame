@@ -72,6 +72,7 @@ class AutoClickerInstance:
         self.log_func, self.update_ui_func, self.report_stats_func = log_func, update_ui_func, report_stats_func
         self.running, self.status, self.is_lagging = False, "Đang chờ", False
         self.current_account = None
+        self.account_lock = None # Sẽ được gán từ MultiPremiumApp
 
     def log(self, msg): self.log_func(f"[{self.device_id}] {msg}")
     
@@ -328,7 +329,12 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 20},
         ]
         while self.running:
-            target = next((a for a in accounts if not a.get('done')), None)
+            target = None
+            with self.account_lock:
+                target = next((a for a in accounts if not a.get('done') and not a.get('processing')), None)
+                if target:
+                    target['processing'] = True
+            
             if not target: break
             self.current_account = target
             self.log(f">> CHẠY: {target['tk']}")
@@ -340,7 +346,11 @@ class AutoClickerInstance:
                 target['done'] = True
                 self.report_stats_func(True)
                 self.update_ui_func()
-            elif not success: self.report_stats_func(False)
+            elif not success:
+                # Nếu lỗi, bỏ flag processing để máy khác hoặc lượt sau có thể thử lại
+                with self.account_lock:
+                    target['processing'] = False
+                self.report_stats_func(False)
             time.sleep(5)
         self.status = "Xong"; self.update_ui_func(); self.running = False
 
@@ -354,6 +364,7 @@ class MultiPremiumApp(ctk.CTk):
         self.configure(fg_color=BG_COLOR)
         
         self.accounts_data, self.active_workers = [], []
+        self.account_lock = threading.Lock()
         self.adb_path = self.find_adb()
         self.logo_img = ctk.CTkImage(Image.open(resource_path("logo.png")), size=(80, 80))
         self.start_icon = ctk.CTkImage(Image.open(resource_path("start.png")), size=(25, 25))
@@ -495,9 +506,11 @@ class MultiPremiumApp(ctk.CTk):
     def start_all(self):
         if not self.accounts_data: return
         self.btn_start.configure(state="disabled", text=" ĐANG CHẠY...")
+        for a in self.accounts_data: a['processing'] = False
         self.active_workers = []
         for d in self.device_cards.keys():
             w = AutoClickerInstance(d, self.adb_path, print, self.refresh_ui, self.report_stats)
+            w.account_lock = self.account_lock
             self.active_workers.append(w)
             threading.Thread(target=w.run, args=(self.accounts_data,), daemon=True).start()
 

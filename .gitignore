@@ -2,6 +2,9 @@
 build/
 dist/
 
+# License files
+mega-uplv-cf(LD)/license.bin
+
 # Python compiled files
 __pycache__/
 *.pyc
