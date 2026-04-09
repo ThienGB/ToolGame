@@ -772,11 +772,11 @@ class AutoClickerInstance:
         while self.running:
             # Tìm mã còn lượt
             found_valid_code = False
-                for idx, c_item in enumerate(self.codes_queue):
-                    if c_item['count'] > 0:
-                        self.current_code_index = idx
-                        found_valid_code = True
-                        break
+            for idx, c_item in enumerate(self.codes_queue):
+                if c_item['count'] > 0:
+                    self.current_code_index = idx
+                    found_valid_code = True
+                    break
             
             if not found_valid_code:
                 self.log("ĐÃ XỬ LÝ XONG TẤT CẢ MÃ.")
