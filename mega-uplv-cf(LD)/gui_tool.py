@@ -519,8 +519,8 @@ class AutoClickerInstance:
         timeout = step.get("timeout", 180) 
         self.log(f"GMAIL SEARCH: Đang lùng mã cho [{self.current_email}] ở Inbox, Spam & Quảng cáo...")
         
-        # Lấy mốc thời gian bắt đầu tìm (lùi 20 giây để bù trừ độ trễ server)
-        search_threshold = datetime.now(timezone.utc) - timedelta(seconds=20)
+        # Lấy mốc thời gian bắt đầu tìm (lùi 10 phút để bù trừ độ trễ server/múi giờ)
+        search_threshold = datetime.now(timezone.utc) - timedelta(minutes=10)
         
         start_wait = time.time()
         while time.time() - start_wait < timeout and self.running:
@@ -580,10 +580,11 @@ class AutoClickerInstance:
                                 body = ""
                                 if msg.is_multipart():
                                     for part in msg.walk():
-                                        if part.get_content_type() == "text/plain":
+                                        ctype = part.get_content_type()
+                                        if ctype in ["text/plain", "text/html"]:
                                             payload = part.get_payload(decode=True)
-                                            if payload: body = payload.decode(errors='ignore')
-                                            break
+                                            if payload: body += payload.decode(errors='ignore')
+                                            if ctype == "text/plain": break # Ưu tiên text/plain nếu có cả hai
                                 else:
                                     payload = msg.get_payload(decode=True)
                                     if payload: body = payload.decode(errors='ignore')
@@ -604,9 +605,12 @@ class AutoClickerInstance:
 
                 if code_found:
                     self.current_otp = code_found
+                    self.log(f"==> ĐANG NHẬP OTP: {code_found}")
+                    time.sleep(1) # Chờ 1s cho ổn định tiêu điểm
                     # Xóa trắng ô nhập code (nhấn lùi 12 lần cho chắc)
                     for _ in range(12): self.call_adb(["shell", "input", "keyevent", "67"])
                     self.call_adb(["shell", "input", "text", code_found])
+                    time.sleep(1)
                     return True
                 
                 # Nếu chưa thấy mã, chờ một chút rồi quét lại
