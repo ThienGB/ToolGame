@@ -1048,7 +1048,8 @@ class MultiPremiumApp(ctk.CTk):
         btns_frame = ctk.CTkFrame(inst_header, fg_color="transparent")
         btns_frame.pack(side="right")
         # Nút chọn tất cả được gỡ bỏ vì người dùng muốn chạy tất cả máy mà không cần check
-        ctk.CTkButton(btns_frame, text="Làm Mới Danh Sách", command=self.scan_devices, height=26, width=120, font=ctk.CTkFont(size=11, weight="bold")).pack(side="left", padx=5)
+        self.btn_refresh = ctk.CTkButton(btns_frame, text="Làm Mới Danh Sách", command=self.scan_devices, height=26, width=120, font=ctk.CTkFont(size=11, weight="bold"))
+        self.btn_refresh.pack(side="left", padx=5)
 
         self.device_list_frame = ctk.CTkScrollableFrame(self.inst_frame, height=180, fg_color="transparent") 
         self.device_list_frame.pack(fill="x", padx=10, pady=(0, 15))
@@ -1205,65 +1206,96 @@ class MultiPremiumApp(ctk.CTk):
             self.gmail_compact_frame.pack(fill="x", padx=10, pady=(5, 0))
 
     def scan_devices(self):
+        # Disable button to prevent multiple scans
+        if hasattr(self, "btn_refresh"):
+            self.btn_refresh.configure(state="disabled", text="Đang Quét...")
+        
         base_path = self.ld_path_entry.get().strip()
-        # Ưu tiên sử dụng adb.exe trong thư mục LDPlayer được chọn
-        self.adb_path = os.path.join(base_path, "adb.exe")
-        if not os.path.exists(self.adb_path): 
-            # Dự phòng nếu user trỏ vào thư mục cha
+        threading.Thread(target=self._perform_scan, args=(base_path,), daemon=True).start()
+
+    def _perform_scan(self, base_path):
+        # Determine ADB path
+        adb_path = os.path.join(base_path, "adb.exe")
+        if not os.path.exists(adb_path): 
             alt_path = os.path.join(base_path, "LDPlayer9", "adb.exe")
             if os.path.exists(alt_path):
-                self.adb_path = alt_path
+                adb_path = alt_path
             else:
-                self.adb_path = "adb"
-                self.add_log(f"CẢNH BÁO: Không tìm thấy adb.exe tại '{base_path}'. Dùng lệnh adb hệ thống.")
-        else:
-            self.add_log(f"HỆ THỐNG: Đã tìm thấy ADB tại: {self.adb_path}")
+                adb_path = "adb"
         
-        for w in self.device_list_frame.winfo_children(): w.destroy()
-        self.device_cards = {}
+        device_serials = []
+        offline_count = 0
+        unauthorized_count = 0
         
         try:
-            # Tự động khởi động lại server để đảm bảo kết nối ổn định với LDPlayer
-            subprocess.run([self.adb_path, "kill-server"], creationflags=subprocess.CREATE_NO_WINDOW)
-            subprocess.run([self.adb_path, "start-server"], creationflags=subprocess.CREATE_NO_WINDOW)
-
-            res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            lines = res.stdout.strip().split('\n')
-            device_serials = []
+            # CHÚ Ý: Không kill-server mỗi lần quét vì sẽ làm ngắt kết nối các máy đang chạy, 
+            # khiến ADB mất thời gian nhận diện lại (có thể dẫn đến thiếu máy).
+            res = subprocess.run([adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
             
-            # Parsing chuẩn hơn để loại bỏ dòng "List of devices attached" và các text thừa của daemon
+            # Nếu ADB server chưa chạy, subprocess sẽ tự động start nó. 
+            # Chỉ khi lỗi nặng mới cần kill-server thủ công.
+            
+            lines = res.stdout.strip().split('\n')
             for line in lines:
                 line = line.strip()
                 if not line or "List of devices attached" in line or "* daemon" in line:
                     continue
                 
-                # Format dòng thiết bị: "serial_id\tdevice"
-                parts = line.split('\t')
-                if len(parts) >= 2 and parts[1].strip() == "device":
-                    device_serials.append(parts[0].strip())
+                parts = line.split() # Dùng split() để tách mọi loại khoảng trắng (tab/space)
+                if len(parts) >= 2:
+                    serial = parts[0].strip()
+                    status = parts[1].strip()
+                    
+                    if status == "device":
+                        device_serials.append(serial)
+                    elif status == "offline":
+                        offline_count += 1
+                    elif status == "unauthorized":
+                        unauthorized_count += 1
             
-            for i, serial in enumerate(device_serials):
-                # Card siêu nhỏ gọn (Compact UI)
-                card = ctk.CTkFrame(self.device_list_frame, fg_color="#252525", corner_radius=6, border_width=1, border_color="#383838")
-                card.grid(row=i // 10, column=i % 10, padx=3, pady=3, sticky="nsew")
-                
-                # Chỉ hiển thị phần ID cuối của device cho gọn
-                display_name = serial.split(":")[-1] if ":" in serial else serial
-                name_lbl = ctk.CTkLabel(card, text=display_name, font=ctk.CTkFont(size=10, weight="bold"))
-                name_lbl.pack(pady=(5, 0))
-                
-                status_lbl = ctk.CTkLabel(card, text="Sẵn sàng", font=ctk.CTkFont(size=9), text_color="#666")
-                status_lbl.pack(pady=(0, 5))
-                
-                self.device_cards[serial] = {"card": card, "status": status_lbl}
-
-            if not self.device_cards:
-                self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào đang chạy. Vui lòng kiểm tra đã Mở LDPlayer và bật 'Gỡ lỗi ADB' trong Cài đặt LDPlayer.")
-            else:
-                self.add_log(f"HỆ THỐNG: Đã tìm thấy {len(self.device_cards)} thiết bị.")
-            self.update_stats_ui()
         except Exception as e:
-            self.add_log(f"LỖI: Không thể quét thiết bị hoặc khởi động server: {str(e)}")
+            self.add_log(f"LỖI: Không thể quét thiết bị: {str(e)}")
+            
+        # Log kết quả chi tiết để user biết tại sao thiếu máy
+        if offline_count > 0 or unauthorized_count > 0:
+            self.add_log(f"HỆ THỐNG: Tìm thấy {len(device_serials)} máy OK, {offline_count} máy offline, {unauthorized_count} máy chưa xác thực.")
+            self.add_log("Gợi ý: Hãy kiểm tra các máy chưa nhận được xem đã bật 'Gỡ lỗi ADB' chưa.")
+            
+        # Update UI on main thread
+        self.after(0, lambda: self._update_device_list_ui(device_serials, adb_path))
+
+    def _update_device_list_ui(self, device_serials, adb_path):
+        self.adb_path = adb_path
+        
+        # Clear existing widgets
+        for w in self.device_list_frame.winfo_children():
+            w.destroy()
+        self.device_cards = {}
+        
+        # Create new widgets
+        for i, serial in enumerate(device_serials):
+            card = ctk.CTkFrame(self.device_list_frame, fg_color="#252525", corner_radius=6, border_width=1, border_color="#383838")
+            card.grid(row=i // 10, column=i % 10, padx=3, pady=3, sticky="nsew")
+            
+            display_name = serial.split(":")[-1] if ":" in serial else serial
+            name_lbl = ctk.CTkLabel(card, text=display_name, font=ctk.CTkFont(size=10, weight="bold"))
+            name_lbl.pack(pady=(5, 0))
+            
+            status_lbl = ctk.CTkLabel(card, text="Sẵn sàng", font=ctk.CTkFont(size=9), text_color="#666")
+            status_lbl.pack(pady=(0, 5))
+            
+            self.device_cards[serial] = {"card": card, "status": status_lbl}
+
+        if not self.device_cards:
+            self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào đang chạy. Vui lòng kiểm tra đã Mở LDPlayer và bật 'Gỡ lỗi ADB' trong Cài đặt LDPlayer.")
+        else:
+            self.add_log(f"HỆ THỐNG: Đã tìm thấy {len(self.device_cards)} thiết bị.")
+            
+        # Re-enable button
+        if hasattr(self, "btn_refresh"):
+            self.btn_refresh.configure(state="normal", text="Làm Mới Danh Sách")
+            
+        self.update_stats_ui()
 
     # Gỡ bỏ hàm select_all_devices vì không dùng checkbox nữa
 

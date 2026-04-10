@@ -105,13 +105,17 @@ class AutoClickerInstance:
             self.call_adb(["shell", "input", "keyevent", "111"])
             self.log("EVENT: Nhấn ESC (Key 111)")
         elif action == "solve_captcha": res = self.solve_captcha_logic(step)
+        elif action == "clear_android_data":
+            pkg = step.get("package")
+            self.call_adb(["shell", "pm", "clear", pkg])
+            res = True
         
         self.status, self.is_lagging = "Đang chạy", (time.time() - start) > 35
         self.update_ui_func()
         return res
 
     def click_image_logic(self, step):
-        targets = [step.get("target")] if step.get("target") else [step.get(f"target{i}") for i in range(1, 6) if step.get(f"target{i}")]
+        targets = [step.get("target")] if step.get("target") else [step.get(f"target{i}") for i in range(1, 11) if step.get(f"target{i}")]
         timeout, conf = step.get("timeout", 10), step.get("confidence", 0.8)
         imgs = [(t, get_cached_image(t)) for t in targets if get_cached_image(t) is not None]
         start = time.time()
@@ -268,19 +272,19 @@ class AutoClickerInstance:
         self.script = [
             {"action": "clear_android_data", "package": "com.tencent.stc.cfl"},
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 5},
-            {"action": "click_image", "target": "images/more.png", "timeout": 420},
-            {"action": "click_image", "target": "images/lipass.png", "timeout": 120},
+            {"action": "click_image", "target": "images/more.png", "timeout": 180},
+            {"action": "click_image", "target": "images/lipass.png", "timeout": 60},
             {"action": "click_image", "target": "images/passwordlogin.png", "timeout": 30},
-            {"action": "click_image", "target": "images/emailadress.png", "timeout": 120},
+            {"action": "click_image", "target": "images/emailadress.png", "timeout": 60},
             {"action": "input_account_logic"},
             {"action": "click_image", "target": "images/ok.png", "timeout": 10},
-            {"action": "click_image", "target": "images/password.png", "timeout": 60},
+            {"action": "click_image", "target": "images/password.png", "timeout": 30},
             {"action": "input_password_logic"},
             {"action": "click_image", "target": "images/ok.png", "timeout": 10},
-            {"action": "click_image", "target": "images/login.png", "timeout": 120},
+            {"action": "click_image", "target": "images/login.png", "timeout": 60},
             {"action": "wait", "timeout": 5},
             {"action": "solve_captcha", "sample_roi": [355, 300, 65, 65], "grid_roi": [75, 375, 380, 260]},
-            {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 420},
+            {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 60},
             {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 20},
             {"action": "click_image", "target": "images/event_center.jpg", "timeout": 20},
@@ -324,7 +328,13 @@ class AutoClickerInstance:
                 # Nếu lỗi, bỏ flag processing để máy khác hoặc lượt sau có thể thử lại
                 with self.account_lock:
                     target['processing'] = False
+                    # Tăng số lần lỗi, nếu quá 3 lần thì bỏ qua để tránh treo tool
+                    target['fail_count'] = target.get('fail_count', 0) + 1
+                    if target['fail_count'] >= 3:
+                        target['done'] = True
+                        self.log(f"!! BỎ QUA: {target['tk']} do lỗi quá 3 lần.")
                 self.report_stats_func(False, target)
+            self.log(">> Đã xong lượt, chuẩn bị tài khoản tiếp theo...")
             time.sleep(5)
         self.status = "Xong"; self.update_ui_func(); self.running = False
 
