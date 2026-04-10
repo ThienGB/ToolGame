@@ -161,9 +161,11 @@ class AutoClickerInstance:
         self.is_lagging = False
         self.script = []
         self.codes_queue = [] 
-        self.current_code_index = 0
         self.current_email = None
         self.mail_tm_token = None
+        self.accounts_processed = 0 # Bộ đếm số acc đã chạy
+        self.restart_threshold = 15 # Sau 15 lượt chạy sẽ khởi động lại LDPlayer 1 lần
+        self.ld_console_path = None # Sẽ được gán từ App
 
     def log(self, msg):
         self.log_func(f"[{self.device_id}] {msg}")
@@ -212,6 +214,47 @@ class AutoClickerInstance:
             del stdout
             return img
         except: return None
+
+    def restart_emulator(self):
+        if not self.ld_console_path or not os.path.exists(self.ld_console_path):
+            self.log("CẢNH BÁO: Không tìm thấy ldconsole.exe để khởi động lại.")
+            return False
+
+        # Tìm index của LDPlayer dựa trên port ADB (5554 -> index 0, 5556 -> index 1...)
+        port = None
+        if ":" in self.device_id: port = self.device_id.split(":")[-1]
+        elif "-" in self.device_id: port = self.device_id.split("-")[-1]
+        
+        index = -1
+        if port and port.isdigit():
+            index = (int(port) - 5554) // 2
+
+        if index == -1:
+            self.log("LỖI: Không xác định được index máy ảo để restart.")
+            return False
+
+        self.log(f"==> ĐANG KHỞI ĐỘNG LẠI MÁY ẢO (Index {index})...")
+        self.update_status(f"Restarting LD {index}")
+        
+        # 1. Tắt máy ảo
+        subprocess.run([self.ld_console_path, "quit", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW)
+        time.sleep(5)
+        
+        # 2. Bật lại máy ảo
+        subprocess.run([self.ld_console_path, "launch", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW)
+        
+        # 3. Chờ máy ảo lên và sẵn sàng (Quét cho đến khi ADB kết nối lại được)
+        self.log("Đợi máy ảo khởi động lại (khoảng 45s-60s)...")
+        start_wait = time.time()
+        while time.time() - start_wait < 120: # Chờ tối đa 2 phút
+            res = self.call_adb(["shell", "getprop", "sys.boot_completed"])
+            if b"1" in res.stdout:
+                self.log("Máy ảo đã khởi động xong!")
+                time.sleep(10) # Chờ thêm 10s cho các dịch vụ ổn định
+                return True
+            time.sleep(5)
+        
+        return False
 
     def execute_step(self, step):
         if not self.running: return False
@@ -278,12 +321,19 @@ class AutoClickerInstance:
                 self.log(f"LỖI: Không tìm thấy ảnh mẫu: {t_path}")
 
         start = time.time()
+        # Pre-fetch templates outside the loop to save CPU and RAM lookups
+        prepared_targets = []
+        for t_path in targets:
+            t_img = get_cached_image(t_path, grayscale=False)
+            if t_img is not None:
+                prepared_targets.append((t_path, t_img))
+
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
                 # cv2.imwrite(f"debug_{self.device_id}.png", screen) # Tắt ghi file liên tục để giảm lag disk
                 
-                for t_path, t_img in target_imgs:
+                for t_path, t_img in prepared_targets:
                     res = cv2.matchTemplate(screen, t_img, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, max_loc = cv2.minMaxLoc(res)
                     
@@ -354,6 +404,9 @@ class AutoClickerInstance:
         
         # Tiền xử lý: Dùng CLAHE để tăng tương phản
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        ok_template = get_cached_image("images/ok_capcha.png")
+        bad_temp = get_cached_image("images/capcha_order_type.jpg")
+        
         no_captcha_count = 0
         fail_count = 0
 
@@ -371,7 +424,6 @@ class AutoClickerInstance:
 
             # QUAN TRỌNG: Kiểm tra xem nút OK có đang trên màn hình không
             # Nếu không có nút OK trong vài lần check liên tiếp, nghĩa là captcha đã biến mất (đã giải xong)
-            ok_template = get_cached_image("images/ok_capcha.png")
             mv_ok = 0
             ml_ok = (0, 0)
             if ok_template is not None:
@@ -390,7 +442,6 @@ class AutoClickerInstance:
                 self.log("CẢNH BÁO: Thiếu file images/ok_capcha.png để nhận diện nút OK.")
 
             # 1. KIỂM TRA DẠNG CAPTCHA BỊ LỖI LỆCH LOẠI
-            bad_temp = get_cached_image("images/capcha_order_type.jpg")
             if bad_temp is not None:
                 res_bad = cv2.matchTemplate(screen, bad_temp, cv2.TM_CCOEFF_NORMED)
                 _, mv_bad, _, _ = cv2.minMaxLoc(res_bad)
@@ -510,8 +561,11 @@ class AutoClickerInstance:
         if not self.current_email:
             if not self.generate_temp_email_logic(): return False
         
-        # Xóa trắng trước khi nhập
-        for _ in range(40): self.call_adb(["shell", "input", "keyevent", "67"])
+        # Xóa trắng trước khi nhập: Gộp 40 lần nhấn Backspace vào 1 lệnh duy nhất để giảm 40 lần gọi subprocess
+        # Giúp giảm tải cực lớn cho CPU và ngăn lỗi treo ADB
+        backspaces = ["67"] * 40
+        self.call_adb(["shell", "input", "keyevent"] + backspaces)
+        
         escaped_email = self.escape_adb_text(self.current_email)
         self.call_adb(["shell", "input", "text", escaped_email])
         self.log(f"EMAIL: Đã nhập {self.current_email}")
@@ -627,8 +681,8 @@ class AutoClickerInstance:
                     self.current_otp = code_found
                     self.log(f"==> ĐANG NHẬP OTP: {code_found}")
                     time.sleep(1) # Chờ 1s cho ổn định tiêu điểm
-                    # Xóa trắng ô nhập code (nhấn lùi 12 lần cho chắc)
-                    for _ in range(12): self.call_adb(["shell", "input", "keyevent", "67"])
+                    # Xóa trắng ô nhập code: Gộp 12 lần nhấn Backspace vào 1 lệnh duy nhất
+                    self.call_adb(["shell", "input", "keyevent"] + ["67"] * 12)
                     self.call_adb(["shell", "input", "text", code_found])
                     time.sleep(1)
                     return True
@@ -643,10 +697,17 @@ class AutoClickerInstance:
 
 
     def input_name_logic(self):
-        for _ in range(20): self.call_adb(["shell", "input", "keyevent", "67"])
-        name = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8)) + ''.join(random.choice("!@#%&*+-") for _ in range(4))
+        # Gộp 20 lần nhấn Backspace vào 1 lệnh duy nhất
+        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 20)
+        
+        # Tăng độ dài (14-16 ký tự) và độ phức tạp để tránh trùng tên
+        length = random.randint(12, 14)
+        all_chars = string.ascii_letters + string.digits + "!@#$%^&*"
+        name = ''.join(random.choice(all_chars) for _ in range(length))
+        
         escaped_name = self.escape_adb_text(name)
         self.call_adb(["shell", "input", "text", escaped_name])
+        self.log(f"NAME: Đã nhập tên ngẫu nhiên: {name}")
         return True
 
     def input_text_logic(self, step):
@@ -660,7 +721,8 @@ class AutoClickerInstance:
                 else: return False
             else: return False
 
-        for _ in range(30): self.call_adb(["shell", "input", "keyevent", "67"])
+        # Gộp 30 lần nhấn Backspace vào 1 lệnh duy nhất
+        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 30)
         escaped_content = self.escape_adb_text(content)
         self.call_adb(["shell", "input", "text", escaped_content])
         return True
@@ -838,19 +900,37 @@ class AutoClickerInstance:
                         f.write(f"{self.current_email}|123456Aa|{current_item['code']}\n")
                     current_item['count'] -= 1
                 
+                self.accounts_processed += 1 # Tăng bộ đếm
                 self.report_stats_func(True)
                 self.update_ui_func()
             elif not success and self.running:
                 self.log(f"!! THẤT BẠI: Mã {current_item['code']} không hoàn tất.")
+                self.accounts_processed += 1 # Vẫn tính 1 lượt chạy dù lỗi để đảm bảo dọn RAM
                 self.report_stats_func(False)
             
+            # Tự động Restart sau N lượt chạy (bất kể thành công hay lỗi)
+            if self.running and self.accounts_processed >= self.restart_threshold:
+                self.log(f"Đã chạy {self.accounts_processed} lượt. Tiến hành Restart để sạch RAM.")
+                if self.restart_emulator():
+                    self.accounts_processed = 0 # Reset bộ đếm
+                else:
+                    self.log("Khởi động lại thất bại, tiếp tục chạy nhưng có thể bị chậm.")
+
             time.sleep(5)
-            # Dọn dẹp bộ nhớ Python
+            # Dọn dẹp bộ nhớ Python triệt để
             gc.collect()
+            
             # Dọn dẹp bộ nhớ bên trong máy ảo LDPlayer (chống phình RAM do Android)
-            self.call_adb(["shell", "echo 3 > /proc/sys/vm/drop_caches"])
-            self.call_adb(["shell", "am", "kill-all"])
-            self.log("Đã giải phóng RAM cho giả lập để chống phình.")
+            # Giải phóng pagecache, dentries và inodes
+            self.call_adb(["shell", "su", "-c", "echo 3 > /proc/sys/vm/drop_caches"])
+            # Giải phóng RAM từ các app chạy ngầm
+            self.call_adb(["shell", "su", "-c", "am kill-all"])
+            # Xóa logcat vì nó phì rất nhanh khi bị gọi screencap liên tục
+            self.call_adb(["shell", "logcat -c"])
+            # Xóa các file rác trong /data/local/tmp (nếu có)
+            self.call_adb(["shell", "rm -rf /data/local/tmp/*"])
+            
+            self.log("==> Đã dọn dẹp RAM & Logcat máy ảo để duy trì hiệu năng.")
         self.running = False
 
 # --- Modern UI (Premium Edition) ---
@@ -1268,6 +1348,7 @@ class MultiPremiumApp(ctk.CTk):
                 gmail_user=self.gmail_user,
                 gmail_pass=self.gmail_pass,
             )
+            worker.ld_console_path = self.ld_path if self.ld_path.endswith(".exe") else os.path.join(self.ld_path, "ldconsole.exe")
             self.active_workers.append(worker)
             t = threading.Thread(target=worker.run, args=(self.codes_data,), daemon=True)
             t.start()
