@@ -262,7 +262,6 @@ class AutoClickerInstance:
     def run(self, accounts):
         self.running = True
         self.script = [
-            {"action": "clear_android_data", "package": "com.tencent.stc.cfl"},
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 5},
             {"action": "click_image", "target": "images/more.png", "timeout": 180},
             {"action": "click_image", "target": "images/lipass.png", "timeout": 60},
@@ -276,7 +275,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/login.png", "timeout": 60},
             {"action": "wait", "timeout": 5},
             {"action": "solve_captcha", "sample_roi": [355, 300, 65, 65], "grid_roi": [75, 375, 380, 260]},
-            {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 60},
+            {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 420},
             {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 20},
             {"action": "click_image", "target": "images/event_center.jpg", "timeout": 20},
@@ -297,6 +296,15 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
             {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
             {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
+            {"action": "press_esc", "timeout": 5},
+            {"action": "click_image_if", "target": "images/setting.jpg","timeout": 20},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image", "target": "images/logout.png","timeout": 20},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image_if", "target": "images/logout.png","timeout": 5},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image_if", "target": "images/confirm_name_btn.png","timeout": 20},
+            {"action": "wait", "timeout": 20},
         ]
         while self.running:
             target = None
