@@ -135,143 +135,134 @@ class AutoClickerInstance:
     def solve_captcha_logic(self, step):
         sample_roi = step.get("sample_roi")
         grid_roi = step.get("grid_roi")
-        rows = step.get("rows", 2)
-        cols = step.get("cols", 3)
-        confidence = step.get("confidence", 0.25)
-        timeout = step.get("timeout_loop", 150) # 150s timeout là đủ, tránh bị kẹt quá lâu
+        rows, cols = step.get("rows", 2), step.get("cols", 3)
+        timeout = step.get("timeout_loop", 150)
         
-        if not sample_roi or not grid_roi:
-            self.log("LỖI CAPTCHA: Thiếu sample_roi hoặc grid_roi.")
+        if not grid_roi:
+            self.log("LỖI CAPTCHA: Thiếu grid_roi.")
             return False
 
-        self.log("CAPTCHA: Bắt đầu giải (Đã tối ưu CPU/RAM)...")
+        self.log("CAPTCHA: Bắt đầu giải...")
         start_loop = time.time()
-        
-        # Tiền xử lý: Dùng CLAHE để tăng tương phản
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
         no_captcha_count = 0
-        fail_count = 0
 
         while time.time() - start_loop < timeout and self.running:
             screen = self.get_screenshot()
             if screen is None: 
-                time.sleep(1)
-                continue
+                time.sleep(1); continue
             
             h, w = screen.shape[:2]
             if w > h:
-                self.log("CAPTCHA: Đã quay về màn hình NGANG.")
-                del screen
-                return True
+                self.log("CAPTCHA: Đã vào game (Màn hình ngang)."); return True
 
-            # QUAN TRỌNG: Kiểm tra xem nút OK có đang trên màn hình không
-            # Nếu không có nút OK trong vài lần check liên tiếp, nghĩa là captcha đã biến mất (đã giải xong)
+            # Kiểm tra nút OK để biết captcha còn hay không
             ok_template = get_cached_image("images/ok_capcha.png")
-            mv_ok = 0
-            ml_ok = (0, 0)
+            mv_ok, ml_ok = 0, (0, 0)
             if ok_template is not None:
                 res_ok = cv2.matchTemplate(screen, ok_template, cv2.TM_CCOEFF_NORMED)
                 _, mv_ok, _, ml_ok = cv2.minMaxLoc(res_ok)
-                del res_ok
                 if mv_ok < 0.7:
                     no_captcha_count += 1
-                    if no_captcha_count >= 3:
-                        self.log("CAPTCHA: Không thấy nút OK nữa trên màn hình. Coi như đã giải xong!")
-                        del screen
+                    if no_captcha_count >= 3: 
+                        self.log("CAPTCHA: Đã xong (Không thấy nút OK).")
                         return True
-                else:
-                    no_captcha_count = 0
-            else:
-                self.log("CẢNH BÁO: Thiếu file images/ok_capcha.png để nhận diện nút OK.")
+                else: no_captcha_count = 0
 
-            # 1. KIỂM TRA DẠNG CAPTCHA BỊ LỖI LỆCH LOẠI
+            # 1. Kiểm tra captcha bị lệch loại
             bad_temp = get_cached_image("images/capcha_order_type.jpg")
             if bad_temp is not None:
                 res_bad = cv2.matchTemplate(screen, bad_temp, cv2.TM_CCOEFF_NORMED)
                 _, mv_bad, _, _ = cv2.minMaxLoc(res_bad)
-                del res_bad
-                if mv_bad >= 0.70: # Hạ xuống 0.7 để bắt nhạy hơn
-                    self.log(f"CAPTCHA: Phát hiện loại sai ({mv_bad:.2f}). Đang tải hộp thoại mới...")
+                if mv_bad >= 0.75:
+                    self.log(f"CAPTCHA: Sai loại ({mv_bad:.2f}), đang tải lại...")
                     self.call_adb(["shell", "input", "keyevent", "4"])
                     time.sleep(2)
-                    self.click_image_logic({"target": "images/get_code.jpg", "timeout": 10, "confidence": 0.8})
-                    del screen
+                    self.click_image_logic({"target": "images/get_code.jpg", "timeout": 10})
                     continue
 
+            # 2. Kiểm tra loại "Chọn hình khác biệt" (Outlier)
+            outlier_temp = get_cached_image("images/select_most_one.jpg")
+            is_outlier = False
+            if outlier_temp is not None:
+                res_outlier = cv2.matchTemplate(screen, outlier_temp, cv2.TM_CCOEFF_NORMED)
+                _, mv_outlier, _, ml_outlier = cv2.minMaxLoc(res_outlier)
+                if mv_outlier >= 0.75: is_outlier = True
+
             try:
-                # 2. Trích xuất hình mẫu
-                sx, sy, sw, sh = sample_roi
-                sx1, sy1 = max(0, sx), max(0, sy)
-                sx2, sy2 = min(w, sx+sw), min(h, sy+sh)
-                sample_img = screen[sy1:sy2, sx1:sx2].copy()
+                gx, gy, gw, gh = grid_roi
+                cell_w, cell_h = gw // cols, gh // rows
                 
-                if sample_img is not None and sample_img.size > 0:
-                    sample_gray = cv2.cvtColor(sample_img, cv2.COLOR_BGR2GRAY)
-                    sample_enhanced = clahe.apply(sample_gray)
-                    sample_enhanced = cv2.GaussianBlur(sample_enhanced, (3, 3), 0)
+                if is_outlier:
+                    self.log("CAPTCHA: Loại 'Chọn hình khác biệt'...")
+                    cells = []
+                    for i in range(rows * cols):
+                        r, c = i // cols, i % cols
+                        cx, cy = gx + c * cell_w, gy + r * cell_h
+                        cell_img = screen[cy:cy+cell_h, cx:cx+cell_w]
+                        if cell_img is None or cell_img.size == 0: cells.append(None); continue
+                        gray = cv2.cvtColor(cell_img, cv2.COLOR_BGR2GRAY)
+                        enhanced = clahe.apply(gray)
+                        cells.append(cv2.GaussianBlur(enhanced, (3, 3), 0))
                     
-                    # 3. Chia lưới 
-                    gx, gy, gw, gh = grid_roi
-                    cell_w, cell_h = gw // cols, gh // rows
-                    resized_sample = cv2.resize(sample_enhanced, (cell_w, cell_h))
+                    scores = [0] * len(cells)
+                    for i in range(len(cells)):
+                        if cells[i] is None: continue
+                        for j in range(i + 1, len(cells)):
+                            if cells[j] is None: continue
+                            res = cv2.matchTemplate(cells[i], cells[j], cv2.TM_CCOEFF_NORMED)
+                            _, score, _, _ = cv2.minMaxLoc(res)
+                            scores[i] += score; scores[j] += score
+                    
+                    best_idx = np.argmin(scores)
+                    self.log(f"CAPTCHA: Chọn hình số {best_idx+1} (Khác biệt nhất).")
+                else:
+                    # 3. Loại so hình mẫu
+                    sx, sy, sw, sh = sample_roi
+                    sample_img = screen[sy:sy+sh, sx:sx+sw]
+                    if sample_img is None or sample_img.size == 0: 
+                        time.sleep(2); continue
+                    
+                    s_gray = cv2.cvtColor(sample_img, cv2.COLOR_BGR2GRAY)
+                    s_enhanced = cv2.resize(clahe.apply(s_gray), (cell_w, cell_h))
+                    s_enhanced = cv2.GaussianBlur(s_enhanced, (3, 3), 0)
                     
                     best_val, best_idx = -1, -1
-                    total_cells = rows * cols
-                    for i in range(total_cells):
-                        row_idx, col_idx = i // cols, i % cols
-                        cx, cy = gx + col_idx * cell_w, gy + row_idx * cell_h
+                    for i in range(rows * cols):
+                        r, c = i // cols, i % cols
+                        cx, cy = gx + c * cell_w, gy + r * cell_h
                         choice_img = screen[cy:cy+cell_h, cx:cx+cell_w]
                         if choice_img is None or choice_img.size == 0: continue
+                        c_gray = cv2.cvtColor(choice_img, cv2.COLOR_BGR2GRAY)
+                        c_enhanced = cv2.GaussianBlur(clahe.apply(c_gray), (3, 3), 0)
                         
-                        choice_gray = cv2.cvtColor(choice_img, cv2.COLOR_BGR2GRAY)
-                        choice_enhanced = clahe.apply(choice_gray)
-                        choice_enhanced = cv2.GaussianBlur(choice_enhanced, (3, 3), 0)
-                        
-                        res = cv2.matchTemplate(choice_enhanced, resized_sample, cv2.TM_CCOEFF_NORMED)
+                        res = cv2.matchTemplate(c_enhanced, s_enhanced, cv2.TM_CCOEFF_NORMED)
                         _, score, _, _ = cv2.minMaxLoc(res)
-                        
-                        if score > best_val:
-                            best_val, best_idx = score, i
-                        
-                        del res
-                        del choice_gray
-                        del choice_enhanced
-
-                    # Luôn bấm vào hình có độ khớp cao nhất dù điểm số có thấp, nếu sai game sẽ tự đổi captcha
-                    if best_idx != -1:
-                        final_row, final_col = best_idx // cols, best_idx % cols
-                        tx, ty = gx + final_col * cell_w + cell_w // 2, gy + final_row * cell_h + cell_h // 2
-                        self.call_adb(["shell", "input", "tap", str(tx), str(ty)])
-                        self.log(f"CAPTCHA: Bấm hình số {best_idx+1} (Khớp: {best_val:.2f})")
-                        
-                        time.sleep(2)
-                        
-                        # Táp vào tọa độ nút OK mà ta đã tìm thấy ở đầu loop
-                        if ok_template is not None and mv_ok >= 0.7:
-                            oh, ow = ok_template.shape[:2]
-                            ox, oy = ml_ok[0] + ow//2, ml_ok[1] + oh//2
-                            self.call_adb(["shell", "input", "tap", str(ox), str(oy)])
-                            self.log("CAPTCHA: Đã bấm nút OK. Đợi phản hồi...")
+                        if score > best_val: best_val, best_idx = score, i
                     
-                    del sample_img
-                    del sample_gray
-                    del sample_enhanced
-                    del resized_sample
+                    self.log(f"CAPTCHA: Chọn hình số {best_idx+1} (Khớp: {best_val:.2f}).")
 
-                del screen
-                time.sleep(3) # Chờ load trạng thái mới
+                if best_idx != -1:
+                    r, c = best_idx // cols, best_idx % cols
+                    self.call_adb(["shell", "input", "tap", str(gx+c*cell_w+cell_w//2), str(gy+r*cell_h+cell_h//2)])
+                    time.sleep(2)
+                    if is_outlier:
+                        oh, ow = outlier_temp.shape[:2]
+                        self.call_adb(["shell", "input", "tap", str(ml_outlier[0]+ow//2), str(ml_outlier[1]+oh//2)])
+                        self.log("CAPTCHA: Đã bấm nút select_most_one để xác nhận.")
+                    elif ok_template is not None and mv_ok >= 0.7:
+                        oh, ow = ok_template.shape[:2]
+                        self.call_adb(["shell", "input", "tap", str(ml_ok[0]+ow//2), str(ml_ok[1]+oh//2)])
                 
+                time.sleep(3)
             except Exception as e:
-                self.log(f"CAPTCHA ERROR: {str(e)}")
-                time.sleep(2)
-                
+                self.log(f"CAPTCHA ERROR: {str(e)}"); time.sleep(2)
         return False
-    
+
     def run(self, accounts):
         self.running = True
         self.script = [
             {"action": "clear_android_data", "package": "com.tencent.stc.cfl"},
-            
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 5},
             {"action": "click_image", "target": "images/more.png", "timeout": 180},
             {"action": "click_image", "target": "images/lipass.png", "timeout": 60},
@@ -311,8 +302,7 @@ class AutoClickerInstance:
             target = None
             with self.account_lock:
                 target = next((a for a in accounts if not a.get('done') and not a.get('processing')), None)
-                if target:
-                    target['processing'] = True
+                if target: target['processing'] = True
             
             if not target: break
             self.current_account = target
@@ -321,15 +311,14 @@ class AutoClickerInstance:
             for step in self.script:
                 if not self.running: break
                 if not self.execute_step(step): success = False; break
+            
             if success and self.running:
                 target['done'] = True
                 self.report_stats_func(True)
                 self.update_ui_func()
             elif not success:
-                # Nếu lỗi, bỏ flag processing để máy khác hoặc lượt sau có thể thử lại
                 with self.account_lock:
                     target['processing'] = False
-                    # Tăng số lần lỗi, nếu quá 3 lần thì bỏ qua để tránh treo tool
                     target['fail_count'] = target.get('fail_count', 0) + 1
                     if target['fail_count'] >= 3:
                         target['done'] = True
@@ -339,8 +328,7 @@ class AutoClickerInstance:
             time.sleep(5)
         self.status = "Xong"; self.update_ui_func(); self.running = False
 
-# --- Premium UI Part (Copy from MegaUpLvCF style) ---
-
+# --- UI Logic (MultiPremiumApp, LoginApp etc. continue from here) ---
 class MultiPremiumApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -496,7 +484,7 @@ class MultiPremiumApp(ctk.CTk):
                 try:
                     with self.account_lock:
                         with open("that_bai.txt", "a", encoding="utf-8") as f:
-                            f.write(f"{account['tk']}|{account['mk']}|{datetime.now().strftime('%H:%M:%S')}\n")
+                            f.write(f"{account['tk']}|{account['mk']}\n")
                 except: pass
         self.after(0, self.refresh_ui)
 
@@ -516,7 +504,6 @@ class MultiPremiumApp(ctk.CTk):
         self.btn_start.configure(state="normal", text=" CHẠY TẤT CẢ")
 
 # --- Authentication Screen ---
-
 class LoginApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -559,6 +546,5 @@ if __name__ == "__main__":
             v, _ = verify_license(f.read().strip(), get_hwid())
             if v: MultiPremiumApp().mainloop(); sys.exit()
     LoginApp().mainloop()
-
 
 # pyinstaller --noconfirm --onefile --windowed --name "MegaLoginCF" --add-data "images;images" --add-data "logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool.py
