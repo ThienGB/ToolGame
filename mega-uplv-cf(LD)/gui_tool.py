@@ -342,8 +342,8 @@ class AutoClickerInstance:
         grid_roi = step.get("grid_roi")
         rows = step.get("rows", 2)
         cols = step.get("cols", 3)
-        confidence = step.get("confidence", 0.3)
-        timeout = step.get("timeout_loop", 300) 
+        confidence = step.get("confidence", 0.25)
+        timeout = step.get("timeout_loop", 150) # 150s timeout là đủ, tránh bị kẹt quá lâu
         
         if not sample_roi or not grid_roi:
             self.log("LỖI CAPTCHA: Thiếu sample_roi hoặc grid_roi.")
@@ -352,12 +352,16 @@ class AutoClickerInstance:
         self.log("CAPTCHA: Bắt đầu giải (Đã tối ưu CPU/RAM)...")
         start_loop = time.time()
         
-        # Tiền xử lý: Dùng CLAHE 1 lần nếu được (nhưng screenshot thay đổi mỗi lần)
+        # Tiền xử lý: Dùng CLAHE để tăng tương phản
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        no_captcha_count = 0
+        fail_count = 0
 
         while time.time() - start_loop < timeout and self.running:
             screen = self.get_screenshot()
-            if screen is None: break
+            if screen is None: 
+                time.sleep(1)
+                continue
             
             h, w = screen.shape[:2]
             if w > h:
@@ -365,14 +369,34 @@ class AutoClickerInstance:
                 del screen
                 return True
 
-            # 1. KIỂM TRA DẠNG CAPTCHA SAI
+            # QUAN TRỌNG: Kiểm tra xem nút OK có đang trên màn hình không
+            # Nếu không có nút OK trong vài lần check liên tiếp, nghĩa là captcha đã biến mất (đã giải xong)
+            ok_template = get_cached_image("images/ok_capcha.png")
+            mv_ok = 0
+            ml_ok = (0, 0)
+            if ok_template is not None:
+                res_ok = cv2.matchTemplate(screen, ok_template, cv2.TM_CCOEFF_NORMED)
+                _, mv_ok, _, ml_ok = cv2.minMaxLoc(res_ok)
+                del res_ok
+                if mv_ok < 0.7:
+                    no_captcha_count += 1
+                    if no_captcha_count >= 3:
+                        self.log("CAPTCHA: Không thấy nút OK nữa trên màn hình. Coi như đã giải xong!")
+                        del screen
+                        return True
+                else:
+                    no_captcha_count = 0
+            else:
+                self.log("CẢNH BÁO: Thiếu file images/ok_capcha.png để nhận diện nút OK.")
+
+            # 1. KIỂM TRA DẠNG CAPTCHA BỊ LỖI LỆCH LOẠI
             bad_temp = get_cached_image("images/capcha_order_type.jpg")
             if bad_temp is not None:
                 res_bad = cv2.matchTemplate(screen, bad_temp, cv2.TM_CCOEFF_NORMED)
                 _, mv_bad, _, _ = cv2.minMaxLoc(res_bad)
                 del res_bad
-                if mv_bad >= 0.75:
-                    self.log(f"CAPTCHA: Phát hiện loại sai. Back & GetCode lại...")
+                if mv_bad >= 0.70: # Hạ xuống 0.7 để bắt nhạy hơn
+                    self.log(f"CAPTCHA: Phát hiện loại sai ({mv_bad:.2f}). Đang tải hộp thoại mới...")
                     self.call_adb(["shell", "input", "keyevent", "4"])
                     time.sleep(2)
                     self.click_image_logic({"target": "images/get_code.jpg", "timeout": 10, "confidence": 0.8})
@@ -391,7 +415,7 @@ class AutoClickerInstance:
                     sample_enhanced = clahe.apply(sample_gray)
                     sample_enhanced = cv2.GaussianBlur(sample_enhanced, (3, 3), 0)
                     
-                    # 3. Chia lưới
+                    # 3. Chia lưới 
                     gx, gy, gw, gh = grid_roi
                     cell_w, cell_h = gw // cols, gh // rows
                     resized_sample = cv2.resize(sample_enhanced, (cell_w, cell_h))
@@ -408,7 +432,6 @@ class AutoClickerInstance:
                         choice_enhanced = clahe.apply(choice_gray)
                         choice_enhanced = cv2.GaussianBlur(choice_enhanced, (3, 3), 0)
                         
-                        # Chỉ dùng 1 phương pháp TM_CCOEFF_NORMED để tiết kiệm RAM/CPU
                         res = cv2.matchTemplate(choice_enhanced, resized_sample, cv2.TM_CCOEFF_NORMED)
                         _, score, _, _ = cv2.minMaxLoc(res)
                         
@@ -419,25 +442,21 @@ class AutoClickerInstance:
                         del choice_gray
                         del choice_enhanced
 
-                    if best_idx != -1 and best_val >= confidence:
+                    # Luôn bấm vào hình có độ khớp cao nhất dù điểm số có thấp, nếu sai game sẽ tự đổi captcha
+                    if best_idx != -1:
                         final_row, final_col = best_idx // cols, best_idx % cols
                         tx, ty = gx + final_col * cell_w + cell_w // 2, gy + final_row * cell_h + cell_h // 2
                         self.call_adb(["shell", "input", "tap", str(tx), str(ty)])
-                        self.log(f"CAPTCHA: Chọn hình {best_idx+1} (Khớp: {best_val:.2f})")
+                        self.log(f"CAPTCHA: Bấm hình số {best_idx+1} (Khớp: {best_val:.2f})")
                         
                         time.sleep(2)
-                        ok_template = get_cached_image("images/ok_capcha.png")
-                        if ok_template is not None:
-                            scr_ok = self.get_screenshot()
-                            if scr_ok is not None:
-                                res_ok = cv2.matchTemplate(scr_ok, ok_template, cv2.TM_CCOEFF_NORMED)
-                                _, mv_ok, _, ml_ok = cv2.minMaxLoc(res_ok)
-                                if mv_ok >= 0.8:
-                                    oh, ow = ok_template.shape[:2]
-                                    ox, oy = ml_ok[0] + ow//2, ml_ok[1] + oh//2
-                                    self.call_adb(["shell", "input", "tap", str(ox), str(oy)])
-                                del res_ok
-                                del scr_ok
+                        
+                        # Táp vào tọa độ nút OK mà ta đã tìm thấy ở đầu loop
+                        if ok_template is not None and mv_ok >= 0.7:
+                            oh, ow = ok_template.shape[:2]
+                            ox, oy = ml_ok[0] + ow//2, ml_ok[1] + oh//2
+                            self.call_adb(["shell", "input", "tap", str(ox), str(oy)])
+                            self.log("CAPTCHA: Đã bấm nút OK. Đợi phản hồi...")
                     
                     del sample_img
                     del sample_gray
@@ -445,11 +464,12 @@ class AutoClickerInstance:
                     del resized_sample
 
                 del screen
-                time.sleep(3) # Chờ captcha load lại hoặc biến mất
+                time.sleep(3) # Chờ load trạng thái mới
                 
             except Exception as e:
                 self.log(f"CAPTCHA ERROR: {str(e)}")
                 time.sleep(2)
+                
         return False
     
     def press_esc_logic(self, step):
@@ -825,10 +845,12 @@ class AutoClickerInstance:
                 self.report_stats_func(False)
             
             time.sleep(5)
-            # Dọn dẹp bộ nhớ sau mỗi vòng lặp tài khoản để treo máy lâu không bị tràn RAM
+            # Dọn dẹp bộ nhớ Python
             gc.collect()
-        
-        self.update_status("Xong")
+            # Dọn dẹp bộ nhớ bên trong máy ảo LDPlayer (chống phình RAM do Android)
+            self.call_adb(["shell", "echo 3 > /proc/sys/vm/drop_caches"])
+            self.call_adb(["shell", "am", "kill-all"])
+            self.log("Đã giải phóng RAM cho giả lập để chống phình.")
         self.running = False
 
 # --- Modern UI (Premium Edition) ---
