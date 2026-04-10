@@ -267,6 +267,7 @@ class AutoClickerInstance:
         self.running = True
         self.script = [
             {"action": "clear_android_data", "package": "com.tencent.stc.cfl"},
+            
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 5},
             {"action": "click_image", "target": "images/more.png", "timeout": 420},
             {"action": "click_image", "target": "images/lipass.png", "timeout": 120},
