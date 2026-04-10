@@ -845,10 +845,12 @@ class AutoClickerInstance:
                 self.report_stats_func(False)
             
             time.sleep(5)
-            # Dọn dẹp bộ nhớ sau mỗi vòng lặp tài khoản để treo máy lâu không bị tràn RAM
+            # Dọn dẹp bộ nhớ Python
             gc.collect()
-        
-        self.update_status("Xong")
+            # Dọn dẹp bộ nhớ bên trong máy ảo LDPlayer (chống phình RAM do Android)
+            self.call_adb(["shell", "echo 3 > /proc/sys/vm/drop_caches"])
+            self.call_adb(["shell", "am", "kill-all"])
+            self.log("Đã giải phóng RAM cho giả lập để chống phình.")
         self.running = False
 
 # --- Modern UI (Premium Edition) ---
