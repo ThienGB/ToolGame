@@ -136,7 +136,7 @@ class AutoClickerInstance:
         sample_roi = step.get("sample_roi")
         grid_roi = step.get("grid_roi")
         rows, cols = step.get("rows", 2), step.get("cols", 3)
-        timeout = step.get("timeout_loop", 150)
+        timeout = step.get("timeout_loop", 999)
         
         if not grid_roi:
             self.log("LỖI CAPTCHA: Thiếu grid_roi.")
@@ -156,18 +156,12 @@ class AutoClickerInstance:
             if w > h:
                 self.log("CAPTCHA: Đã vào game (Màn hình ngang)."); return True
 
-            # Kiểm tra nút OK để biết captcha còn hay không
+            # QUAN TRỌNG: Kiểm tra xem nút OK có đang trên màn hình không
             ok_template = get_cached_image("images/ok_capcha.png")
             mv_ok, ml_ok = 0, (0, 0)
             if ok_template is not None:
                 res_ok = cv2.matchTemplate(screen, ok_template, cv2.TM_CCOEFF_NORMED)
                 _, mv_ok, _, ml_ok = cv2.minMaxLoc(res_ok)
-                if mv_ok < 0.7:
-                    no_captcha_count += 1
-                    if no_captcha_count >= 3: 
-                        self.log("CAPTCHA: Đã xong (Không thấy nút OK).")
-                        return True
-                else: no_captcha_count = 0
 
             # 1. Kiểm tra captcha bị lệch loại
             bad_temp = get_cached_image("images/capcha_order_type.jpg")
@@ -274,7 +268,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/ok.png", "timeout": 10},
             {"action": "click_image", "target": "images/login.png", "timeout": 60},
             {"action": "wait", "timeout": 5},
-            {"action": "solve_captcha", "sample_roi": [355, 300, 65, 65], "grid_roi": [75, 375, 380, 260]},
+            {"action": "solve_captcha", "sample_roi": [355, 300, 65, 65], "grid_roi": [75, 375, 380, 260], "timeout_loop": 60},
             {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 420},
             {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 20},
