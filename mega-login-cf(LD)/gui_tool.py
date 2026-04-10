@@ -133,82 +133,85 @@ class AutoClickerInstance:
         grid_roi = step.get("grid_roi")
         rows = step.get("rows", 2)
         cols = step.get("cols", 3)
-        confidence = step.get("confidence", 0.3)
-        timeout = step.get("timeout_loop", 300) 
+        confidence = step.get("confidence", 0.25)
+        timeout = step.get("timeout_loop", 150) # 150s timeout là đủ, tránh bị kẹt quá lâu
         
-        last_success_check = time.time() # Thời điểm cuối cùng thấy dấu hiệu captcha đúng dạng
-
         if not sample_roi or not grid_roi:
             self.log("LỖI CAPTCHA: Thiếu sample_roi hoặc grid_roi.")
             return False
 
-        self.log("CAPTCHA: Bắt đầu chu kỳ giải và tự động đổi dạng nếu cần...")
+        self.log("CAPTCHA: Bắt đầu giải (Đã tối ưu CPU/RAM)...")
         start_loop = time.time()
         
+        # Tiền xử lý: Dùng CLAHE để tăng tương phản
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        no_captcha_count = 0
+        fail_count = 0
+
         while time.time() - start_loop < timeout and self.running:
             screen = self.get_screenshot()
-            if screen is None: break
+            if screen is None: 
+                time.sleep(1)
+                continue
             
             h, w = screen.shape[:2]
-            # Nếu màn hình đã về hướng NGANG -> Coi như đã giải xong hoặc trình duyệt đã đóng
             if w > h:
-                self.log("CAPTCHA: Đã quay về màn hình NGANG. Kết thúc bước giải.")
+                self.log("CAPTCHA: Đã quay về màn hình NGANG.")
+                del screen
                 return True
 
-            # 1. KIỂM TRA DẠNG CAPTCHA SAI (loại "Click in this order")
-            # Nếu tìm thấy marker này -> đây là loại không giải được -> Back & GetCode lại
-            bad_type_path = resource_path("images/capcha_order_type.jpg")
-            is_wrong_type = False
-            if os.path.exists(bad_type_path):
-                bad_temp = cv2.imread(bad_type_path)
-                if bad_temp is not None:
-                    res_bad = cv2.matchTemplate(screen, bad_temp, cv2.TM_CCOEFF_NORMED)
-                    _, mv_bad, _, _ = cv2.minMaxLoc(res_bad)
-                    if mv_bad >= 0.75:
-                        is_wrong_type = True
-                        self.log(f"CAPTCHA: Phát hiện loại 'Click in order' (Khớp: {mv_bad:.2f}). Đang Back & GetCode lại...")
+            # QUAN TRỌNG: Kiểm tra xem nút OK có đang trên màn hình không
+            # Nếu không có nút OK trong vài lần check liên tiếp, nghĩa là captcha đã biến mất (đã giải xong)
+            ok_template = get_cached_image("images/ok_capcha.png")
+            mv_ok = 0
+            ml_ok = (0, 0)
+            if ok_template is not None:
+                res_ok = cv2.matchTemplate(screen, ok_template, cv2.TM_CCOEFF_NORMED)
+                _, mv_ok, _, ml_ok = cv2.minMaxLoc(res_ok)
+                del res_ok
+                if mv_ok < 0.7:
+                    no_captcha_count += 1
+                    if no_captcha_count >= 3:
+                        self.log("CAPTCHA: Không thấy nút OK nữa trên màn hình. Coi như đã giải xong!")
+                        del screen
+                        return True
+                else:
+                    no_captcha_count = 0
+            else:
+                self.log("CẢNH BÁO: Thiếu file images/ok_capcha.png để nhận diện nút OK.")
 
-            if is_wrong_type:
-                self.call_adb(["shell", "input", "keyevent", "4"])
-                time.sleep(2)
-                # Click Get Code lại để nhận captcha mới
-                self.click_image_logic({"target": "images/get_code.jpg", "timeout": 10, "confidence": 0.8})
-                time.sleep(1)
-                self.click_image_logic({"target": "images/get_code.jpg", "timeout": 5, "confidence": 0.8})
-                time.sleep(5)
-                last_success_check = time.time()
-                continue
+            # 1. KIỂM TRA DẠNG CAPTCHA BỊ LỖI LỆCH LOẠI
+            bad_temp = get_cached_image("images/capcha_order_type.jpg")
+            if bad_temp is not None:
+                res_bad = cv2.matchTemplate(screen, bad_temp, cv2.TM_CCOEFF_NORMED)
+                _, mv_bad, _, _ = cv2.minMaxLoc(res_bad)
+                del res_bad
+                if mv_bad >= 0.70: # Hạ xuống 0.7 để bắt nhạy hơn
+                    self.log(f"CAPTCHA: Phát hiện loại sai ({mv_bad:.2f}). Đang tải hộp thoại mới...")
+                    self.call_adb(["shell", "input", "keyevent", "4"])
+                    time.sleep(2)
+                    self.click_image_logic({"target": "images/get_code.jpg", "timeout": 10, "confidence": 0.8})
+                    del screen
+                    continue
 
             try:
-                # 2. Trích xuất hình mẫu (Cắt ảnh an toàn)
+                # 2. Trích xuất hình mẫu
                 sx, sy, sw, sh = sample_roi
                 sx1, sy1 = max(0, sx), max(0, sy)
                 sx2, sy2 = min(w, sx+sw), min(h, sy+sh)
-                sample_img = screen[sy1:sy2, sx1:sx2]
+                sample_img = screen[sy1:sy2, sx1:sx2].copy()
                 
                 if sample_img is not None and sample_img.size > 0:
-                    cv2.imwrite(f"debug_sample_{self.device_id}.png", sample_img)
                     sample_gray = cv2.cvtColor(sample_img, cv2.COLOR_BGR2GRAY)
-                    
-                    # Cải thiện mẫu: Adaptive histogram equalization + denoise
-                    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
                     sample_enhanced = clahe.apply(sample_gray)
                     sample_enhanced = cv2.GaussianBlur(sample_enhanced, (3, 3), 0)
                     
-                    # 3. Chia lưới và tìm hình khớp nhất
+                    # 3. Chia lưới 
                     gx, gy, gw, gh = grid_roi
                     cell_w, cell_h = gw // cols, gh // rows
-                    
-                    # Lưu ảnh vùng lưới để debug
-                    grid_view = screen[gy:gy+gh, gx:gx+gw]
-                    cv2.imwrite(f"debug_grid_{self.device_id}.png", grid_view)
-                    
-                    # Resize mẫu 1 lần duy nhất
                     resized_sample = cv2.resize(sample_enhanced, (cell_w, cell_h))
                     
                     best_val, best_idx = -1, -1
-                    scores = []
-                    
                     total_cells = rows * cols
                     for i in range(total_cells):
                         row_idx, col_idx = i // cols, i % cols
@@ -217,86 +220,53 @@ class AutoClickerInstance:
                         if choice_img is None or choice_img.size == 0: continue
                         
                         choice_gray = cv2.cvtColor(choice_img, cv2.COLOR_BGR2GRAY)
-                        # Cải thiện hình lựa chọn: Adaptive histogram equalization + denoise
                         choice_enhanced = clahe.apply(choice_gray)
                         choice_enhanced = cv2.GaussianBlur(choice_enhanced, (3, 3), 0)
                         
-                        # Thử nhiều phương pháp matching và lấy kết quả tốt nhất
-                        scores_list = []
-                        # Method 1: TM_CCOEFF_NORMED (hiệu quả nhất cho object recognition)
-                        res1 = cv2.matchTemplate(choice_enhanced, resized_sample, cv2.TM_CCOEFF_NORMED)
-                        _, val1, _, _ = cv2.minMaxLoc(res1)
-                        scores_list.append(val1)
+                        res = cv2.matchTemplate(choice_enhanced, resized_sample, cv2.TM_CCOEFF_NORMED)
+                        _, score, _, _ = cv2.minMaxLoc(res)
                         
-                        # Method 2: TM_CCORR_NORMED (tương quan)
-                        res2 = cv2.matchTemplate(choice_enhanced, resized_sample, cv2.TM_CCORR_NORMED)
-                        _, val2, _, _ = cv2.minMaxLoc(res2)
-                        scores_list.append(val2)
+                        if score > best_val:
+                            best_val, best_idx = score, i
                         
-                        # Method 3: TM_SQDIFF_NORMED (nhỏ = khớp)
-                        res3 = cv2.matchTemplate(choice_enhanced, resized_sample, cv2.TM_SQDIFF_NORMED)
-                        _, val3, _, _ = cv2.minMaxLoc(res3)
-                        scores_list.append(1 - val3)  # Đảo ngược để nhỏ = khớp
-                        
-                        # Lấy giá trị trung bình từ 3 phương pháp
-                        max_val = max(scores_list)
-                        avg_val = sum(scores_list) / len(scores_list)
-                        # Ưu tiên điểm cao nhất nhưng xem xét cả trung bình
-                        combined_score = max_val * 0.6 + avg_val * 0.4
-                        
-                        scores.append(f"{i+1}:{combined_score:.2f}")
-                        if combined_score > best_val:
-                            best_val, best_idx = combined_score, i
-                    
-                    self.log(f"CAPTCHA SCORE: {' | '.join(scores)}")
-                    
-                    if best_idx != -1 and best_val >= confidence:
-                        # Click chọn hình
+                        del res
+                        del choice_gray
+                        del choice_enhanced
+
+                    # Luôn bấm vào hình có độ khớp cao nhất dù điểm số có thấp, nếu sai game sẽ tự đổi captcha
+                    if best_idx != -1:
                         final_row, final_col = best_idx // cols, best_idx % cols
                         tx, ty = gx + final_col * cell_w + cell_w // 2, gy + final_row * cell_h + cell_h // 2
                         self.call_adb(["shell", "input", "tap", str(tx), str(ty)])
-                        self.log(f"CAPTCHA: Đã chọn hình {best_idx+1} (Khớp: {best_val:.2f})")
+                        self.log(f"CAPTCHA: Bấm hình số {best_idx+1} (Khớp: {best_val:.2f})")
                         
-                        # Tìm và nhấn nút OK
                         time.sleep(2)
-                        ok_path = resource_path("images/ok_capcha.png")
-                        if os.path.exists(ok_path):
-                            ok_template = cv2.imread(ok_path)
-                            if ok_template is not None:
-                                scr_ok = self.get_screenshot()
-                                if scr_ok is not None:
-                                    res_ok = cv2.matchTemplate(scr_ok, ok_template, cv2.TM_CCOEFF_NORMED)
-                                    _, mv_ok, _, ml_ok = cv2.minMaxLoc(res_ok)
-                                    if mv_ok >= 0.8:
-                                        oh, ow = ok_template.shape[:2]
-                                        ox, oy = ml_ok[0] + ow//2, ml_ok[1] + oh//2
-                                        self.call_adb(["shell", "input", "tap", str(ox), str(oy)])
-                                        self.log(f"CAPTCHA: Đã nhấn nút OK (Khớp: {mv_ok:.2f})")
                         
-                        # Sau khi bấm OK, chờ và kiểm tra xem captcha có còn không
-                        time.sleep(2)
-                        check_screen = self.get_screenshot()
-                        if check_screen is not None:
-                            ch, cw = check_screen.shape[:2]
-                            # Nếu vẫn dọc (captcha còn) thì continue vòng lặp để giải tiếp
-                            if cw <= ch:
-                                self.log("CAPTCHA: Giải xong nhưng captcha vẫn còn. Tiếp tục giải...")
-                                time.sleep(1)
-                                continue
-                            else:
-                                self.log("CAPTCHA: Giải thành công, quay về màn hình ngang.")
-                                return True
-                
-                time.sleep(1)
+                        # Táp vào tọa độ nút OK mà ta đã tìm thấy ở đầu loop
+                        if ok_template is not None and mv_ok >= 0.7:
+                            oh, ow = ok_template.shape[:2]
+                            ox, oy = ml_ok[0] + ow//2, ml_ok[1] + oh//2
+                            self.call_adb(["shell", "input", "tap", str(ox), str(oy)])
+                            self.log("CAPTCHA: Đã bấm nút OK. Đợi phản hồi...")
+                    
+                    del sample_img
+                    del sample_gray
+                    del sample_enhanced
+                    del resized_sample
+
+                del screen
+                time.sleep(3) # Chờ load trạng thái mới
                 
             except Exception as e:
                 self.log(f"CAPTCHA ERROR: {str(e)}")
                 time.sleep(2)
+                
         return False
     
     def run(self, accounts):
         self.running = True
         self.script = [
+            {"action": "clear_android_data", "package": "com.tencent.stc.cfl"},
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 5},
             {"action": "click_image", "target": "images/more.png", "timeout": 420},
             {"action": "click_image", "target": "images/lipass.png", "timeout": 120},
@@ -309,29 +279,28 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/ok.png", "timeout": 10},
             {"action": "click_image", "target": "images/login.png", "timeout": 120},
             {"action": "wait", "timeout": 5},
-            # {"action": "solve_captcha", "sample_roi": [355, 300, 65, 65], "grid_roi": [75, 375, 380, 260]},
-            # {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 420},
-            # {"action": "wait", "timeout": 3},
-            # {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 20},
-            # {"action": "click_image", "target": "images/event_center.jpg", "timeout": 20},
-            # {"action": "click_image", "target": "images/limited_time.png", "timeout": 20},
-            # {"action": "click_image", "target1": "images/sk.png",  "target2": "images/sk1.png","timeout": 20},
-            # {"action": "wait", "timeout": 2},
-            # {"action": "click_image", "target": "images/earn.png", "timeout": 20},
-            # {"action": "wait", "timeout": 2},
-            # {"action": "click_image", "target": "images/claim.png","timeout": 20},
-            # {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
-            # {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
-            # {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
-            # {"action": "press_esc", "timeout": 5},
-            # {"action": "click_image_if", "target": "images/setting.jpg","timeout": 20},
-            # {"action": "wait", "timeout": 3},
-            # {"action": "click_image", "target": "images/logout.png","timeout": 20},
-            # {"action": "wait", "timeout": 3},
-            # {"action": "click_image_if", "target": "images/logout.png","timeout": 5},
-            # {"action": "wait", "timeout": 3},
-            # {"action": "click_image_if", "target": "images/confirm_name_btn.png","timeout": 20},
-            # {"action": "wait", "timeout": 20},
+            {"action": "solve_captcha", "sample_roi": [355, 300, 65, 65], "grid_roi": [75, 375, 380, 260]},
+            {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 420},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 20},
+            {"action": "click_image", "target": "images/event_center.jpg", "timeout": 20},
+            {"action": "click_image", "target": "images/limited_time.png", "timeout": 20},
+            {"action": "click_image", 
+              "target1": "images/sk.png",  
+              "target2": "images/sk1.png", 
+              "target3": "images/invite_friend.png", 
+              "target4": "images/invite_friend1.png",
+              "target5": "images/invite_friend2.png",
+              "target6": "images/invite_friend3.png",
+              "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image", "target": "images/earn.png", "timeout": 20},
+            {"action": "click_image_if", "target": "images/earn.png", "timeout": 3},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image", "target": "images/claim.png","timeout": 20},
+            {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
+            {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
+            {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
         ]
         while self.running:
             target = None
@@ -355,7 +324,7 @@ class AutoClickerInstance:
                 # Nếu lỗi, bỏ flag processing để máy khác hoặc lượt sau có thể thử lại
                 with self.account_lock:
                     target['processing'] = False
-                self.report_stats_func(False)
+                self.report_stats_func(False, target)
             time.sleep(5)
         self.status = "Xong"; self.update_ui_func(); self.running = False
 
@@ -417,6 +386,7 @@ class MultiPremiumApp(ctk.CTk):
         self.btn_start.pack(padx=20, pady=(30, 10), fill="x")
         self.btn_stop = ctk.CTkButton(self.sidebar, text=" DỪNG TẤT CẢ", image=self.stop_icon, compound="left", command=self.stop_all, fg_color="#333", height=50, corner_radius=10)
         self.btn_stop.pack(padx=20, pady=10, fill="x")
+        
         ctk.CTkLabel(self.sidebar, text="Nguồn: RyoUTE", font=ctk.CTkFont(size=11), text_color="#666").pack(side="bottom", pady=20)
 
         # 2. Main Area
@@ -438,11 +408,12 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(self.stats_card, text="THÔNG SỐ HOẠT ĐỘNG", font=ctk.CTkFont(size=16, weight="bold"), text_color=ACCENT_GREEN).pack(pady=15)
         self.stats_inner = ctk.CTkFrame(self.stats_card, fg_color="transparent")
         self.stats_inner.pack(fill="both", expand=True, padx=20)
-        self.stats_inner.columnconfigure((0, 1, 2), weight=1)
+        self.stats_inner.columnconfigure((0, 1, 2, 3), weight=1)
         
         self.success_val = self.create_stat_item(self.stats_inner, "THÀNH CÔNG", "0", 0, 0, "#4ADE80")
-        self.lag_val = self.create_stat_item(self.stats_inner, "ĐANG LAG", "0", 0, 1, "#FB923C")
-        self.rem_val = self.create_stat_item(self.stats_inner, "CÒN LẠI", "0", 0, 2, ACCENT_PURPLE)
+        self.fail_val_ui = self.create_stat_item(self.stats_inner, "LỖI LƯỢT", "0", 0, 1, ACCENT_RED)
+        self.lag_val = self.create_stat_item(self.stats_inner, "ĐANG LAG", "0", 0, 2, "#FB923C")
+        self.rem_val = self.create_stat_item(self.stats_inner, "CÒN LẠI", "0", 0, 3, ACCENT_PURPLE)
 
     def create_stat_item(self, parent, title, value, row, col, color):
         f = ctk.CTkFrame(parent, fg_color="#252525", corner_radius=12)
@@ -503,10 +474,20 @@ class MultiPremiumApp(ctk.CTk):
             rem = sum(1 for a in self.accounts_data if not a['done'])
             self.success_val.configure(text=str(done))
             self.rem_val.configure(text=str(rem))
+            self.fail_val_ui.configure(text=str(self.failure_count))
             self.lag_val.configure(text=str(sum(1 for w in self.active_workers if w.is_lagging)))
         except: pass
 
-    def report_stats(self, success): self.after(0, self.refresh_ui)
+    def report_stats(self, success, account=None):
+        if not success: 
+            self.failure_count += 1
+            if account:
+                try:
+                    with self.account_lock:
+                        with open("that_bai.txt", "a", encoding="utf-8") as f:
+                            f.write(f"{account['tk']}|{account['mk']}|{datetime.now().strftime('%H:%M:%S')}\n")
+                except: pass
+        self.after(0, self.refresh_ui)
 
     def start_all(self):
         if not self.accounts_data: return
