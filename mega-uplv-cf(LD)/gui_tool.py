@@ -164,7 +164,7 @@ class AutoClickerInstance:
         self.current_email = None
         self.mail_tm_token = None
         self.accounts_processed = 0 # Bộ đếm số acc đã chạy
-        self.restart_threshold = 3 # Sau N lượt chạy sẽ khởi động lại LDPlayer 1 lần
+        self.restart_threshold = 1 # Sau N lượt chạy sẽ khởi động lại LDPlayer 1 lần
         self.ld_console_path = None # Sẽ được gán từ App
 
     def log(self, msg):
@@ -242,7 +242,6 @@ class AutoClickerInstance:
                 if len(parts) >= 7:
                     idx_val, _, _, _, _, _, serial = parts[:7]
                     # So khớp thông minh: lấy số port ở cuối để so sánh
-                    # Ví dụ: 'emulator-5554' và '127.0.0.1:5554' đều có port 5554
                     s_port = serial.split('-')[-1].split(':')[-1]
                     d_port = self.device_id.split('-')[-1].split(':')[-1]
                     
@@ -271,50 +270,97 @@ class AutoClickerInstance:
         
         # Đợi tắt hẳn (tránh lỗi launch khi instance đang closing)
         start_quit = time.time()
-        while time.time() - start_quit < 25:
+        while time.time() - start_quit < 30:
             time.sleep(2)
-            res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            is_running = False
-            for line in res.stdout.splitlines():
-                parts = line.split(',')
-                if len(parts) >= 5 and parts[0] == str(index):
-                    if parts[4] != '0': is_running = True
-                    break
-            if not is_running: break
+            try:
+                res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                is_running = False
+                for line in res.stdout.splitlines():
+                    parts = line.split(',')
+                    if len(parts) >= 5 and parts[0] == str(index):
+                        if parts[4] != '0': is_running = True
+                        break
+                if not is_running: break
+            except: break
 
-        time.sleep(2)
+        time.sleep(3)
         
         # 2. Bật lại máy ảo
         subprocess.run([self.ld_console_path, "launch", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW)
         
         # 3. Chờ máy ảo lên và sẵn sàng
-        self.log("Đợi máy ảo khởi động lại (tối đa 2 phút)...")
+        self.log(f"Đang đợi máy ảo (Index {index}) ổn định ADB...")
         start_wait = time.time()
-        while time.time() - start_wait < 120:
+        
+        while time.time() - start_wait < 150:
             if not self.running: return False
             
-            # Nếu là cổng mạng (127.0.0.1:...), thử connect lại nếu ADB bị mất kết nối
-            if ":" in self.device_id:
+            # Cập nhật serial định kỳ từ list2 (đề phòng LDPlayer nhảy port hoặc đổi tên serial)
+            current_ld_serial = None
+            try:
+                res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                for line in res.stdout.splitlines():
+                    parts = line.split(',')
+                    if parts[0] == str(index):
+                        # Quét tất cả các cột để tìm chuỗi có định dạng Serial ADB (chứa : hoặc emulator-)
+                        for p in parts:
+                            p = p.strip()
+                            if (":" in p or p.startswith("emulator-")) and p != "null":
+                                current_ld_serial = p
+                                break
+                        
+                        if current_ld_serial and current_ld_serial != self.device_id:
+                            self.log(f"PHÁT HIỆN SERIAL: {self.device_id} -> {current_ld_serial}")
+                            self.device_id = current_ld_serial
+                        break
+            except: pass
+
+            # Nếu chưa tìm thấy serial qua list2, thử cổng mặc định theo Index
+            if not current_ld_serial or current_ld_serial == "null":
+                 target_port = 5554 + (index * 2)
+                 target_serial = f"127.0.0.1:{target_port}"
+                 # Chỉ thử connect nếu chưa sẵn sàng
+                 subprocess.run([self.adb_path, "connect", target_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+
+            # Nếu là cổng mạng, ép kết nối lại để xóa cache offline
+            if self.device_id and ":" in self.device_id:
                 subprocess.run([self.adb_path, "connect", self.device_id], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
 
-            # Kiểm tra trạng thái boot qua ADB
-            res = self.call_adb(["shell", "getprop", "sys.boot_completed"], timeout=10)
-            if b"1" in res.stdout:
-                self.log("Máy ảo đã khởi động xong (sys.boot_completed=1)!")
-                time.sleep(5) # Chờ ổn định services
-                return True
+            # Kiểm tra trạng thái thực tế trong ADB
+            res_adb = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+            is_connected = False
+            for line in res_adb.stdout.splitlines():
+                # Kiểm tra cả device_id hiện tại và port dự phòng
+                if self.device_id in line and "device" in line and "offline" not in line:
+                    is_connected = True
+                    break
             
-            # Dự phòng: Kiểm tra wm size nếu boot_completed treo ở 0 nhưng máy thực chất đã lên
-            if time.time() - start_wait > 60:
-                res_wm = self.call_adb(["shell", "wm", "size"], timeout=10)
-                if b"Physical size" in res_wm.stdout:
-                    self.log("Máy ảo đã khởi động xong (nhận diện qua wm size)!")
-                    time.sleep(10)
+            if is_connected:
+                # Kiểm tra phản hồi shell thực tế
+                res_boot = self.call_adb(["shell", "getprop", "sys.boot_completed"], timeout=8)
+                if b"1" in res_boot.stdout:
+                    self.log("==> KẾT NỐI THÀNH CÔNG! Máy ảo đã sẵn sàng.")
+                    time.sleep(10) # Chờ service Android ổn định hoàn toàn
                     return True
+                
+                # Dự phòng nếu boot_completed bị treo
+                if time.time() - start_wait > 60:
+                    res_wm = self.call_adb(["shell", "wm", "size"], timeout=8)
+                    if b"Physical size" in res_wm.stdout:
+                        self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)!")
+                        time.sleep(10)
+                        return True
+            else:
+                # Nếu vẫn chưa thấy thiết bị, thử connect lại port tiêu chuẩn dựa trên index
+                if time.time() - start_wait > 30:
+                    guest_port = 5554 + (index * 2)
+                    guest_serial = f"127.0.0.1:{guest_port}"
+                    if guest_serial != self.device_id:
+                         subprocess.run([self.adb_path, "connect", guest_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
 
             time.sleep(5)
         
-        self.log("LỖI: Quá thời gian chờ máy ảo khởi động.")
+        self.log(f"LỖI: Quá 150s vẫn không 'bắt' được ADB của máy Index {index}.")
         return False
 
     def execute_step(self, step):
@@ -798,7 +844,6 @@ class AutoClickerInstance:
              {"action": "clear_android_data", "package": "com.tencent.stc.cfl"},
              {"action": "click_image", "target": "images/game_logo.png", "timeout": 30, "confidence": 0.8},
              {"action": "click_image", "target": "images/guest.png", "timeout": 420, "confidence": 0.9},
-             {"action": "click_image", "target1": "images/agree.png","target2": "images/agree1.png", "timeout": 60, "confidence": 0.9},
              {"action": "click_image", "target": "images/agree_btn.png", "timeout": 30, "confidence": 0.9},
              {"action": "click_image", "target": "images/name_input1.png", "timeout": 120, "confidence": 0.9},
              {"action": "click_image", "target": "images/name_input2.png", "timeout": 30, "confidence": 0.9},

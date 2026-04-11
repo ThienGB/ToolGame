@@ -1,7 +1,40 @@
+# Dữ liệu tài khoản và kết quả
 SUCCESS_ACC.txt
 FAILED_ACC.txt
+failed_accounts.txt
+account_results.txt
+
+# Cấu hình và bản quyền (BẢO MẬT)
 license.bin
 config.json
+*.bin
+*.key
+
+# File debug và hình ảnh tạm thời
 debug_*.png
-*.log
+*.screenshot.png
+/debug_*/
+
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+
+# Build và Dist (PyInstaller)
+build/
+dist/
+*.spec
+
+# Thư mục IDE
+.vscode/
+.idea/
+
+# Binaries và Log
+adb.exe
+AdbWinApi.dll
+AdbWinUsbApi.dll
+*.log
