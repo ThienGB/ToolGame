@@ -164,7 +164,7 @@ class AutoClickerInstance:
         self.current_email = None
         self.mail_tm_token = None
         self.accounts_processed = 0 # Bộ đếm số acc đã chạy
-        self.restart_threshold = 15 # Sau 15 lượt chạy sẽ khởi động lại LDPlayer 1 lần
+        self.restart_threshold = 1 # Sau 15 lượt chạy sẽ khởi động lại LDPlayer 1 lần
         self.ld_console_path = None # Sẽ được gán từ App
 
     def log(self, msg):
@@ -185,31 +185,44 @@ class AutoClickerInstance:
         self.is_lagging = is_lagging
         self.update_ui_func()
 
-    def call_adb(self, args):
+    def call_adb(self, args, timeout=15):
         cmd = [self.adb_path, "-s", self.device_id] + args
-        # Thêm CREATE_NO_WINDOW để không bị hiện CMD khi chạy trên Win
-        return subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+        try:
+            # Thêm timeout để tránh treo luồng nếu máy ảo bị đơ
+            return subprocess.run(cmd, capture_output=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
+        except subprocess.TimeoutExpired:
+            self.log(f"ADB TIMEOUT: Lệnh {args[0] if args else ''} quá lâu.")
+            return subprocess.CompletedProcess(cmd, 1, b"", b"timeout")
+        except Exception as e:
+            return subprocess.CompletedProcess(cmd, 1, b"", str(e).encode())
 
     def get_screenshot(self):
         try:
-            # Ưu tiên dùng exec-out để nhận byte chuẩn, không bị đính kèm \r\n (Giảm 1 nửa RAM tải ảnh)
+            # Ưu tiên dùng exec-out để nhận byte chuẩn
             cmd = [self.adb_path, "-s", self.device_id, "exec-out", "screencap", "-p"]
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
-            stdout, _ = process.communicate()
+            try:
+                stdout, _ = process.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                return None
             
             if process.returncode != 0 or not stdout:
-                # Chế độ dự phòng cho các bản ADB cũ không hỗ trợ exec-out
+                # Chế độ dự phòng
                 cmd = [self.adb_path, "-s", self.device_id, "shell", "screencap", "-p"]
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
-                stdout, _ = process.communicate()
+                try:
+                    stdout, _ = process.communicate(timeout=15)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    return None
+                    
                 if process.returncode != 0 or not stdout: return None
                 stdout = stdout.replace(b"\r\n", b"\n")
             
-            # Khởi tạo ma trận ảnh trực tiếp từ bộ nhớ
             image_array = np.frombuffer(stdout, dtype=np.uint8)
             img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
             
-            # Giải phóng dữ liệu byte ngay lập tức
             del image_array
             del stdout
             return img
@@ -220,14 +233,31 @@ class AutoClickerInstance:
             self.log("CẢNH BÁO: Không tìm thấy ldconsole.exe để khởi động lại.")
             return False
 
-        # Tìm index của LDPlayer dựa trên port ADB (5554 -> index 0, 5556 -> index 1...)
-        port = None
-        if ":" in self.device_id: port = self.device_id.split(":")[-1]
-        elif "-" in self.device_id: port = self.device_id.split("-")[-1]
-        
         index = -1
-        if port and port.isdigit():
-            index = (int(port) - 5554) // 2
+        # Cách 1: Tìm Index bằng list2 (Chính xác cao nhất)
+        try:
+            res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+            for line in res.stdout.splitlines():
+                parts = line.split(',')
+                if len(parts) >= 7:
+                    idx_val, _, _, _, _, _, serial = parts[:7]
+                    # So khớp thông minh: lấy số port ở cuối để so sánh
+                    # Ví dụ: 'emulator-5554' và '127.0.0.1:5554' đều có port 5554
+                    s_port = serial.split('-')[-1].split(':')[-1]
+                    d_port = self.device_id.split('-')[-1].split(':')[-1]
+                    
+                    if (s_port == d_port and s_port.isdigit()) or (serial == self.device_id):
+                        index = int(idx_val)
+                        break
+        except: pass
+
+        # Cách 2: Phân tích port (Dự phòng cho máy ảo vừa mở chưa kịp hiện serial)
+        if index == -1:
+            port = None
+            if ":" in self.device_id: port = self.device_id.split(":")[-1]
+            elif "-" in self.device_id: port = self.device_id.split("-")[-1]
+            if port and port.isdigit():
+                index = (int(port) - 5554) // 2
 
         if index == -1:
             self.log("LỖI: Không xác định được index máy ảo để restart.")
@@ -238,22 +268,53 @@ class AutoClickerInstance:
         
         # 1. Tắt máy ảo
         subprocess.run([self.ld_console_path, "quit", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW)
-        time.sleep(5)
+        
+        # Đợi tắt hẳn (tránh lỗi launch khi instance đang closing)
+        start_quit = time.time()
+        while time.time() - start_quit < 25:
+            time.sleep(2)
+            res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            is_running = False
+            for line in res.stdout.splitlines():
+                parts = line.split(',')
+                if len(parts) >= 5 and parts[0] == str(index):
+                    if parts[4] != '0': is_running = True
+                    break
+            if not is_running: break
+
+        time.sleep(2)
         
         # 2. Bật lại máy ảo
         subprocess.run([self.ld_console_path, "launch", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW)
         
-        # 3. Chờ máy ảo lên và sẵn sàng (Quét cho đến khi ADB kết nối lại được)
-        self.log("Đợi máy ảo khởi động lại (khoảng 45s-60s)...")
+        # 3. Chờ máy ảo lên và sẵn sàng
+        self.log("Đợi máy ảo khởi động lại (tối đa 2 phút)...")
         start_wait = time.time()
-        while time.time() - start_wait < 120: # Chờ tối đa 2 phút
-            res = self.call_adb(["shell", "getprop", "sys.boot_completed"])
+        while time.time() - start_wait < 120:
+            if not self.running: return False
+            
+            # Nếu là cổng mạng (127.0.0.1:...), thử connect lại nếu ADB bị mất kết nối
+            if ":" in self.device_id:
+                subprocess.run([self.adb_path, "connect", self.device_id], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+
+            # Kiểm tra trạng thái boot qua ADB
+            res = self.call_adb(["shell", "getprop", "sys.boot_completed"], timeout=10)
             if b"1" in res.stdout:
-                self.log("Máy ảo đã khởi động xong!")
-                time.sleep(10) # Chờ thêm 10s cho các dịch vụ ổn định
+                self.log("Máy ảo đã khởi động xong (sys.boot_completed=1)!")
+                time.sleep(5) # Chờ ổn định services
                 return True
+            
+            # Dự phòng: Kiểm tra wm size nếu boot_completed treo ở 0 nhưng máy thực chất đã lên
+            if time.time() - start_wait > 60:
+                res_wm = self.call_adb(["shell", "wm", "size"], timeout=10)
+                if b"Physical size" in res_wm.stdout:
+                    self.log("Máy ảo đã khởi động xong (nhận diện qua wm size)!")
+                    time.sleep(10)
+                    return True
+
             time.sleep(5)
         
+        self.log("LỖI: Quá thời gian chờ máy ảo khởi động.")
         return False
 
     def execute_step(self, step):
@@ -393,7 +454,7 @@ class AutoClickerInstance:
         rows = step.get("rows", 2)
         cols = step.get("cols", 3)
         confidence = step.get("confidence", 0.25)
-        timeout = step.get("timeout_loop", 150) # 150s timeout là đủ, tránh bị kẹt quá lâu
+        timeout = step.get("timeout_loop", 90) # 150s timeout là đủ, tránh bị kẹt quá lâu
         
         if not sample_roi or not grid_roi:
             self.log("LỖI CAPTCHA: Thiếu sample_roi hoặc grid_roi.")
@@ -833,7 +894,7 @@ class AutoClickerInstance:
                 "confidence": 0.25
             },
             {"action": "click_image", "target": "images/email_validation_code.jpg", "timeout": 20, "confidence": 0.8},
-            {"action": "wait_for_email_code", "timeout": 120},
+            {"action": "wait_for_email_code", "timeout": 30},
             {"action": "click_image", "target": "images/link.jpg", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/link.jpg", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/confirm_check.jpg", "timeout": 20, "confidence": 0.9},
@@ -854,7 +915,7 @@ class AutoClickerInstance:
                 "confidence": 0.25
             },
             {"action": "click_image", "target": "images/email_validation_code.jpg", "timeout": 20, "confidence": 0.8},
-            {"action": "wait_for_email_code", "timeout": 120},
+            {"action": "wait_for_email_code", "timeout": 30},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 5, "confidence": 0.8},
             {"action": "click_image", "target": "images/new_password_input.jpg", "timeout": 20, "confidence": 0.8},
             {"action": "input_text", "content": "123456Aa"},
@@ -1053,8 +1114,8 @@ class MultiPremiumApp(ctk.CTk):
 
         self.device_list_frame = ctk.CTkScrollableFrame(self.inst_frame, height=180, fg_color="transparent") 
         self.device_list_frame.pack(fill="x", padx=10, pady=(0, 15))
-        # Tăng số cột lên 10 để thu gọn cho nhiều máy
-        for col in range(10): 
+        # Tăng số cột lên 12 và cấu hình cột đều nhau
+        for col in range(12): 
             self.device_list_frame.grid_columnconfigure(col, weight=1)
         self.device_cards = {}
 
@@ -1095,10 +1156,10 @@ class MultiPremiumApp(ctk.CTk):
 
     def create_stat_item(self, parent, title, value, row, col, color):
         frame = ctk.CTkFrame(parent, fg_color="#252525", corner_radius=12)
-        frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
-        ctk.CTkLabel(frame, text=title, font=ctk.CTkFont(size=11, weight="bold"), text_color="#888").pack(pady=(15, 0))
-        val_label = ctk.CTkLabel(frame, text=value, font=ctk.CTkFont(size=24, weight="bold"), text_color=color)
-        val_label.pack(pady=(5, 15))
+        frame.grid(row=row, column=col, padx=8, pady=5, sticky="nsew")
+        ctk.CTkLabel(frame, text=title, font=ctk.CTkFont(size=10, weight="bold"), text_color="#888").pack(pady=(8, 0))
+        val_label = ctk.CTkLabel(frame, text=value, font=ctk.CTkFont(size=20, weight="bold"), text_color=color)
+        val_label.pack(pady=(2, 8))
         return val_label
 
     def report_stats(self, success=True):
@@ -1228,8 +1289,13 @@ class MultiPremiumApp(ctk.CTk):
         unauthorized_count = 0
         
         try:
-            # CHÚ Ý: Không kill-server mỗi lần quét vì sẽ làm ngắt kết nối các máy đang chạy, 
-            # khiến ADB mất thời gian nhận diện lại (có thể dẫn đến thiếu máy).
+            # CHÚ Ý: Không kill-server mỗi lần quét vì sẽ làm ngắt kết nối các máy đang chạy.
+            
+            # Tự động thử kết nối các cổng phổ biến từ Instance 0 đến 20 để tránh sót máy (ADBSocket)
+            # Điều này cực kỳ hiệu quả khi máy ảo đã mở nhưng ADB chưa tự động nhận diện.
+            for port in range(5554, 5596, 2):
+                subprocess.run([adb_path, "connect", f"127.0.0.1:{port}"], capture_output=True, timeout=0.5, creationflags=subprocess.CREATE_NO_WINDOW)
+            
             res = subprocess.run([adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
             
             # Nếu ADB server chưa chạy, subprocess sẽ tự động start nó. 
@@ -1275,9 +1341,11 @@ class MultiPremiumApp(ctk.CTk):
         # Create new widgets
         for i, serial in enumerate(device_serials):
             card = ctk.CTkFrame(self.device_list_frame, fg_color="#252525", corner_radius=6, border_width=1, border_color="#383838")
-            card.grid(row=i // 10, column=i % 10, padx=3, pady=3, sticky="nsew")
+            # Sắp xếp 12 máy trên 1 hàng để tối ưu không gian
+            card.grid(row=i // 12, column=i % 12, padx=3, pady=3, sticky="nsew")
             
-            display_name = serial.split(":")[-1] if ":" in serial else serial
+            # Tách lấy port hoặc phần số cuối cùng của Serial (Ví dụ: emulator-5554 -> 5554, 127.0.0.1:5556 -> 5556)
+            display_name = serial.replace("emulator-", "").split(":")[-1]
             name_lbl = ctk.CTkLabel(card, text=display_name, font=ctk.CTkFont(size=10, weight="bold"))
             name_lbl.pack(pady=(5, 0))
             
