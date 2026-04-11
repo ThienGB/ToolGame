@@ -164,7 +164,7 @@ class AutoClickerInstance:
         self.current_email = None
         self.mail_tm_token = None
         self.accounts_processed = 0 # Bộ đếm số acc đã chạy
-        self.restart_threshold = 1 # Sau 15 lượt chạy sẽ khởi động lại LDPlayer 1 lần
+        self.restart_threshold = 3 # Sau N lượt chạy sẽ khởi động lại LDPlayer 1 lần
         self.ld_console_path = None # Sẽ được gán từ App
 
     def log(self, msg):
@@ -1071,6 +1071,12 @@ class MultiPremiumApp(ctk.CTk):
         self.gmail_edit_button = ctk.CTkButton(self.gmail_compact_frame, text="Sửa", command=lambda: self.show_gmail_fields(True), width=80, height=25)
         self.gmail_edit_button.pack(side="right", pady=5)
 
+        # Restart Threshold config
+        ctk.CTkLabel(self.path_card, text="LƯỢT CHẠY RESTART (CYCLES)", font=ctk.CTkFont(size=11, weight="bold")).pack(pady=(10, 0))
+        self.restart_threshold_entry = ctk.CTkEntry(self.path_card, placeholder_text="Mặc định: 3", height=30)
+        self.restart_threshold_entry.pack(padx=10, pady=5, fill="x")
+        self.restart_threshold_entry.insert(0, "3")
+
 
         # Input Card
         self.input_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR, corner_radius=15, border_width=1, border_color="#333333")
@@ -1213,10 +1219,12 @@ class MultiPremiumApp(ctk.CTk):
         ld_path = self.ld_path_entry.get().strip()
         gmail_user = self.gmail_user_entry.get().strip()
         gmail_pass = self.gmail_pass_entry.get().strip()
+        restart_threshold = self.restart_threshold_entry.get().strip()
         config = {
             "ld_path": ld_path,
             "gmail_user": gmail_user,
             "gmail_pass": gmail_pass,
+            "restart_threshold": restart_threshold,
         }
         with open("config.json", "w") as f:
             json.dump(config, f)
@@ -1226,7 +1234,7 @@ class MultiPremiumApp(ctk.CTk):
             self.gmail_user = gmail_user
         if gmail_pass:
             self.gmail_pass = gmail_pass
-        self.add_log("HỆ THỐNG: Đã lưu cấu hình LDPlayer và Gmail.")
+        self.add_log("HỆ THỐNG: Đã lưu cấu hình LDPlayer, Gmail và Lượt Restart.")
         if self.gmail_user and self.gmail_pass:
             self.show_gmail_fields(False)
 
@@ -1238,6 +1246,7 @@ class MultiPremiumApp(ctk.CTk):
                     path = config.get("ld_path", "")
                     gmail_user = config.get("gmail_user", "")
                     gmail_pass = config.get("gmail_pass", "")
+                    restart_threshold = config.get("restart_threshold", "3")
                     if path:
                         self.ld_path_entry.delete(0, "end")
                         self.ld_path_entry.insert(0, path)
@@ -1250,6 +1259,9 @@ class MultiPremiumApp(ctk.CTk):
                         self.gmail_pass_entry.delete(0, "end")
                         self.gmail_pass_entry.insert(0, gmail_pass)
                         self.gmail_pass = gmail_pass
+                    if restart_threshold:
+                        self.restart_threshold_entry.delete(0, "end")
+                        self.restart_threshold_entry.insert(0, restart_threshold)
                     if self.gmail_user and self.gmail_pass:
                         self.show_gmail_fields(False)
             except: pass
@@ -1291,12 +1303,8 @@ class MultiPremiumApp(ctk.CTk):
         try:
             # CHÚ Ý: Không kill-server mỗi lần quét vì sẽ làm ngắt kết nối các máy đang chạy.
             
-            # Tự động thử kết nối các cổng phổ biến từ Instance 0 đến 20 để tránh sót máy (ADBSocket)
-            # Điều này cực kỳ hiệu quả khi máy ảo đã mở nhưng ADB chưa tự động nhận diện.
-            for port in range(5554, 5596, 2):
-                subprocess.run([adb_path, "connect", f"127.0.0.1:{port}"], capture_output=True, timeout=0.5, creationflags=subprocess.CREATE_NO_WINDOW)
-            
-            res = subprocess.run([adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            # Chỉ chạy lệnh adb devices để lấy danh sách thiết bị thực tế đang có
+            res = subprocess.run([adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
             
             # Nếu ADB server chưa chạy, subprocess sẽ tự động start nó. 
             # Chỉ khi lỗi nặng mới cần kill-server thủ công.
@@ -1452,6 +1460,10 @@ class MultiPremiumApp(ctk.CTk):
                 gmail_pass=self.gmail_pass,
             )
             worker.ld_console_path = self.ld_path if self.ld_path.endswith(".exe") else os.path.join(self.ld_path, "ldconsole.exe")
+            try:
+                worker.restart_threshold = int(self.restart_threshold_entry.get().strip())
+            except:
+                worker.restart_threshold = 3
             self.active_workers.append(worker)
             t = threading.Thread(target=worker.run, args=(self.codes_data,), daemon=True)
             t.start()

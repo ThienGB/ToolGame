@@ -76,13 +76,36 @@ class AutoClickerInstance:
 
     def log(self, msg): self.log_func(f"[{self.device_id}] {msg}")
     
-    def call_adb(self, args):
-        return subprocess.run([self.adb_path, "-s", self.device_id] + args, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+    def call_adb(self, args, timeout=15):
+        try:
+            return subprocess.run([self.adb_path, "-s", self.device_id] + args, capture_output=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
+        except subprocess.TimeoutExpired:
+            return subprocess.CompletedProcess([], 1, b"", b"timeout")
+        except Exception as e:
+            return subprocess.CompletedProcess([], 1, b"", str(e).encode())
 
     def get_screenshot(self):
         try:
-            p = self.call_adb(["shell", "screencap", "-p"])
-            return cv2.imdecode(np.frombuffer(p.stdout.replace(b"\r\n", b"\n"), np.uint8), cv2.IMREAD_COLOR)
+            # Ưu tiên dùng exec-out để nhận byte chuẩn
+            cmd = [self.adb_path, "-s", self.device_id, "exec-out", "screencap", "-p"]
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+            try:
+                stdout, _ = process.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill(); return None
+            
+            if process.returncode != 0 or not stdout:
+                # Chế độ dự phòng
+                cmd = [self.adb_path, "-s", self.device_id, "shell", "screencap", "-p"]
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+                try:
+                    stdout, _ = process.communicate(timeout=15)
+                except subprocess.TimeoutExpired:
+                    process.kill(); return None
+                if process.returncode != 0 or not stdout: return None
+                stdout = stdout.replace(b"\r\n", b"\n")
+            
+            return cv2.imdecode(np.frombuffer(stdout, np.uint8), cv2.IMREAD_COLOR)
         except: return None
 
     def escape_adb_text(self, text):
@@ -397,10 +420,16 @@ class MultiPremiumApp(ctk.CTk):
         # Device Selection Card
         inst_f = ctk.CTkFrame(main, fg_color=CARD_COLOR, corner_radius=15, border_width=1, border_color="#333")
         inst_f.pack(fill="x", pady=(0, 20))
-        ctk.CTkLabel(inst_f, text="THIẾT BỊ ĐANG MỞ", font=ctk.CTkFont(size=14, weight="bold"), text_color=ACCENT_GREEN).pack(pady=10, padx=20, anchor="w")
-        self.dev_frame = ctk.CTkScrollableFrame(inst_f, height=180, fg_color="transparent")
+        
+        header_f = ctk.CTkFrame(inst_f, fg_color="transparent")
+        header_f.pack(fill="x", padx=20, pady=10)
+        ctk.CTkLabel(header_f, text="THIẾT BỊ ĐANG MỞ", font=ctk.CTkFont(size=14, weight="bold"), text_color=ACCENT_GREEN).pack(side="left")
+        
+        self.btn_refresh = ctk.CTkButton(header_f, text="Làm Mới Danh Sách", command=self.scan_devices, height=26, width=120, font=ctk.CTkFont(size=11, weight="bold"))
+        self.btn_refresh.pack(side="right")
+        self.dev_frame = ctk.CTkScrollableFrame(inst_f, height=280, fg_color="transparent")
         self.dev_frame.pack(fill="x", padx=10, pady=(0, 15))
-        for col in range(10): self.dev_frame.grid_columnconfigure(col, weight=1)
+        for col in range(12): self.dev_frame.grid_columnconfigure(col, weight=1)
         self.device_cards = {}
 
         # Stats Card
@@ -436,27 +465,51 @@ class MultiPremiumApp(ctk.CTk):
             except: pass
 
     def scan_devices(self):
-        self.adb_path = os.path.join(self.ld_path_entry.get().strip(), "adb.exe")
+        # Chạy quét máy ảo trong luồng riêng để tránh lag UI
+        self.btn_refresh.configure(state="disabled", text="Đang quét...")
+        threading.Thread(target=self._perform_scan, daemon=True).start()
+
+    def _perform_scan(self):
+        base_path = self.ld_path_entry.get().strip()
+        self.adb_path = os.path.join(base_path, "adb.exe")
         if not os.path.exists(self.adb_path): self.adb_path = "adb"
+        
+        device_serials = []
+        try:
+            # Chỉ chạy lệnh adb devices để lấy danh sách thiết bị thực tế đang có
+            res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+            device_serials = [l.split('\t')[0] for l in res.stdout.strip().split('\n') if "device" in l and "\tdevice" in l]
+        except: pass
+
+        # Cập nhật UI trên main thread
+        self.after(0, lambda: self._update_device_ui(device_serials))
+
+    def _update_device_ui(self, device_serials):
         for w in self.dev_frame.winfo_children(): w.destroy()
         self.device_cards = {}
-        try:
-            res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            devices = [l.split('\t')[0] for l in res.stdout.strip().split('\n')[1:] if "device" in l]
-            for i, d in enumerate(devices):
-                card = ctk.CTkFrame(self.dev_frame, fg_color="#252525", corner_radius=6, border_width=1, border_color="#383838")
-                card.grid(row=i // 10, column=i % 10, padx=3, pady=3, sticky="nsew")
-                ctk.CTkLabel(card, text=d.split(":")[-1] if ":" in d else d, font=ctk.CTkFont(size=10, weight="bold")).pack(pady=(5,0))
-                lbl = ctk.CTkLabel(card, text="Sẵn sàng", font=ctk.CTkFont(size=9), text_color="#666")
-                lbl.pack(pady=(0,5)); self.device_cards[d] = {"status": lbl}
-        except: pass
+        
+        for i, d in enumerate(device_serials):
+            card = ctk.CTkFrame(self.dev_frame, fg_color="#252525", corner_radius=6, border_width=1, border_color="#383838")
+            card.grid(row=i // 12, column=i % 12, padx=3, pady=3, sticky="nsew")
+            
+            # Hiển thị chỉ port
+            display_name = d.replace("emulator-", "").split(":")[-1]
+            ctk.CTkLabel(card, text=display_name, font=ctk.CTkFont(size=10, weight="bold")).pack(pady=(5,0))
+            
+            lbl = ctk.CTkLabel(card, text="Sẵn sàng", font=ctk.CTkFont(size=9), text_color="#666")
+            lbl.pack(pady=(0,5)); self.device_cards[d] = {"status": lbl}
+        
+        self.btn_refresh.configure(state="normal", text="Làm Mới Danh Sách")
+        self.refresh_ui()
 
     def load_file(self):
         p = filedialog.askopenfilename(filetypes=[("Text", "*.txt")])
         if p:
             with open(p, "r", encoding="utf-8") as f:
                 for l in f:
-                    if "|" in l: tk, mk = l.strip().split("|", 1); self.accounts_data.append({"tk": tk, "mk": mk, "done": False})
+                    if "|" in l: 
+                        tk, mk = l.strip().split("|", 1)
+                        self.accounts_data.append({"tk": tk, "mk": mk, "done": False})
             self.refresh_ui()
 
     def refresh_ui(self):
