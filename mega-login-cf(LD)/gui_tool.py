@@ -67,12 +67,13 @@ def verify_license(key, hwid):
 
 # --- Automation Logic ---
 class AutoClickerInstance:
-    def __init__(self, device_id, adb_path, log_func, update_ui_func, report_stats_func):
+    def __init__(self, device_id, adb_path, log_func, update_ui_func, report_stats_func, claim_xu=False):
         self.device_id, self.adb_path = device_id, adb_path
         self.log_func, self.update_ui_func, self.report_stats_func = log_func, update_ui_func, report_stats_func
         self.running, self.status, self.is_lagging = False, "Đang chờ", False
         self.current_account = None
         self.account_lock = None # Sẽ được gán từ MultiPremiumApp
+        self.claim_xu = claim_xu
 
     def log(self, msg): self.log_func(f"[{self.device_id}] {msg}")
     
@@ -295,25 +296,32 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 420},
             {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target1": "images/x.png", "target2": "images/x1.png", "timeout": 20},
-            {"action": "click_image", "target": "images/event_center.jpg", "timeout": 20},
-            {"action": "click_image", "target": "images/limited_time.png", "timeout": 20},
-            {"action": "click_image", 
-              "target1": "images/sk.png",  
-              "target2": "images/sk1.png", 
-              "target3": "images/invite_friend.png", 
-              "target4": "images/invite_friend1.png",
-              "target5": "images/invite_friend2.png",
-              "target6": "images/invite_friend3.png",
-              "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/earn.png", "timeout": 20},
-            {"action": "click_image_if", "target": "images/earn.png", "timeout": 3},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/claim.png","timeout": 20},
-            {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
-            {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
-            {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
-            {"action": "press_esc", "timeout": 5},
+        ]
+
+        if self.claim_xu:
+            self.script.extend([
+                {"action": "click_image", "target": "images/event_center.jpg", "timeout": 20},
+                {"action": "click_image", "target": "images/limited_time.png", "timeout": 20},
+                {"action": "click_image", 
+                  "target1": "images/sk.png",  
+                  "target2": "images/sk1.png", 
+                  "target3": "images/invite_friend.png", 
+                  "target4": "images/invite_friend1.png",
+                  "target5": "images/invite_friend2.png",
+                  "target6": "images/invite_friend3.png",
+                  "timeout": 20, "confidence": 0.9},
+                {"action": "wait", "timeout": 2},
+                {"action": "click_image", "target": "images/earn.png", "timeout": 20},
+                {"action": "click_image_if", "target": "images/earn.png", "timeout": 3},
+                {"action": "wait", "timeout": 2},
+                {"action": "click_image", "target": "images/claim.png","timeout": 20},
+                {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
+                {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
+                {"action": "click_image_if", "target": "images/claim.png","timeout": 5},
+                {"action": "press_esc", "timeout": 5},
+            ])
+
+        self.script.extend([
             {"action": "click_image_if", "target": "images/setting.jpg","timeout": 20},
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/logout.png","timeout": 20},
@@ -322,7 +330,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target": "images/confirm_name_btn.png","timeout": 20},
             {"action": "wait", "timeout": 20},
-        ]
+        ])
         while self.running:
             target = None
             with self.account_lock:
@@ -405,6 +413,14 @@ class MultiPremiumApp(ctk.CTk):
         self.acc_card.pack(padx=20, pady=10, fill="x")
         ctk.CTkButton(self.acc_card, text="NẠP FILE TK|MK (.txt)", command=self.load_file, fg_color=ACCENT_PURPLE, height=40, font=ctk.CTkFont(weight="bold")).pack(padx=15, pady=15, fill="x")
 
+        # Option Card
+        self.opt_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR, corner_radius=15, border_width=1, border_color="#333")
+        self.opt_card.pack(padx=20, pady=5, fill="x")
+        ctk.CTkLabel(self.opt_card, text="CẤU HÌNH TÙY CHỌN", font=ctk.CTkFont(size=11, weight="bold"), text_color=ACCENT_GREEN).pack(pady=(10, 5))
+        self.claim_xu_var = ctk.BooleanVar(value=True)
+        self.cb_claim = ctk.CTkCheckBox(self.opt_card, text="Claim Xu", variable=self.claim_xu_var, font=ctk.CTkFont(size=13, weight="bold"), fg_color=ACCENT_GREEN, hover_color=ACCENT_GREEN, text_color="white")
+        self.cb_claim.pack(padx=15, pady=(5, 15), anchor="w")
+
         # Controls
         self.btn_start = ctk.CTkButton(self.sidebar, text=" CHẠY TẤT CẢ", image=self.start_icon, compound="left", command=self.start_all, height=50, corner_radius=10, font=ctk.CTkFont(size=16, weight="bold"))
         self.btn_start.pack(padx=20, pady=(30, 10), fill="x")
@@ -454,14 +470,22 @@ class MultiPremiumApp(ctk.CTk):
         return lbl
 
     def save_config(self):
-        with open("config.json", "w") as f: json.dump({"ld_path": self.ld_path_entry.get().strip()}, f)
+        with open("config.json", "w") as f: 
+            json.dump({
+                "ld_path": self.ld_path_entry.get().strip(),
+                "claim_xu": self.claim_xu_var.get()
+            }, f)
 
     def load_config(self):
         if os.path.exists("config.json"):
             try:
                 with open("config.json", "r") as f:
-                    p = json.load(f).get("ld_path", "")
-                    if p: self.ld_path_entry.delete(0, "end"); self.ld_path_entry.insert(0, p)
+                    config = json.load(f)
+                    p = config.get("ld_path", "")
+                    if p: 
+                        self.ld_path_entry.delete(0, "end")
+                        self.ld_path_entry.insert(0, p)
+                    self.claim_xu_var.set(config.get("claim_xu", True))
             except: pass
 
     def scan_devices(self):
@@ -549,7 +573,7 @@ class MultiPremiumApp(ctk.CTk):
         for a in self.accounts_data: a['processing'] = False
         self.active_workers = []
         for d in self.device_cards.keys():
-            w = AutoClickerInstance(d, self.adb_path, print, self.refresh_ui, self.report_stats)
+            w = AutoClickerInstance(d, self.adb_path, print, self.refresh_ui, self.report_stats, claim_xu=self.claim_xu_var.get())
             w.account_lock = self.account_lock
             self.active_workers.append(w)
             threading.Thread(target=w.run, args=(self.accounts_data,), daemon=True).start()
