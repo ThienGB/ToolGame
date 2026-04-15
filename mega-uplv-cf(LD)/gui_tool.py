@@ -835,7 +835,7 @@ class AutoClickerInstance:
         self.script = [
             {"action": "clear_android_data", "package": "com.tencent.stc.cfl"},
              {"action": "click_image", "target": "images/game_logo.png", "timeout": 30, "confidence": 0.8},
-             {"action": "click_image", "target": "images/guest.png", "timeout": 420, "confidence": 0.9},
+             {"action": "click_image", "target": "images/guest.png", "timeout": 600, "confidence": 0.9},
              {"action": "click_image", "target1": "images/agree.png","target2": "images/agree1.png", "timeout": 60, "confidence": 0.9},
              {"action": "click_image", "target": "images/agree_btn.png", "timeout": 30, "confidence": 0.9},
              {"action": "click_image", "target": "images/name_input1.png", "timeout": 120, "confidence": 0.9},
