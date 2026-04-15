@@ -1285,13 +1285,10 @@ class MultiPremiumApp(ctk.CTk):
             lines = res.stdout.strip().split('\n')[1:]
             device_serials = [line.split('\t')[0] for line in lines if "device" in line]
             
-            # Mapping serial -> absolute index
-            for serial in device_serials:
-                idx = self.get_absolute_index(serial)
-                if idx == -1:
-                    # Nếu không xác định được qua port, gán index tạm dựa trên số lượng adb
-                    idx = len(self.device_map) + 100 
-                self.device_map[serial] = idx
+            # Gán index theo thứ tự quét: tab scan đầu tiên = 0 (host team 1),
+            # tab thứ 6 = 5 (host team 2), v.v. Không phụ thuộc vào port ADB.
+            for i, serial in enumerate(device_serials):
+                self.device_map[serial] = i
             
             if not self.device_map:
                 self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào.")
