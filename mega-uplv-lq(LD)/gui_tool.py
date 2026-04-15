@@ -8,12 +8,16 @@ import threading
 import random
 import string
 import re
+import base64
+import hashlib
+import uuid
+import winreg
+from datetime import datetime
 import cv2
 import numpy as np
 import customtkinter as ctk
 from PIL import Image
 import sys
-import os
 
 # Ensure console output uses UTF-8 to avoid UnicodeEncodeError on Windows console
 try:
@@ -45,6 +49,8 @@ import tkinter.filedialog as fd
 # --- Biến toàn cục để nạp OCR khi cần (Lazy Load) ---
 easyocr = None
 _ocr_reader = None
+SECRET_KEY = "RyoUTE_MegaUpLvLQ_2026"
+LICENSE_FILE = "license.bin"
 
 def init_ocr_reader(log_func=None):
     """Hàm khởi tạo OCR khi thực sự cần dùng để tránh lỗi lúc mở app"""
@@ -1013,7 +1019,7 @@ class AutoClickerInstance:
 class MultiPremiumApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("MegaUpLvCFTool(LD)")
+        self.title("MegaUpLvLQTool(LD)")
         self.geometry("1000x650")
         self.configure(fg_color=BG_COLOR)
         
@@ -1067,7 +1073,7 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(self.sidebar, image=self.logo_img, text="").pack(pady=(20,0))
         self.logo_label = ctk.CTkLabel(self.sidebar, text="BẢNG ĐIỀU KHIỂN", font=ctk.CTkFont(size=18, weight="bold"), text_color=ACCENT_GREEN)
         self.logo_label.pack(pady=(10, 0))
-        ctk.CTkLabel(self.sidebar, text="MegaUpLvCFTool(LD) v2.5", font=ctk.CTkFont(size=11)).pack(pady=(0, 15))
+        ctk.CTkLabel(self.sidebar, text="MegaUpLvLQTool(LD) v2.5", font=ctk.CTkFont(size=11)).pack(pady=(0, 15))
 
         # LDPlayer Path Config
         self.path_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR, corner_radius=10)
@@ -1361,17 +1367,12 @@ class MultiPremiumApp(ctk.CTk):
         except Exception as e:
             self.add_log(f"LỖI ĐỌC FILE: {e}")
 
-    # Removed refresh_accounts_list and remove_account as accounts list is no longer displayed
-
-
     def add_log(self, text):
         # Only print to console, no UI log
         try:
             print(f"DEBUG: {text}")
         except UnicodeEncodeError:
             print(f"DEBUG: {text.encode('utf-8', errors='replace').decode('utf-8')}")
-
-    # Removed open_device_log as log UI is removed
 
     def start_all(self):
         if not self.team_frames:
@@ -1461,6 +1462,163 @@ class MultiPremiumApp(ctk.CTk):
         self.add_log(f"!!! ĐANG DỪNG TEAM {team_idx + 1}...")
         self.update_team_status(team_idx)
 
+    def activate(self):
+        key = self.key_input.get().strip()
+        if not key:
+            self.status_label.configure(text="Vui lòng nhập Key!")
+            return
+        
+        valid, msg = verify_license(key, self.hwid)
+        if valid:
+            with open(LICENSE_FILE, "w") as f:
+                f.write(key)
+            self.status_label.configure(text=f"Kích hoạt thành công! Hạn dùng: {msg}", text_color="#4ADE80")
+            self.after(1500, self.launch_main)
+        else:
+            self.status_label.configure(text=msg, text_color=ACCENT_RED)
+
+def get_hwid():
+    try:
+        def get_cmd(cmd):
+            try:
+                # Sử dụng shell=True và lọc kết quả sạch hơn
+                res = subprocess.check_output(cmd, shell=True, creationflags=subprocess.CREATE_NO_WINDOW).decode().strip()
+                lines = [l.strip() for l in res.split('\n') if l.strip()]
+                if len(lines) > 1:
+                    val = lines[1].strip()
+                    # Loại bỏ các giá trị rác phổ biến của nhà sản xuất thường gây trùng mã
+                    trash = ["filled", "default", "none", "00000000", "ffffffff", "unknown", "to be"]
+                    if any(t in val.lower() for t in trash): return ""
+                    return val
+                return ""
+            except: return ""
+
+        # 1. BIOS UUID (Thường bị trùng trên máy ảo clone)
+        hw_uuid = get_cmd("wmic csproduct get uuid")
+        # 2. Disk Serial (Ổ cứng đầu tiên)
+        disk_serial = get_cmd("wmic diskdrive where 'index=0' get serialnumber")
+        # 3. CPU ID
+        cpu_id = get_cmd("wmic cpu get processorid")
+        # 4. Mainboard Serial (Rất khó trùng trên máy thật)
+        board_serial = get_cmd("wmic baseboard get serialnumber")
+        
+        # 5. Machine GUID (Duy nhất cho mỗi bộ Windows cài đặt)
+        machine_guid = ""
+        if winreg:
+            try:
+                registry_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography", 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY)
+                machine_guid, _ = winreg.QueryValueEx(registry_key, "MachineGuid")
+                winreg.CloseKey(registry_key)
+            except: pass
+
+        # 6. MAC Address (Dùng làm định danh bổ trợ)
+        mac = str(uuid.getnode())
+
+        # Kết hợp tất cả các nguồn dữ liệu để tạo mã băm 20 ký tự
+        combined = f"U:{hw_uuid}|D:{disk_serial}|C:{cpu_id}|B:{board_serial}|G:{machine_guid}|M:{mac}"
+        return hashlib.sha256(combined.encode()).hexdigest()[:20].upper()
+    except:
+        # Fallback an toàn nếu toàn bộ các lệnh trên lỗi
+        return hashlib.sha256(str(uuid.getnode()).encode()).hexdigest()[:20].upper()
+
+def verify_license(key, hwid):
+    try:
+        # Format key: Base64(ExpiryTimestamp|Signature)
+        decoded = base64.b64decode(key).decode()
+        expiry_str, signature = decoded.split('|')
+        
+        # Kiểm tra Signature
+        expected_sig = hashlib.sha256(f"{expiry_str}{hwid}{SECRET_KEY}".encode()).hexdigest()[:10]
+        if signature != expected_sig:
+            return False, "Key không hợp lệ cho máy này!"
+        
+        # Kiểm tra Hạn dùng (Chính xác đến từng giây)
+        expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+        if datetime.now() > expiry_date:
+            return False, f"Key đã hết hạn vào {expiry_str}!"
+            
+        return True, expiry_str
+    except:
+        return False, "Key sai định dạng!"
+
+
+class LoginApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("KÍCH HOẠT MegaUpLvLQTool")
+        self.geometry("500x550")
+        self.resizable(False, False)
+        self.configure(fg_color=BG_COLOR)
+        
+        self.hwid = get_hwid()
+        self.setup_ui()
+
+    def setup_ui(self):
+        # Logo & Title
+        ctk.CTkLabel(self, text="MegaUpLvLQTool(LD)", font=ctk.CTkFont(size=24, weight="bold"), text_color=ACCENT_GREEN).pack(pady=(40, 10))
+        ctk.CTkLabel(self, text="HỆ THỐNG QUẢN LÝ BẢN QUYỀN", font=ctk.CTkFont(size=12)).pack(pady=(0, 30))
+
+        # HWID Box
+        hwid_frame = ctk.CTkFrame(self, fg_color=CARD_COLOR, corner_radius=10)
+        hwid_frame.pack(padx=40, fill="x")
+        ctk.CTkLabel(hwid_frame, text="MÃ MÁY CỦA BẠN (HWID):", font=ctk.CTkFont(size=11, weight="bold")).pack(pady=(10, 0))
+        
+        # Dùng Entry để dễ copy
+        self.hwid_entry = ctk.CTkEntry(hwid_frame, placeholder_text=self.hwid, height=35, font=ctk.CTkFont(size=12))
+        self.hwid_entry.insert(0, self.hwid)
+        self.hwid_entry.configure(state="readonly")
+        self.hwid_entry.pack(padx=20, pady=(5, 10), fill="x")
+        
+        ctk.CTkLabel(self, text="Hãy gửi mã trên cho Admin để nhận Key kích hoạt.", font=ctk.CTkFont(size=10), text_color="#888").pack(pady=5)
+
+        # Key Input
+        self.key_input = ctk.CTkEntry(self, placeholder_text="Nhập Key kích hoạt tại đây...", height=40)
+        self.key_input.pack(padx=40, pady=20, fill="x")
+
+        # Buttons
+        self.btn_activate = ctk.CTkButton(self, text="KÍCH HOẠT NGAY", command=self.activate, height=45, corner_radius=10, font=ctk.CTkFont(weight="bold"))
+        self.btn_activate.pack(padx=40, pady=5, fill="x")
+        
+        self.status_label = ctk.CTkLabel(self, text="", text_color=ACCENT_RED)
+        self.status_label.pack(pady=10)
+
+        # Footer Credit (Nguồn)
+        ctk.CTkLabel(self, text="Nguồn: RyoUTE", font=ctk.CTkFont(size=12, weight="bold"), text_color="#777").pack(pady=(30, 20))
+
+    def activate(self):
+        key = self.key_input.get().strip()
+        if not key:
+            self.status_label.configure(text="Vui lòng nhập Key!")
+            return
+        
+        valid, msg = verify_license(key, self.hwid)
+        if valid:
+            with open(LICENSE_FILE, "w") as f:
+                f.write(key)
+            self.status_label.configure(text=f"Kích hoạt thành công! Hạn dùng: {msg}", text_color="#4ADE80")
+            self.after(1500, self.launch_main)
+        else:
+            self.status_label.configure(text=msg, text_color=ACCENT_RED)
+
+    def launch_main(self):
+        self.destroy()
+        main_app = MultiPremiumApp()
+        main_app.mainloop()
+
+
 if __name__ == "__main__":
-    app = MultiPremiumApp()
-    app.mainloop()
+    hwid = get_hwid()
+    need_login = True
+    if os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, "r") as f:
+            saved_key = f.read().strip()
+        valid, _ = verify_license(saved_key, hwid)
+        if valid:
+            need_login = False
+    
+    if need_login:
+        login = LoginApp()
+        login.mainloop()
+    else:
+        app = MultiPremiumApp()
+        app.mainloop()

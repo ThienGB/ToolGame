@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import pyperclip # Thư viện để copy nhanh vào clipboard
 
 # PHẢI TRÙNG VỚI SECRET_KEY TRONG gui_tool.py
-SECRET_KEY = "RyoUTE_MegaUpLvCF_2026"
+SECRET_KEY = "RyoUTE_MegaUpLvLQ_2026"
 
 # --- Theme Configuration ---
 ctk.set_appearance_mode("Dark")
@@ -19,7 +19,7 @@ ACCENT_PURPLE = "#A855F7"
 class KeyGeneratorApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("MegaUpLvCFTool - KEY GENERATOR PRO")
+        self.title("MegaUpLvLQTool - KEY GENERATOR PRO")
         self.geometry("650x750")
         self.resizable(False, False)
         self.configure(fg_color=BG_COLOR)

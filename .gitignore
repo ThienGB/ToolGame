@@ -4,6 +4,8 @@ dist/
 
 # License files
 mega-uplv-cf(LD)/license.bin
+mega-uplv-lq(LD)/license.bin
+mega-login-cf(LD)/license.bin
 
 # Python compiled files
 __pycache__/
