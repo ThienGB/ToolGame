@@ -382,7 +382,19 @@ class MultiPremiumApp(ctk.CTk):
         
         device_serials = []
         try:
-            # Chỉ chạy lệnh adb devices để lấy danh sách thiết bị thực tế đang có
+            # 1. Thử kết nối với các cổng phổ biến của LDPlayer (Instance 0-31)
+            # Tăng lên 32 để hỗ trợ số lượng máy ảo lớn (20-25 thiết bị)
+            for i in range(32):
+                port = 5554 + (i * 2)
+                # Chạy không đồng bộ để quét nhanh hơn
+                subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                               creationflags=subprocess.CREATE_NO_WINDOW)
+            
+            # Đợi 1 chút để ADB Connect hoàn tất
+            time.sleep(1.5)
+
+            # 2. Lấy danh sách thiết bị thực tế đang có
             res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
             device_serials = [l.split('\t')[0] for l in res.stdout.strip().split('\n') if "device" in l and "\tdevice" in l]
         except: pass
