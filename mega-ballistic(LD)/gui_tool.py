@@ -18,6 +18,8 @@ except ImportError:
     winreg = None
 
 from tkinter import filedialog
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
 # --- Paths & Constants ---
 def resource_path(relative_path):
@@ -67,12 +69,14 @@ def verify_license(key, hwid):
 
 # --- Automation Logic ---
 class AutoClickerInstance:
-    def __init__(self, device_id, adb_path, log_func, update_ui_func, report_stats_func):
+    def __init__(self, device_id, adb_path, log_func, update_ui_func, report_stats_func, restart_threshold=0):
         self.device_id, self.adb_path = device_id, adb_path
         self.log_func, self.update_ui_func, self.report_stats_func = log_func, update_ui_func, report_stats_func
         self.running, self.status, self.is_lagging = False, "Đang chờ", False
         self.current_account = None
-        self.account_lock = None # Sẽ được gán từ MultiPremiumApp
+        self.account_lock = None 
+        self.restart_threshold = restart_threshold
+        self.fail_streak = 0
 
     def log(self, msg): self.log_func(f"[{self.device_id}] {msg}")
     
@@ -107,6 +111,34 @@ class AutoClickerInstance:
             
             return cv2.imdecode(np.frombuffer(stdout, np.uint8), cv2.IMREAD_COLOR)
         except: return None
+
+    def restart_emulator(self):
+        self.log("DRAIN: Đang khởi động lại máy ảo...")
+        base_path = os.path.dirname(self.adb_path)
+        ld_path = os.path.join(base_path, "dnplayer.exe")
+        if not os.path.exists(ld_path):
+            ld_path = os.path.join(base_path, "ldconsole.exe")
+            
+        # 1. Tìm index của máy ảo từ device_id (thường là emulator-5554 -> idx 0)
+        try:
+            port = int(self.device_id.split(':')[-1]) if ':' in self.device_id else 5554
+            idx = (port - 5554) // 2
+            
+            # 2. Đóng máy ảo
+            subprocess.run([ld_path, "quit", "--index", str(idx)], creationflags=subprocess.CREATE_NO_WINDOW)
+            time.sleep(3)
+            
+            # 3. Mở lại máy ảo
+            subprocess.run([ld_path, "launch", "--index", str(idx)], creationflags=subprocess.CREATE_NO_WINDOW)
+            self.log("RESTART: Đang đợi máy ảo khởi động lại (45s)...")
+            time.sleep(45)
+            
+            # 4. Connect lại ADB
+            subprocess.run([self.adb_path, "connect", self.device_id], creationflags=subprocess.CREATE_NO_WINDOW)
+            return True
+        except Exception as e:
+            self.log(f"RESTART ERROR: {str(e)}")
+            return False
 
     def escape_adb_text(self, text):
         chars = ['\\', '"', "'", '&', '>', '<', '|', ';', '(', ')', '*', '?', '$', '!', '#', '%', '{', '}', '~', '[', ']', '^', '@']
@@ -253,21 +285,31 @@ class AutoClickerInstance:
                         self.report_stats_func(True)
                         self.update_ui_func()
                         self.log(">> CHÚC MỪNG: Đã về đích thành công (xong 1 vòng).")
+                        self.fail_streak = 0 # Reset lỗi khi thành công
                     elif not success and self.running:
-                        # Nếu lỗi, có thể đợi 3s trước khi bắt đầu lại lượt mới
-                        time.sleep(3)
-
+                        self.fail_streak += 1
+                        self.report_stats_func(False)
+                        
+                        # Kiểm tra ngưỡng Restart
+                        if self.restart_threshold > 0 and self.fail_streak >= self.restart_threshold:
+                            self.log(f"!! LAG QUÁ: Lỗi {self.fail_streak} lần. Tiến hành Restart máy ảo...")
+                            self.restart_emulator()
+                            self.fail_streak = 0 # Reset sau khi restart
+                        else:
+                            self.log(f">> Đợi 3s để thử lại lượt mới (Thử lại lần {self.fail_streak})...")
+                            time.sleep(3)
         self.status = "Xong"; self.update_ui_func(); self.running = False
 
 # --- UI Logic (MultiPremiumApp, LoginApp etc. continue from here) ---
 class MultiPremiumApp(ctk.CTk):
-    def __init__(self):
+    def __init__(self, restart_threshold=0):
         super().__init__()
         self.title("MegaUpLvCFTool(LD)")
         self.geometry("1100x850")
         self.configure(fg_color=BG_COLOR)
         
         self.accounts_data, self.active_workers = [], []
+        self.restart_threshold = 0
         self.account_lock = threading.Lock()
         self.adb_path = self.find_adb()
         self.logo_img = ctk.CTkImage(Image.open(resource_path("logo.png")), size=(80, 80))
@@ -295,15 +337,21 @@ class MultiPremiumApp(ctk.CTk):
         self.sidebar.pack(side="left", fill="y")
         ctk.CTkLabel(self.sidebar, image=self.logo_img, text="").pack(pady=(40,0))
         ctk.CTkLabel(self.sidebar, text="BẢNG ĐIỀU KHIỂN", font=ctk.CTkFont(size=22, weight="bold"), text_color=ACCENT_GREEN).pack(pady=(20, 0))
-        ctk.CTkLabel(self.sidebar, text="MegaUpLvCFTool(LD) v2.5", font=ctk.CTkFont(size=12)).pack(pady=(0, 20))
+        ctk.CTkLabel(self.sidebar, text="MegaUpLvCFTool(LD) v2.5", font=ctk.CTkFont(size=12), text_color="#A0A0A0").pack(pady=(0, 20))
 
         # LDPlayer Path Config
         self.path_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR, corner_radius=10)
         self.path_card.pack(padx=20, pady=5, fill="x")
-        ctk.CTkLabel(self.path_card, text="ĐƯỜNG DẪN LDPLAYER", font=ctk.CTkFont(size=11, weight="bold")).pack(pady=(5, 0))
-        self.ld_path_entry = ctk.CTkEntry(self.path_card, placeholder_text="Ví dụ: C:\LDPlayer\LDPlayer9", height=30)
+        ctk.CTkLabel(self.path_card, text="ĐƯỜNG DẪN LDPLAYER", font=ctk.CTkFont(size=11, weight="bold"), text_color="white").pack(pady=(5, 0))
+        self.ld_path_entry = ctk.CTkEntry(self.path_card, placeholder_text="Ví dụ: C:\LDPlayer\LDPlayer9", height=30, text_color="white", fg_color="#333")
         self.ld_path_entry.pack(padx=10, pady=10, fill="x")
         self.ld_path_entry.insert(0, r"C:\LDPlayer\LDPlayer9")
+        
+        ctk.CTkLabel(self.path_card, text="Cycles Restart", font=ctk.CTkFont(size=11, weight="bold"), text_color="white").pack(pady=(5, 0))
+        self.restart_entry = ctk.CTkEntry(self.path_card, height=30, text_color="white", fg_color="#333")
+        self.restart_entry.pack(padx=10, pady=10, fill="x")
+        self.restart_entry.insert(0, "0")
+        
         ctk.CTkButton(self.path_card, text="Lưu Cấu Hình", command=self.save_config, height=25).pack(padx=10, pady=(0, 10), fill="x")
 
         # Account Input Area
@@ -362,7 +410,8 @@ class MultiPremiumApp(ctk.CTk):
     def save_config(self):
         with open("config.json", "w") as f: 
             json.dump({
-                "ld_path": self.ld_path_entry.get().strip()
+                "ld_path": self.ld_path_entry.get().strip(),
+                "restart_threshold": self.restart_entry.get().strip()
             }, f)
 
     def load_config(self):
@@ -374,6 +423,8 @@ class MultiPremiumApp(ctk.CTk):
                     if p: 
                         self.ld_path_entry.delete(0, "end")
                         self.ld_path_entry.insert(0, p)
+                    self.restart_entry.delete(0, "end")
+                    self.restart_entry.insert(0, config.get("restart_threshold", "0"))
             except: pass
 
     def scan_devices(self):
@@ -432,9 +483,9 @@ class MultiPremiumApp(ctk.CTk):
             
             # Hiển thị chỉ port
             display_name = d.replace("emulator-", "").split(":")[-1]
-            ctk.CTkLabel(card, text=display_name, font=ctk.CTkFont(size=10, weight="bold")).pack(pady=(5,0))
+            ctk.CTkLabel(card, text=display_name, font=ctk.CTkFont(size=10, weight="bold"), text_color="white").pack(pady=(5,0))
             
-            lbl = ctk.CTkLabel(card, text="Sẵn sàng", font=ctk.CTkFont(size=9), text_color="#666")
+            lbl = ctk.CTkLabel(card, text="Sẵn sàng", font=ctk.CTkFont(size=9), text_color="#AAA")
             lbl.pack(pady=(0,5)); self.device_cards[d] = {"status": lbl}
         
         self.btn_refresh.configure(state="normal", text="Làm Mới Danh Sách")
@@ -478,21 +529,17 @@ class MultiPremiumApp(ctk.CTk):
     def report_stats(self, success, account=None):
         if not success: 
             self.failure_count += 1
-            if account:
-                try:
-                    with self.account_lock:
-                        with open("that_bai.txt", "a", encoding="utf-8") as f:
-                            f.write(f"{account['tk']}|{account['mk']}\n")
-                except: pass
         self.after(0, self.refresh_ui)
 
     def start_all(self):
         if not self.accounts_data: return
+        try: self.restart_threshold = int(self.restart_entry.get().strip())
+        except: self.restart_threshold = 0
         self.btn_start.configure(state="disabled", text=" ĐANG CHẠY...")
         for a in self.accounts_data: a['processing'] = False
         self.active_workers = []
         for d in self.device_cards.keys():
-            w = AutoClickerInstance(d, self.adb_path, print, self.refresh_ui, self.report_stats)
+            w = AutoClickerInstance(d, self.adb_path, print, self.refresh_ui, self.report_stats, restart_threshold=self.restart_threshold)
             w.account_lock = self.account_lock
             self.active_workers.append(w)
             threading.Thread(target=w.run, args=(self.accounts_data,), daemon=True).start()
