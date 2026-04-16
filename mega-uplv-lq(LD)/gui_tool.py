@@ -685,6 +685,11 @@ class AutoClickerInstance:
                    
                 ]
             },
+            {"action": "wait", "timeout": 5},
+            {"action": "click_any"},
+            {"action": "wait", "timeout": 2},
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
 
@@ -718,6 +723,8 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 10, "confidence": 0.9},
             {"action": "wait", "timeout": 5},
             {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/nhan_sktt.png", "timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/krixi.png", "timeout": 10, "confidence": 0.9},
@@ -751,8 +758,8 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/thoat_sk.png","target2": "images/quaylaisktt.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
-            {"action": "click_image", "target": "images/vat_pham.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/su_dung_button.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/vat_pham.png", "target2": "images/vat_pham1.png","target3": "images/vat_pham2.png","target4": "images/vat_pham3.png","target5": "images/vat_pham4.png","timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/su_dung_button.png","target2": "images/su_dung.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/ok.png","target2": "images/ok1.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
@@ -814,11 +821,13 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
             {"action": "press_esc", "wait": 2},
             {"action": "wait", "timeout": 5},
+            {"action": "press_esc", "wait": 2} ,
         ]
 
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)
          
         teamup_host_script = [
+            {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/team5.png", "timeout": 60},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.9},
@@ -848,6 +857,7 @@ class AutoClickerInstance:
         ]
         
         teamup_guest_script = [
+            {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/pvp.png", "timeout": 60, "confidence": 0.9},
             {"action": "click_image", "target": "images/idphong.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait_for_room", "timeout": 300}, # Chờ Host quét xong ID
