@@ -163,6 +163,7 @@ class AutoClickerInstance:
         self.codes_queue = [] 
         self.current_email = None
         self.mail_tm_token = None
+        self.used_email_ids = set() # Track used email Message-IDs in the current account cycle
         self.accounts_processed = 0 # Bộ đếm số acc đã chạy
         self.restart_threshold = 1 # Sau N lượt chạy sẽ khởi động lại LDPlayer 1 lần
         self.ld_console_path = None # Sẽ được gán từ App
@@ -635,6 +636,9 @@ class AutoClickerInstance:
             # Gmail Dot Trick Implementation
             user_part, domain_part = self.gmail_user.split('@')
             
+            # Khắc phục lỗi 2 dấu chấm liền nhau: Xóa hết dấu chấm có sẵn của mail gốc trước khi trick
+            user_part = user_part.replace('.', '')
+            
             # Chọn ngẫu nhiên số lượng dấu chấm và vị trí (không ở đầu/cuối/cạnh nhau)
             # Một cách đơn giản: tung đồng xu cho mỗi khoảng trống giữa các chữ cái
             while True:
@@ -647,7 +651,7 @@ class AutoClickerInstance:
                 
                 # Đảm bảo không trùng với mail gốc (tùy chọn)
                 if new_user != user_part:
-                    self.current_email = f"{new_user}@{domain_part}"
+                    self.current_email = f"{new_user}@{domain_part}".lower()
                     break
                     
             self.log(f"GMAIL DOT: Đã tạo mail con: {self.current_email}")
@@ -660,11 +664,6 @@ class AutoClickerInstance:
         if not self.current_email:
             if not self.generate_temp_email_logic(): return False
         
-        # Xóa trắng trước khi nhập: Gộp 40 lần nhấn Backspace vào 1 lệnh duy nhất để giảm 40 lần gọi subprocess
-        # Giúp giảm tải cực lớn cho CPU và ngăn lỗi treo ADB
-        backspaces = ["67"] * 40
-        self.call_adb(["shell", "input", "keyevent"] + backspaces)
-        
         escaped_email = self.escape_adb_text(self.current_email)
         self.call_adb(["shell", "input", "text", escaped_email])
         self.log(f"EMAIL: Đã nhập {self.current_email}")
@@ -672,7 +671,6 @@ class AutoClickerInstance:
     def input_account_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("tk", "")
-        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
         safe_content = self.escape_adb_text(content)
         self.call_adb(["shell", "input", "text", safe_content])
         return True
@@ -680,7 +678,6 @@ class AutoClickerInstance:
     def input_password_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("mk", "")
-        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
         safe_content = self.escape_adb_text(content)
         self.call_adb(["shell", "input", "text", safe_content])
         return True    
@@ -735,6 +732,12 @@ class AutoClickerInstance:
                                 if self.current_email.lower() not in recipient:
                                     continue # Không phải thư cho mình, bỏ qua tìm thư tiếp theo
                                 
+                                # Chống đọc lại OTP đã dùng: Kiểm tra ID của thư xem đã xử lý chưa
+                                msg_id = str(msg.get("Message-ID", "")).strip()
+                                if not msg_id: msg_id = str(num) # fallback
+                                if msg_id in self.used_email_ids:
+                                    continue
+                                
                                 # 2. KIỂM TRA THỜI GIAN: Chỉ chấp nhận thư mới
                                 date_header = msg.get("Date")
                                 if date_header:
@@ -768,6 +771,7 @@ class AutoClickerInstance:
                                 
                                 if codes:
                                     code_found = codes[-1]
+                                    self.used_email_ids.add(msg_id) # Đánh dấu thư này đã sử dụng cho vòng này
                                     self.log(f"GMAIL MATCH: Tìm thấy mã {code_found} gửi cho {self.current_email}")
                                     break
                         if code_found: break
@@ -780,8 +784,6 @@ class AutoClickerInstance:
                     self.current_otp = code_found
                     self.log(f"==> ĐANG NHẬP OTP: {code_found}")
                     time.sleep(1) # Chờ 1s cho ổn định tiêu điểm
-                    # Xóa trắng ô nhập code: Gộp 12 lần nhấn Backspace vào 1 lệnh duy nhất
-                    self.call_adb(["shell", "input", "keyevent"] + ["67"] * 12)
                     self.call_adb(["shell", "input", "text", code_found])
                     time.sleep(1)
                     return True
@@ -820,8 +822,6 @@ class AutoClickerInstance:
                 else: return False
             else: return False
 
-        # Gộp 30 lần nhấn Backspace vào 1 lệnh duy nhất
-        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 30)
         escaped_content = self.escape_adb_text(content)
         self.call_adb(["shell", "input", "text", escaped_content])
         return True
@@ -984,6 +984,7 @@ class AutoClickerInstance:
             # Reset dữ liệu cho acc mới và sinh ngay Email ảo
             self.current_email = None
             self.current_otp = None
+            self.used_email_ids = set() # Reset danh sách các email đã lấy mã trong vòng này
             self.generate_temp_email_logic() # Sinh ngay email ảo cho vòng này
             self.log(f"ACC LOOP: Email ảo cho vòng này: {self.current_email}")
             

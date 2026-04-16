@@ -18,6 +18,7 @@ import numpy as np
 import customtkinter as ctk
 from PIL import Image
 import sys
+import gc
 
 # Ensure console output uses UTF-8 to avoid UnicodeEncodeError on Windows console
 try:
@@ -115,6 +116,10 @@ class AutoClickerInstance:
         self.script = []
         self.current_account = None
         self.modes = {"login": True, "tutorial": True, "uplevel": True} # Default
+        
+        self.accounts_processed = 0 # Bộ đếm số acc đã chạy
+        self.restart_threshold = 1 # Sau N lượt chạy sẽ khởi động lại LDPlayer 1 lần
+        self.ld_console_path = None # Sẽ được gán từ App
 
     def log(self, msg):
         self.log_func(f"[{self.device_id}] {msg}")
@@ -157,6 +162,132 @@ class AutoClickerInstance:
             image_array = np.frombuffer(image_bytes, dtype=np.uint8)
             return cv2.imdecode(image_array, cv2.IMREAD_COLOR)
         except: return None
+
+    def restart_emulator(self):
+        if not self.ld_console_path or not os.path.exists(self.ld_console_path):
+            self.log("CẢNH BÁO: Không tìm thấy ldconsole.exe để khởi động lại.")
+            return False
+
+        index = -1
+        # Cách 1: Tìm Index bằng list2 (Chính xác cao nhất)
+        try:
+            res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+            for line in res.stdout.splitlines():
+                parts = line.split(',')
+                if len(parts) >= 7:
+                    idx_val, _, _, _, _, _, serial = parts[:7]
+                    # So khớp thông minh: lấy số port ở cuối để so sánh
+                    s_port = serial.split('-')[-1].split(':')[-1]
+                    d_port = self.device_id.split('-')[-1].split(':')[-1]
+                    
+                    if (s_port == d_port and s_port.isdigit()) or (serial == self.device_id):
+                        index = int(idx_val)
+                        break
+        except: pass
+
+        # Cách 2: Phân tích port (Dự phòng cho máy ảo vừa mở chưa kịp hiện serial)
+        if index == -1:
+            port = None
+            if ":" in self.device_id: port = self.device_id.split(":")[-1]
+            elif "-" in self.device_id: port = self.device_id.split("-")[-1]
+            if port and port.isdigit():
+                index = (int(port) - 5554) // 2
+
+        if index == -1:
+            self.log("LỖI: Không xác định được index máy ảo để restart.")
+            return False
+
+        self.log(f"==> ĐANG KHỞI ĐỘNG LẠI MÁY ẢO (Index {index})...")
+        self.update_status(f"Restarting LD {index}")
+        
+        # 1. Tắt máy ảo
+        subprocess.run([self.ld_console_path, "quit", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW)
+        
+        # Đợi tắt hẳn (tránh lỗi launch khi instance đang closing)
+        start_quit = time.time()
+        while time.time() - start_quit < 30:
+            if not self.running: return False
+            time.sleep(2)
+            try:
+                res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                is_running = False
+                for line in res.stdout.splitlines():
+                    parts = line.split(',')
+                    if len(parts) >= 5 and parts[0] == str(index):
+                        if parts[4] != '0': is_running = True
+                        break
+                if not is_running: break
+            except: break
+
+        time.sleep(3)
+        
+        # 2. Bật lại máy ảo
+        subprocess.run([self.ld_console_path, "launch", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW)
+        
+        # 3. Chờ máy ảo lên và sẵn sàng
+        self.log(f"Đang đợi máy ảo (Index {index}) ổn định ADB...")
+        start_wait = time.time()
+        
+        guest_port = 5554 + (index * 2)
+        guest_serial = f"127.0.0.1:{guest_port}"
+
+        while time.time() - start_wait < 150:
+            if not self.running: return False
+            
+            # Thử connect liên tục vào port tiêu chuẩn
+            subprocess.run([self.adb_path, "connect", guest_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+
+            # Cập nhật serial thực tế từ list2 (nếu LDPlayer nhảy port khác)
+            current_ld_serial = None
+            try:
+                res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                for line in res.stdout.splitlines():
+                    parts = line.split(',')
+                    if parts[0] == str(index):
+                        # Quét tất cả các cột để tìm chuỗi có định dạng Serial ADB
+                        for p in parts:
+                            p = p.strip()
+                            if (":" in p or p.startswith("emulator-")) and p != "null":
+                                current_ld_serial = p
+                                break
+                        break
+            except: pass
+
+            # Nếu list2 có serial mới, ưu tiên dùng nó
+            if current_ld_serial and current_ld_serial != self.device_id:
+                self.log(f"Cập nhật Serial: {self.device_id} -> {current_ld_serial}")
+                self.device_id = current_ld_serial
+            
+            # Kiểm tra xem device_id hiện tại (hoặc guest_serial) đã online chưa
+            res_adb = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+            is_connected = False
+            for line in res_adb.stdout.splitlines():
+                if (self.device_id in line or guest_serial in line) and "device" in line and "offline" not in line:
+                    # Nếu guest_serial online mà device_id chưa đổi, thì ép device_id sang guest_serial
+                    if guest_serial in line and self.device_id not in line:
+                        self.device_id = guest_serial
+                    is_connected = True
+                    break
+            
+            if is_connected:
+                # Kiểm tra phản hồi shell thực tế
+                res_boot = self.call_adb(["shell", "getprop", "sys.boot_completed"])
+                if b"1" in res_boot.stdout:
+                    self.log("==> KẾT NỐI THÀNH CÔNG! Máy ảo đã sẵn sàng.")
+                    time.sleep(10) # Chờ service Android ổn định hoàn toàn
+                    return True
+                
+                # Dự phòng nếu boot_completed bị treo
+                if time.time() - start_wait > 60:
+                    res_wm = self.call_adb(["shell", "wm", "size"])
+                    if b"Physical size" in res_wm.stdout:
+                        self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)!")
+                        time.sleep(10)
+                        return True
+
+            time.sleep(5)
+        
+        return False
 
     def execute_step(self, step):
         if not self.running: return False
@@ -999,6 +1130,7 @@ class AutoClickerInstance:
             
             if success and self.running:
                 self.update_ui_func()
+                self.accounts_processed += 1
                 self.report_stats_func(True, self.current_account) # Report Success
                 
                 # NẾU CHỈ CHỌN LOGIN: Dừng luôn, không đổi tài khoản tiếp theo
@@ -1007,9 +1139,18 @@ class AutoClickerInstance:
                     self.running = False
                     break
             elif not success and self.running:
+                self.accounts_processed += 1
                 self.report_stats_func(False, self.current_account) # Report Failure
             
+            # Tự động Restart sau N lượt chạy
+            if self.running and self.accounts_processed >= self.restart_threshold:
+                self.log(f"Đã chạy {self.accounts_processed} lượt. Tiến hành Restart để sạch RAM.")
+                self.restart_emulator()
+                self.accounts_processed = 0
+
             time.sleep(1)
+            # Dọn dẹp bộ nhớ Python triệt để
+            gc.collect()
         
         self.update_status("Xong")
         self.running = False
@@ -1084,6 +1225,11 @@ class MultiPremiumApp(ctk.CTk):
         self.ld_path_entry.insert(0, r"C:\LDPlayer\LDPlayer9")
         ctk.CTkButton(self.path_card, text="Lưu Đường Dẫn", command=self.save_config, height=22, font=ctk.CTkFont(size=11)).pack(padx=10, pady=(0, 5), fill="x")
 
+        # Restart Threshold config
+        ctk.CTkLabel(self.path_card, text="LƯỢT CHẠY RESTART (CYCLES)", font=ctk.CTkFont(size=11, weight="bold")).pack(pady=(10, 0))
+        self.restart_threshold_entry = ctk.CTkEntry(self.path_card, placeholder_text="Mặc định: 3", height=30)
+        self.restart_threshold_entry.pack(padx=10, pady=5, fill="x")
+        self.restart_threshold_entry.insert(0, "3")
 
         # Account Card
         self.account_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR, corner_radius=15, border_width=1, border_color="#333333")
@@ -1239,10 +1385,13 @@ class MultiPremiumApp(ctk.CTk):
         self.after(0, _update)
 
     def save_config(self):
-        config = {"ld_path": self.ld_path_entry.get().strip()}
+        config = {
+            "ld_path": self.ld_path_entry.get().strip(),
+            "restart_threshold": self.restart_threshold_entry.get().strip()
+        }
         with open("config.json", "w") as f:
             json.dump(config, f)
-        self.add_log("HỆ THỐNG: Đã lưu đường dẫn LDPlayer.")
+        self.add_log("HỆ THỐNG: Đã lưu cấu hình LDPlayer và Lượt Restart.")
 
     def load_config(self):
         if os.path.exists("config.json"):
@@ -1253,6 +1402,11 @@ class MultiPremiumApp(ctk.CTk):
                     if path:
                         self.ld_path_entry.delete(0, "end")
                         self.ld_path_entry.insert(0, path)
+                    
+                    restart_threshold = config.get("restart_threshold", "")
+                    if restart_threshold:
+                        self.restart_threshold_entry.delete(0, "end")
+                        self.restart_threshold_entry.insert(0, restart_threshold)
             except: pass
 
     def get_absolute_index(self, serial):
@@ -1436,6 +1590,14 @@ class MultiPremiumApp(ctk.CTk):
         for serial in devices:
             worker_index = self.device_map.get(serial, 0) # Lấy absolute index đã lưu
             worker = AutoClickerInstance(serial, self.adb_path, self.add_log, self.update_all_ui, self.report_stats)
+            
+            base_ld_path = self.ld_path_entry.get().strip()
+            worker.ld_console_path = base_ld_path if base_ld_path.endswith(".exe") else os.path.join(base_ld_path, "ldconsole.exe")
+            try:
+                worker.restart_threshold = int(self.restart_threshold_entry.get().strip())
+            except:
+                worker.restart_threshold = 3
+                
             self.active_workers.append(worker)
             t = threading.Thread(target=worker.run, args=(self.accounts_data, modes, worker_index, self.shared_data), daemon=True)
             t.start()
