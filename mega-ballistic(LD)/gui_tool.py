@@ -386,19 +386,33 @@ class MultiPremiumApp(ctk.CTk):
         
         device_serials = []
         try:
-            # 1. Thử kết nối với các cổng phổ biến của LDPlayer (Instance 0-31)
-            # Tăng lên 32 để hỗ trợ số lượng máy ảo lớn (20-25 thiết bị)
-            for i in range(32):
+            base_path = self.ld_path_entry.get().strip()
+            ldconsole_path = os.path.join(base_path, "ldconsole.exe")
+            
+            # 1. Thử dùng ldconsole để lấy chính xác các máy ảo đang chạy (Cách chính xác nhất)
+            if os.path.exists(ldconsole_path):
+                try:
+                    res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                    for line in res_ld.stdout.splitlines():
+                        parts = line.split(',')
+                        if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON
+                            idx = parts[0]
+                            port = 5554 + (int(idx) * 2)
+                            subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+                except: pass
+
+            # 2. Dải quét dự phòng (Instance 0-59) cho trường hợp LDPlayer nhảy port
+            for i in range(60):
                 port = 5554 + (i * 2)
-                # Chạy không đồng bộ để quét nhanh hơn
                 subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                               stdout=subprocess.PIPE, stderr=stderr_null := open(os.devnull, 'w'), 
                                creationflags=subprocess.CREATE_NO_WINDOW)
             
-            # Đợi 1 chút để ADB Connect hoàn tất
-            time.sleep(1.5)
+            # Tăng thời gian đợi lên 2.5s để ADB "bắt" đủ 20-30 thiết bị
+            time.sleep(2.5)
 
-            # 2. Lấy danh sách thiết bị thực tế đang có
+            # 3. Lấy danh sách thiết bị thực tế đang có
             res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
             device_serials = [l.split('\t')[0] for l in res.stdout.strip().split('\n') if "device" in l and "\tdevice" in l]
         except: pass
