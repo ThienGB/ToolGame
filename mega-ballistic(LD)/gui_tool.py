@@ -406,7 +406,7 @@ class MultiPremiumApp(ctk.CTk):
             for i in range(60):
                 port = 5554 + (i * 2)
                 subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
-                               stdout=subprocess.PIPE, stderr=stderr_null := open(os.devnull, 'w'), 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
                                creationflags=subprocess.CREATE_NO_WINDOW)
             
             # Tăng thời gian đợi lên 2.5s để ADB "bắt" đủ 20-30 thiết bị
