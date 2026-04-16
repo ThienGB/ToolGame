@@ -179,8 +179,8 @@ class AutoClickerInstance:
         self.running = True
         self.script = [
             {"action": "clear_android_data", "package": "com.vnggames.ballisticherovn"},
-            # {"action": "swipe", "x1": 0.5, "y1": 0.5, "x2": 0.4, "y2": 0.6, "duration": 800},
-            # {"action": "click_coords", "x": 325, "y": 550}, 
+            # # {"action": "swipe", "x1": 0.5, "y1": 0.5, "x2": 0.4, "y2": 0.6, "duration": 800},
+            # # {"action": "click_coords", "x": 325, "y": 550}, 
             
             
             
@@ -188,17 +188,19 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/logo.png", "timeout": 5},
             {"action": "click_image", "target": "images/click.png", "timeout": 420},
             {"action": "click_image", "target": "images/dongy.png", "timeout": 60},
-            {"action": "click_image", "target": "images/taonhanvat.png", "timeout": 30},
+            {"action": "click_image", "target": "images/taotaikhoan.png", "timeout": 30},
+            {"action": "click_image", "target": "images/any.png", "timeout": 120},
             {"action": "swipe", "x1": 0.23, "y1": 0.45, "x2": 0.11, "y2": 0.68, "duration": 2000},
-            {"action": "wait", "timeout": 30},
-            {"action": "click_coords", "x": 34, "y": 268, "timeout": 5},
+            {"action": "click_image", "target": "images/any.png", "timeout": 120},
+            {"action": "click_coords", "x": 30, "y": 268, "timeout": 5},
             {"action": "wait", "timeout": 3},
-            {"action": "click_coords", "x": 917, "y": 268, "timeout": 5},
+            {"action": "click_coords", "x": 915, "y": 268, "timeout": 5},
             {"action": "wait", "timeout": 3},
             {"action": "click_coords", "x": 310, "y": 480, "timeout": 5},
             {"action": "wait", "timeout": 3},
             {"action": "swipe", "x1": 0.23, "y1": 0.45, "x2": 0.11, "y2": 0.68, "duration": 2000},
-            {"action": "wait", "timeout": 3},
+            {"action": "click_image", "target": "images/any.png", "timeout": 120},
+            
             {"action": "click_coords", "x": 379, "y": 474, "timeout": 5},
             {"action": "wait", "timeout": 3},
             {"action": "click_coords", "x": 443, "y": 462, "timeout": 5},
