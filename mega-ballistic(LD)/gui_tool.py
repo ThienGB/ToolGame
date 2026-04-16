@@ -221,34 +221,34 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/mienphi.png","timeout": 20},
             
         ]
-        while self.running:
+        if self.running:
             target = None
             with self.account_lock:
                 target = next((a for a in accounts if not a.get('done') and not a.get('processing')), None)
                 if target: target['processing'] = True
             
-            if not target: break
-            self.current_account = target
-            self.log(f">> CHẠY: {target['tk']}")
-            success = True
-            for step in self.script:
-                if not self.running: break
-                if not self.execute_step(step): success = False; break
-            
-            if success and self.running:
-                target['done'] = True
-                self.report_stats_func(True)
-                self.update_ui_func()
-            elif not success:
-                with self.account_lock:
-                    target['processing'] = False
-                    target['fail_count'] = target.get('fail_count', 0) + 1
-                    if target['fail_count'] >= 3:
-                        target['done'] = True
-                        self.log(f"!! BỎ QUA: {target['tk']} do lỗi quá 3 lần.")
-                self.report_stats_func(False, target)
-            self.log(">> Đã xong lượt, chuẩn bị tài khoản tiếp theo...")
-            time.sleep(5)
+            if target:
+                self.current_account = target
+                self.log(f">> CHẠY: {target['tk']}")
+                success = True
+                for step in self.script:
+                    if not self.running: break
+                    if not self.execute_step(step): success = False; break
+                
+                if success and self.running:
+                    target['done'] = True
+                    self.report_stats_func(True)
+                    self.update_ui_func()
+                elif not success:
+                    with self.account_lock:
+                        target['processing'] = False
+                        target['fail_count'] = target.get('fail_count', 0) + 1
+                        if target['fail_count'] >= 3:
+                            target['done'] = True
+                            self.log(f"!! BỎ QUA: {target['tk']} do lỗi quá 3 lần.")
+                    self.report_stats_func(False, target)
+                self.log(">> Đã xong 1 vòng.")
+
         self.status = "Xong"; self.update_ui_func(); self.running = False
 
 # --- UI Logic (MultiPremiumApp, LoginApp etc. continue from here) ---
@@ -434,6 +434,11 @@ class MultiPremiumApp(ctk.CTk):
             self.rem_val.configure(text=str(rem))
             self.fail_val_ui.configure(text=str(self.failure_count))
             self.lag_val.configure(text=str(sum(1 for w in self.active_workers if w.is_lagging)))
+            
+            # Nếu tất cả worker đã dừng, mở lại nút Start
+            if self.active_workers and all(not w.running for w in self.active_workers):
+                self.btn_start.configure(state="normal", text=" CHẠY TẤT CẢ")
+                self.active_workers = []
         except: pass
 
     def report_stats(self, success, account=None):
