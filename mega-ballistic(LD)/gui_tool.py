@@ -225,7 +225,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/hopmu.png","timeout": 20},
             {"action": "click_image_if", "target": "images/boqua.png","timeout": 5},
             {"action": "click_image_if", "target": "images/mienphi.png","timeout": 20},
-            
+            {"action": "click_image", "target": "images/ok_no_qua.jpg","timeout": 60},
         ]
         if self.running:
             target = None
@@ -235,25 +235,27 @@ class AutoClickerInstance:
             
             if target:
                 self.current_account = target
-                self.log(f">> CHẠY: {target['tk']}")
-                success = True
-                for step in self.script:
-                    if not self.running: break
-                    if not self.execute_step(step): success = False; break
                 
-                if success and self.running:
-                    target['done'] = True
-                    self.report_stats_func(True)
-                    self.update_ui_func()
-                elif not success:
-                    with self.account_lock:
-                        target['processing'] = False
-                        target['fail_count'] = target.get('fail_count', 0) + 1
-                        if target['fail_count'] >= 3:
-                            target['done'] = True
-                            self.log(f"!! BỎ QUA: {target['tk']} do lỗi quá 3 lần.")
-                    self.report_stats_func(False, target)
-                self.log(">> Đã xong 1 vòng.")
+                # Vòng lặp "Bất tử": Chỉ thoát khi success=True (về đến bước cuối)
+                success = False
+                while not success and self.running:
+                    self.log(f">> CHẠY: {target['tk']} (Đang cố gắng hoàn thành...)")
+                    success = True
+                    for step in self.script:
+                        if not self.running: break
+                        if not self.execute_step(step): 
+                            self.log(f"!! LỖI TẠI BƯỚC: {step.get('action')}. Đang quay lại từ đầu...")
+                            success = False
+                            break
+                    
+                    if success and self.running:
+                        target['done'] = True
+                        self.report_stats_func(True)
+                        self.update_ui_func()
+                        self.log(">> CHÚC MỪNG: Đã về đích thành công (xong 1 vòng).")
+                    elif not success and self.running:
+                        # Nếu lỗi, có thể đợi 3s trước khi bắt đầu lại lượt mới
+                        time.sleep(3)
 
         self.status = "Xong"; self.update_ui_func(); self.running = False
 
