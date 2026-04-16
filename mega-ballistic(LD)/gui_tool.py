@@ -118,12 +118,6 @@ class AutoClickerInstance:
         res = True
         if action in ["click_image", "click_image_if"]: res = self.click_image_logic(step) or action == "click_image_if"
         elif action == "wait": time.sleep(step.get("timeout", 1))
-        elif action == "input_account_logic":
-            self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
-            self.call_adb(["shell", "input", "text", self.escape_adb_text(self.current_account["tk"])])
-        elif action == "input_password_logic":
-            self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
-            self.call_adb(["shell", "input", "text", self.escape_adb_text(self.current_account["mk"])])
         elif action == "clear_android_data":
             pkg = step.get("package")
             self.call_adb(["shell", "pm", "clear", pkg])
