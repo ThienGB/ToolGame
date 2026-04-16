@@ -130,6 +130,8 @@ class AutoClickerInstance:
             res = True
         elif action == "swipe":
             res = self.swipe_logic(step)
+        elif action == "click_coords":
+            res = self.click_coords_logic(step)
         
         self.status, self.is_lagging = "Đang chạy", (time.time() - start) > 35
         self.update_ui_func()
@@ -169,11 +171,26 @@ class AutoClickerInstance:
         self.log(f"SWIPE: ({x1}, {y1}) -> ({x2}, {y2}) trong {duration}ms")
         return True
 
+    def click_coords_logic(self, step):
+        x, y = step.get("x"), step.get("y")
+        if x is not None and y is not None:
+            delay = step.get("timeout", 0)
+            if delay > 0: time.sleep(delay)
+            self.call_adb(["shell", "input", "tap", str(x), str(y)])
+            self.log(f"CLICK TỌA ĐỘ: ({x}, {y})")
+            return True
+        return False
+
     def run(self, accounts):
         self.running = True
         self.script = [
             # {"action": "clear_android_data", "package": "com.tencent.stc.cfl"},
             {"action": "swipe", "x1": 0.5, "y1": 0.5, "x2": 0.4, "y2": 0.6, "duration": 800},
+            {"action": "click_coords", "x": 325, "y": 550}, 
+            
+            
+            
+            
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 5},
             {"action": "click_image", "target": "images/more.png", "timeout": 180},
             {"action": "click_image", "target": "images/lipass.png", "timeout": 60},
