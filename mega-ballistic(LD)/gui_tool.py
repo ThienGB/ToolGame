@@ -211,6 +211,10 @@ class AutoClickerInstance:
         self.running = True
         self.script = [
             {"action": "clear_android_data", "package": "com.vnggames.ballisticherovn"},
+            {"action": "click_image_if", "target": "images/1111.png", "timeout": 20},
+            {"action": "click_image", "target": "images/warp.png", "timeout": 420},
+            {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
+            {"action": "click_image_if", "target": "images/pause.png", "timeout": 5},
             # # # {"action": "swipe", "x1": 0.5, "y1": 0.5, "x2": 0.4, "y2": 0.6, "duration": 800},
             # # # {"action": "click_coords", "x": 325, "y": 550}, 
             
