@@ -113,31 +113,52 @@ class AutoClickerInstance:
         except: return None
 
     def restart_emulator(self):
-        self.log("DRAIN: Đang khởi động lại máy ảo...")
+        self.status = "Đang Restart..."
+        self.update_ui_func()
+        self.log("RESTART: Đang khởi động lại máy ảo...")
+        
         base_path = os.path.dirname(self.adb_path)
-        ld_path = os.path.join(base_path, "dnplayer.exe")
-        if not os.path.exists(ld_path):
-            ld_path = os.path.join(base_path, "ldconsole.exe")
-            
-        # 1. Tìm index của máy ảo từ device_id (thường là emulator-5554 -> idx 0)
+        # Ưu tiên các file console CLI
+        ld_path = None
+        for exe in ["ldconsole.exe", "dnconsole.exe", "ld.exe"]:
+            p = os.path.join(base_path, exe)
+            if os.path.exists(p):
+                ld_path = p
+                break
+        
+        if not ld_path:
+            # Dự phòng dnplayer nếu không thấy console (dù khả năng cao sẽ lỗi lệnh)
+            ld_path = os.path.join(base_path, "dnplayer.exe")
+
         try:
             port = int(self.device_id.split(':')[-1]) if ':' in self.device_id else 5554
             idx = (port - 5554) // 2
             
             # 2. Đóng máy ảo
+            self.log(f"RESTART: Đang đóng máy ảo index {idx}...")
             subprocess.run([ld_path, "quit", "--index", str(idx)], creationflags=subprocess.CREATE_NO_WINDOW)
-            time.sleep(3)
+            time.sleep(5)
             
             # 3. Mở lại máy ảo
+            self.log(f"RESTART: Đang mở lại máy ảo index {idx}...")
             subprocess.run([ld_path, "launch", "--index", str(idx)], creationflags=subprocess.CREATE_NO_WINDOW)
-            self.log("RESTART: Đang đợi máy ảo khởi động lại (45s)...")
-            time.sleep(45)
+            
+            # Đợi khởi động
+            for i in range(45, 0, -5):
+                self.status = f"Restart ({i}s)"
+                self.update_ui_func()
+                time.sleep(5)
             
             # 4. Connect lại ADB
+            self.log("RESTART: Đang kết nối lại ADB...")
             subprocess.run([self.adb_path, "connect", self.device_id], creationflags=subprocess.CREATE_NO_WINDOW)
+            self.status = "Đang chạy"
+            self.update_ui_func()
             return True
         except Exception as e:
             self.log(f"RESTART ERROR: {str(e)}")
+            self.status = "Lỗi Restart"
+            self.update_ui_func()
             return False
 
     def escape_adb_text(self, text):
