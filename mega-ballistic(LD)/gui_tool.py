@@ -148,9 +148,13 @@ class AutoClickerInstance:
             self.log(f"RESTART: Đang mở lại máy ảo index {idx}...")
             subprocess.run([ld_path, "launch", "--index", str(idx)], creationflags=subprocess.CREATE_NO_WINDOW)
             
-            # 4. Đợi khởi động và kiểm tra boot hoàn tất qua ADB
+            # 4. Đợi máy ảo khởi tạo (Hard Sleep)
+            self.log("RESTART: Đang đợi máy ảo khởi tạo (10s)...")
+            time.sleep(10)
+            
+            # 5. Đợi khởi động và kiểm tra boot hoàn tất qua ADB
             boot_success = False
-            self.log("RESTART: Đang đợi máy ảo boot hoàn tất...")
+            self.log("RESTART: Đang quét trạng thái boot...")
             for i in range(24): # Đợi tối đa 120s (24 * 5s)
                 if not self.running: break
                 
@@ -163,7 +167,7 @@ class AutoClickerInstance:
                     boot_success = True
                     break
                 
-                self.status = f"Restarting ({i*5}s)"
+                self.status = f"Booting ({i*5}s)"
                 self.update_ui_func()
                 time.sleep(5)
 
@@ -173,16 +177,18 @@ class AutoClickerInstance:
                 subprocess.run([self.adb_path, "disconnect", self.device_id], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
                 time.sleep(2)
                 subprocess.run([self.adb_path, "connect", self.device_id], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
-                time.sleep(5) # Đợi thêm 5s để ADB ổn định
-                self.log("RESTART: Đang thử mở 1111 để bắt đầu vòng tiếp (Giả định máy đã lên)...")
+                self.log("RESTART: Đợi thêm 10s để máy ổn định màn hình...")
+                time.sleep(10) 
+                self.log("RESTART: Tiến hành mở 1111 (Giả định máy đã lên)...")
             else:
-                self.log("RESTART: Máy ảo đã khởi động và nhận ADB thành công!")
-                time.sleep(3) # Đợi thêm 3s để hệ thống ổn định hoàn toàn
+                self.log("RESTART: Máy ảo đã báo boot hoàn tất!")
+                self.log("RESTART: Đợi thêm 15s để UI ổn định hoàn toàn...")
+                time.sleep(15) 
             
             self.status = "Đang chạy"
             self.update_ui_func()
             
-            # Sau khi restart (dù success hay timeout), đều chạy setup 1111 và vào vòng mới
+            # Sau khi restart, chạy setup 1111
             self.setup_1111()
             return True
         except Exception as e:
