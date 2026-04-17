@@ -180,8 +180,9 @@ class AutoClickerInstance:
         elif action == "click_coords":
             res = self.click_coords_logic(step)
         elif action == "press_esc":
-            self.call_adb(["shell", "input", "keyevent", "111"])
-            self.log("EVENT: Nhấn ESC (Key 111)")
+            code = step.get("code", "4") # Mặc định dùng mã 4 (BACK) vì hiệu quả nhất trên Android
+            self.call_adb(["shell", "input", "keyevent", str(code)])
+            self.log(f"EVENT: Nhấn phím {code}")
         
         self.status, self.is_lagging = "Đang chạy", (time.time() - start) > 35
         self.update_ui_func()
