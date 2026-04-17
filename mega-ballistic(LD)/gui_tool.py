@@ -242,6 +242,8 @@ class AutoClickerInstance:
             res = True
         elif action == "swipe":
             res = self.swipe_logic(step)
+        elif action == "loop_cases":
+            res = self.loop_cases_logic(step)
         elif action == "click_coords":
             res = self.click_coords_logic(step)
         elif action == "press_esc":
@@ -299,6 +301,96 @@ class AutoClickerInstance:
             self.log(f"CLICK TỌA ĐỘ: ({x}, {y})")
             return True
         return False
+
+    def loop_cases_logic(self, step):
+        cases = step.get("cases", [])
+        if not cases: return True
+        
+        timeout = step.get("timeout", 10)
+        max_loops = step.get("max_loops", -1)  # -1 = không giới hạn
+        
+        log_msg = f"BẮT ĐẦU VÒNG LẶP SỰ KIỆN: Chờ tối đa {timeout}s"
+        if max_loops != -1:
+            log_msg += f", tối đa {max_loops} lần khớp"
+        self.log(log_msg + "...")
+        
+        start_loop_time = time.time()
+        iteration = 0
+        loops_matched = 0  # Đếm số lần đã khớp và thực thi thành công
+        
+        while self.running:
+            iteration += 1
+            
+            # Kiểm tra giới hạn số lần lặp
+            if max_loops != -1 and loops_matched >= max_loops:
+                self.log(f"-> KẾT THÚC VÒNG LẶP: Đã đạt giới hạn {max_loops} lần.")
+                break
+            
+            found_any = False
+            screen = self.get_screenshot()
+            
+            if screen is None: 
+                time.sleep(1)
+                continue
+            
+            best_overall_match = 0
+            best_overall_name = ""
+            
+            for case in cases:
+                # Thu thập tất cả triggers (trigger, trigger1, trigger2...)
+                triggers = []
+                if case.get("trigger"): triggers.append(case.get("trigger"))
+                idx = 1
+                while f"trigger{idx}" in case:
+                    triggers.append(case.get(f"trigger{idx}"))
+                    idx += 1
+                
+                sub_script = case.get("script", [])
+                confidence = case.get("confidence", 0.8)
+                
+                case_matched = False
+                for t_path in triggers:
+                    t_img = get_cached_image(t_path)
+                    if t_img is None: continue
+                    
+                    try:
+                        res = cv2.matchTemplate(screen, t_img, cv2.TM_CCOEFF_NORMED)
+                        _, max_val, _, _ = cv2.minMaxLoc(res)
+                        del res
+                        
+                        if max_val > best_overall_match:
+                            best_overall_match = max_val
+                            best_overall_name = os.path.basename(t_path)
+                        
+                        if max_val >= confidence:
+                            self.log(f"-> PHÁT HIỆN BIẾN CỐ: {os.path.basename(t_path)} (Khớp: {max_val:.2f}/{confidence})")
+                            case_matched = True
+                            found_any = True
+                            break # Thoát vòng lặp triggers để thực hiện script
+                    except: continue
+                
+                if case_matched:
+                    for s_step in sub_script:
+                        if not self.running: break
+                        self.execute_step(s_step)
+                    loops_matched += 1  # Tăng bộ đếm mỗi lần khớp
+                    break # Thoát vòng lặp cases để chụp ảnh màn hình mới
+            
+            del screen
+            
+            if found_any:
+                start_loop_time = time.time() 
+                time.sleep(0.5)
+                continue
+            else:
+                elapsed = time.time() - start_loop_time
+                if elapsed >= timeout:
+                    if best_overall_match > 0.4:
+                        self.log(f"-> KẾT THÚC VÒNG LẶP: Hết thời gian (Tốt nhất: {best_overall_name} {best_overall_match:.2f})")
+                    break
+                time.sleep(1)
+            
+        return True
 
     def run(self, accounts):
         self.running = True
