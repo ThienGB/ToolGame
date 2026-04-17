@@ -238,6 +238,9 @@ class AutoClickerInstance:
             code = step.get("code", "4") # Mặc định dùng mã 4 (BACK) vì hiệu quả nhất trên Android
             self.call_adb(["shell", "input", "keyevent", str(code)])
             self.log(f"EVENT: Nhấn phím {code}")
+        elif action == "press_home":
+            self.call_adb(["shell", "input", "keyevent", "3"])
+            self.log("EVENT: Nhấn phím HOME")
         
         self.status, self.is_lagging = "Đang chạy", (time.time() - start) > 35
         self.update_ui_func()
