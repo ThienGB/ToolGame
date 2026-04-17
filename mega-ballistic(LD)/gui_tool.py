@@ -82,7 +82,12 @@ class AutoClickerInstance:
     
     def call_adb(self, args, timeout=15):
         try:
-            return subprocess.run([self.adb_path, "-s", self.device_id] + args, capture_output=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
+            res = subprocess.run([self.adb_path, "-s", self.device_id] + args, capture_output=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
+            # Nếu báo không thấy thiết bị hoặc offline, thử quét lại (connect) 1 lần
+            if b"not found" in res.stderr or b"offline" in res.stderr:
+                subprocess.run([self.adb_path, "connect", self.device_id], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                res = subprocess.run([self.adb_path, "-s", self.device_id] + args, capture_output=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
+            return res
         except subprocess.TimeoutExpired:
             return subprocess.CompletedProcess([], 1, b"", b"timeout")
         except Exception as e:
@@ -163,17 +168,21 @@ class AutoClickerInstance:
                 time.sleep(5)
 
             if not boot_success:
-                self.log("RESTART: Quá thời gian chờ (120s) hoặc không thể kết nối ADB.")
-                self.status = "Lỗi Boot"
-                self.update_ui_func()
-                return False
+                self.log("RESTART: Quá thời gian chờ (120s). Đang ép làm mới kết nối ADB...")
+                # Ngắt kết nối và kết nối lại để ép ADB nhận diện lại thiết bị
+                subprocess.run([self.adb_path, "disconnect", self.device_id], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                time.sleep(2)
+                subprocess.run([self.adb_path, "connect", self.device_id], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                time.sleep(5) # Đợi thêm 5s để ADB ổn định
+                self.log("RESTART: Đang thử mở 1111 để bắt đầu vòng tiếp (Giả định máy đã lên)...")
+            else:
+                self.log("RESTART: Máy ảo đã khởi động và nhận ADB thành công!")
+                time.sleep(3) # Đợi thêm 3s để hệ thống ổn định hoàn toàn
             
-            self.log("RESTART: Máy ảo đã khởi động và nhận ADB thành công!")
-            time.sleep(3) # Đợi thêm 3s để hệ thống ổn định hoàn toàn
             self.status = "Đang chạy"
             self.update_ui_func()
             
-            # Sau khi restart thành công, tự động chạy setup 1111
+            # Sau khi restart (dù success hay timeout), đều chạy setup 1111 và vào vòng mới
             self.setup_1111()
             return True
         except Exception as e:
