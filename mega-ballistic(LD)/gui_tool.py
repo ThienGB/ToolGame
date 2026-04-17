@@ -202,14 +202,13 @@ class AutoClickerInstance:
         vpn_script = [
             {"action": "click_image_if", "target": "images/vpn.png", "timeout": 20},
             {"action": "click_image", "target": "images/not.png", "timeout": 420},
-            {"action": "click_image", "target": "images/not.png", "timeout": 420},
-            {"action": "click_image", "target": "images/play.png", "timeout": 420},
+            {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
             {"action": "click_image_if", "target": "images/ok4.png", "timeout": 5},
-            {"action": "press_home"},
-            
+            {"action": "press_esc"},
+            {"action": "press_esc"},
             
 
-            
+            {"action": "click_image_if", "target": "images/ok3.png", "timeout": 5},
             
         ]
         for step in vpn_script:
@@ -234,6 +233,8 @@ class AutoClickerInstance:
                     if not self.execute_step(sub_step):
                         break
             res = True
+        elif action == "cases":
+            res = self.cases_logic(step)
         elif action == "wait":
             time.sleep(step.get("timeout", 1))
         elif action == "clear_android_data":
@@ -242,8 +243,6 @@ class AutoClickerInstance:
             res = True
         elif action == "swipe":
             res = self.swipe_logic(step)
-        elif action == "loop_cases":
-            res = self.loop_cases_logic(step)
         elif action == "click_coords":
             res = self.click_coords_logic(step)
         elif action == "press_esc":
@@ -302,42 +301,21 @@ class AutoClickerInstance:
             return True
         return False
 
-    def loop_cases_logic(self, step):
+    def cases_logic(self, step):
         cases = step.get("cases", [])
         if not cases: return True
         
         timeout = step.get("timeout", 10)
-        max_loops = step.get("max_loops", -1)  # -1 = không giới hạn
+        confidence = step.get("confidence", 0.8)
         
-        log_msg = f"BẮT ĐẦU VÒNG LẶP SỰ KIỆN: Chờ tối đa {timeout}s"
-        if max_loops != -1:
-            log_msg += f", tối đa {max_loops} lần khớp"
-        self.log(log_msg + "...")
-        
-        start_loop_time = time.time()
-        iteration = 0
-        loops_matched = 0  # Đếm số lần đã khớp và thực thi thành công
-        
-        while self.running:
-            iteration += 1
-            
-            # Kiểm tra giới hạn số lần lặp
-            if max_loops != -1 and loops_matched >= max_loops:
-                self.log(f"-> KẾT THÚC VÒNG LẶP: Đã đạt giới hạn {max_loops} lần.")
-                break
-            
-            found_any = False
+        start_time = time.time()
+        while time.time() - start_time < timeout and self.running:
             screen = self.get_screenshot()
-            
-            if screen is None: 
+            if screen is None:
                 time.sleep(1)
                 continue
             
-            best_overall_match = 0
-            best_overall_name = ""
-            
             for case in cases:
-                # Thu thập tất cả triggers (trigger, trigger1, trigger2...)
                 triggers = []
                 if case.get("trigger"): triggers.append(case.get("trigger"))
                 idx = 1
@@ -345,60 +323,30 @@ class AutoClickerInstance:
                     triggers.append(case.get(f"trigger{idx}"))
                     idx += 1
                 
+                case_conf = case.get("confidence", confidence)
                 sub_script = case.get("script", [])
-                confidence = case.get("confidence", 0.8)
                 
-                case_matched = False
                 for t_path in triggers:
                     t_img = get_cached_image(t_path)
                     if t_img is None: continue
                     
-                    try:
-                        res = cv2.matchTemplate(screen, t_img, cv2.TM_CCOEFF_NORMED)
-                        _, max_val, _, _ = cv2.minMaxLoc(res)
-                        del res
-                        
-                        if max_val > best_overall_match:
-                            best_overall_match = max_val
-                            best_overall_name = os.path.basename(t_path)
-                        
-                        if max_val >= confidence:
-                            self.log(f"-> PHÁT HIỆN BIẾN CỐ: {os.path.basename(t_path)} (Khớp: {max_val:.2f}/{confidence})")
-                            case_matched = True
-                            found_any = True
-                            break # Thoát vòng lặp triggers để thực hiện script
-                    except: continue
-                
-                if case_matched:
-                    for s_step in sub_script:
-                        if not self.running: break
-                        self.execute_step(s_step)
-                    loops_matched += 1  # Tăng bộ đếm mỗi lần khớp
-                    break # Thoát vòng lặp cases để chụp ảnh màn hình mới
-            
-            del screen
-            
-            if found_any:
-                start_loop_time = time.time() 
-                time.sleep(0.5)
-                continue
-            else:
-                elapsed = time.time() - start_loop_time
-                if elapsed >= timeout:
-                    if best_overall_match > 0.4:
-                        self.log(f"-> KẾT THÚC VÒNG LẶP: Hết thời gian (Tốt nhất: {best_overall_name} {best_overall_match:.2f})")
-                    break
-                time.sleep(1)
-            
-        return True
+                    res = cv2.matchTemplate(screen, t_img, cv2.TM_CCOEFF_NORMED)
+                    _, max_val, _, _ = cv2.minMaxLoc(res)
+                    if max_val >= case_conf:
+                        self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({max_val:.2f})")
+                        for s_step in sub_script:
+                            if not self.running: break
+                            self.execute_step(s_step)
+                        return True # Thoát ngay sau khi thực hiện xong 1 case
+            time.sleep(1)
+        return False
 
     def run(self, accounts):
         self.running = True
         self.script = [
             {"action": "clear_android_data", "package": "com.vnggames.ballisticherovn"},
             {"action": "click_image_if", "target": "images/logo.png", "timeout": 20},
-            
-            {"action": "click_image_if", "target": "images/taotaikhoan.png", "timeout": 420},
+            {"action": "click_image_if", "target": "images/taotaikhoan.png", "timeout": 200},
             {"action": "click_image_if", "target": "images/click.png", "timeout": 5},
             {"action": "click_image_if", "target": "images/dongy.png", "timeout": 5},
             {"action": "click_image_if", "target": "images/taotaikhoan.png", "timeout": 20},
