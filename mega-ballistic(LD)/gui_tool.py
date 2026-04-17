@@ -202,13 +202,14 @@ class AutoClickerInstance:
         vpn_script = [
             {"action": "click_image_if", "target": "images/vpn.png", "timeout": 20},
             {"action": "click_image", "target": "images/not.png", "timeout": 420},
-            {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
+            {"action": "click_image", "target": "images/not.png", "timeout": 420},
+            {"action": "click_image", "target": "images/play.png", "timeout": 420},
             {"action": "click_image_if", "target": "images/ok4.png", "timeout": 5},
-            {"action": "press_esc"},
-            {"action": "press_esc"},
+            {"action": "press_home"},
+            
             
 
-            {"action": "click_image_if", "target": "images/ok3.png", "timeout": 5},
+            
             
         ]
         for step in vpn_script:
@@ -291,6 +292,7 @@ class AutoClickerInstance:
         self.script = [
             {"action": "clear_android_data", "package": "com.vnggames.ballisticherovn"},
             {"action": "click_image_if", "target": "images/logo.png", "timeout": 20},
+            
             {"action": "click_image_if", "target": "images/taotaikhoan.png", "timeout": 200},
             {"action": "click_image_if", "target": "images/click.png", "timeout": 5},
             {"action": "click_image_if", "target": "images/dongy.png", "timeout": 5},
