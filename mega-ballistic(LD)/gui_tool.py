@@ -296,7 +296,7 @@ class AutoClickerInstance:
             {"action": "clear_android_data", "package": "com.vnggames.ballisticherovn"},
             {"action": "click_image_if", "target": "images/logo.png", "timeout": 20},
             
-            {"action": "click_image_if", "target": "images/taotaikhoan.png", "timeout": 200},
+            {"action": "click_image_if", "target": "images/taotaikhoan.png", "timeout": 420},
             {"action": "click_image_if", "target": "images/click.png", "timeout": 5},
             {"action": "click_image_if", "target": "images/dongy.png", "timeout": 5},
             {"action": "click_image_if", "target": "images/taotaikhoan.png", "timeout": 20},
