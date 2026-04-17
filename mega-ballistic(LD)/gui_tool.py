@@ -211,43 +211,50 @@ class AutoClickerInstance:
         self.running = True
         self.script = [
             {"action": "clear_android_data", "package": "com.vnggames.ballisticherovn"},
-            # # {"action": "swipe", "x1": 0.5, "y1": 0.5, "x2": 0.4, "y2": 0.6, "duration": 800},
-            # # {"action": "click_coords", "x": 325, "y": 550}, 
+            # # # {"action": "swipe", "x1": 0.5, "y1": 0.5, "x2": 0.4, "y2": 0.6, "duration": 800},
+            # # # {"action": "click_coords", "x": 325, "y": 550}, 
             
             
             
             
-            {"action": "click_image_if", "target": "images/logo.png", "timeout": 5},
-            {"action": "click_image", "target": "images/click.png", "timeout": 420},
-            {"action": "click_image", "target": "images/dongy.png", "timeout": 60},
-            {"action": "click_image", "target": "images/taotaikhoan.png", "timeout": 30},
+            {"action": "click_image_if", "target": "images/logo.png", "timeout": 20},
+            # {"action": "click_image", "target": "images/click.png", "timeout": 420},
+            # {"action": "click_image", "target": "images/dongy.png", "timeout": 60},
+            {"action": "click_image", "target": "images/taotaikhoan.png", "timeout": 420},
+            {"action": "click_image", "target": "images/any.png", "timeout": 420},
+            {"action": "swipe", "x1": 0.23, "y1": 0.45, "x2": 0.11, "y2": 0.68, "duration": 1000},
             {"action": "click_image", "target": "images/any.png", "timeout": 120},
-            {"action": "swipe", "x1": 0.23, "y1": 0.45, "x2": 0.11, "y2": 0.68, "duration": 2000},
+            
             {"action": "click_image", "target": "images/any.png", "timeout": 120},
+            {"action": "click_coords", "x": 30, "y": 268, "timeout": 2},
+            # {"action": "click_coords", "x": 30, "y": 268, "timeout": 2},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_coords", "x": 915, "y": 268, "timeout": 2},
+            # {"action": "click_coords", "x": 915, "y": 268, "timeout": 2},
+            {"action": "wait", "timeout": 2},
+            
+            {"action": "click_coords", "x": 310, "y": 480, "timeout": 2},
+            # {"action": "click_coords", "x": 310, "y": 480, "timeout": 2},
             {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target": "images/any.png", "timeout": 120},
-            {"action": "click_coords", "x": 30, "y": 268, "timeout": 5},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_coords", "x": 915, "y": 268, "timeout": 5},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_coords", "x": 310, "y": 480, "timeout": 5},
-            {"action": "wait", "timeout": 3},
-            {"action": "swipe", "x1": 0.23, "y1": 0.45, "x2": 0.11, "y2": 0.68, "duration": 2000},
+            {"action": "swipe", "x1": 0.23, "y1": 0.45, "x2": 0.11, "y2": 0.68, "duration": 1000},
             
             {"action": "wait", "timeout": 5},
             {"action": "click_image", "target": "images/any.png", "timeout": 120},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_coords", "x": 379, "y": 474, "timeout": 5},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_coords", "x": 443, "y": 462, "timeout": 5},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_coords", "x": 883, "y": 470, "timeout": 5},
-            {"action": "wait", "timeout": 3},
-            {"action": "swipe", "x1": 0.23, "y1": 0.45, "x2": 0.11, "y2": 0.68, "duration": 2000},
+            
+            {"action": "click_coords", "x": 379, "y": 474, "timeout": 2},
+            # {"action": "click_coords", "x": 379, "y": 474, "timeout": 2},
+            
+            {"action": "click_coords", "x": 443, "y": 462, "timeout": 2},
+            # {"action": "click_coords", "x": 443, "y": 462, "timeout": 2},
+            
+            # {"action": "click_coords", "x": 883, "y": 470, "timeout": 2},
+            {"action": "click_coords", "x": 883, "y": 470, "timeout": 2},
+            {"action": "wait", "timeout": 5},
+            {"action": "swipe", "x1": 0.23, "y1": 0.45, "x2": 0.11, "y2": 0.68, "duration": 1000},
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/nguoichoikycuu.png", "timeout": 60},
             {"action": "wait", "timeout": 8},
-            {"action": "click_coords", "x": 473, "y": 462, "timeout": 5},
+            {"action": "click_coords", "x": 473, "y": 462, "timeout": 3},
             {"action": "click_image", "target": "images/x.png", "timeout": 10},
             {"action": "click_image", "target": "images/ok1.png", "timeout": 10},
             {"action": "click_image", "target": "images/thoat.png", "timeout": 60},
@@ -255,9 +262,9 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images/x.png", "target2": "images/ok2.png", "timeout": 20},
             {"action": "click_image_if", "target": "images/trieuhoi.png","timeout": 20},
             {"action": "click_image", "target": "images/hopmu.png","timeout": 20},
-            {"action": "click_image_if", "target": "images/boqua.png","timeout": 5},
+            {"action": "click_coords", "x": 871, "y": 424, "timeout": 2},
             {"action": "click_image_if", "target": "images/mienphi.png","timeout": 20},
-            {"action": "click_image", "target": "images/ok_no_qua.jpg","timeout": 60},
+            {"action": "click_image", "target": "images/ok_no_qua.jpg","timeout": 10},
         ]
         if self.running:
             target = None
