@@ -200,11 +200,16 @@ class AutoClickerInstance:
     def setup_1111(self):
         self.log("SETUP: Đang bật 1.1.1.1...")
         vpn_script = [
-            {"action": "click_image_if", "target": "images/1111.png", "timeout": 20},
-            {"action": "click_image", "target": "images/warp.png", "timeout": 420},
+            {"action": "click_image_if", "target": "images/vpn.png", "timeout": 20},
+            {"action": "click_image", "target": "images/not.png", "timeout": 420},
             {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
-            {"action": "click_image_if", "target": "images/pause.png", "timeout": 5},
-            {"action": "press_esc", "timeout": 2},
+            {"action": "click_image_if", "target": "images/ok4.png", "timeout": 5},
+            {"action": "press_esc"},
+            {"action": "press_esc"},
+            
+
+            {"action": "click_image_if", "target": "images/ok3.png", "timeout": 5},
+            
         ]
         for step in vpn_script:
             if not self.running: break
