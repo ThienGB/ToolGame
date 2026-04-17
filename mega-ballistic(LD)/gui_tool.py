@@ -235,13 +235,13 @@ class AutoClickerInstance:
         self.running = True
         self.script = [
             {"action": "clear_android_data", "package": "com.vnggames.ballisticherovn"},
-            {"action": "click_image_if", "target": "images/1111.png", "timeout": 20},
-            {"action": "click_image", "target": "images/warp.png", "timeout": 420},
-            {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
-            {"action": "click_image_if", "target": "images/pause.png", "timeout": 5},
-            {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
-            {"action": "press_esc", "wait": 2} ,
-            # # # {"action": "swipe", "x1": 0.5, "y1": 0.5, "x2": 0.4, "y2": 0.6, "duration": 800},
+            # {"action": "click_image_if", "target": "images/1111.png", "timeout": 20},
+            # {"action": "click_image", "target": "images/warp.png", "timeout": 420},
+            # {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
+            # {"action": "click_image_if", "target": "images/pause.png", "timeout": 5},
+            # {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
+            # {"action": "press_esc", "wait": 2} ,
+            # # # # {"action": "swipe", "x1": 0.5, "y1": 0.5, "x2": 0.4, "y2": 0.6, "duration": 800},
             # # # {"action": "click_coords", "x": 325, "y": 550}, 
             
             
@@ -250,7 +250,10 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/logo.png", "timeout": 20},
             # {"action": "click_image", "target": "images/click.png", "timeout": 420},
             # {"action": "click_image", "target": "images/dongy.png", "timeout": 60},
-            {"action": "click_image", "target": "images/taotaikhoan.png", "timeout": 420},
+            {"action": "click_image_if", "target": "images/taotaikhoan.png", "timeout": 200},
+            {"action": "click_image_if", "target": "images/click.png", "timeout": 5},
+            {"action": "click_image_if", "target": "images/dongy.png", "timeout": 5},
+            {"action": "click_image_if", "target": "images/taotaikhoan.png", "timeout": 20},
             {"action": "click_image", "target": "images/any.png", "timeout": 420},
             {"action": "swipe", "x1": 0.23, "y1": 0.45, "x2": 0.11, "y2": 0.68, "duration": 1000},
             {"action": "click_image", "target": "images/any.png", "timeout": 120},
