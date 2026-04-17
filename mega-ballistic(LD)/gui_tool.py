@@ -224,8 +224,18 @@ class AutoClickerInstance:
         if not self.running: return False
         action, start = step.get("action"), time.time()
         res = True
-        if action in ["click_image", "click_image_if"]: res = self.click_image_logic(step) or action == "click_image_if"
-        elif action == "wait": time.sleep(step.get("timeout", 1))
+        
+        if action == "click_image":
+            res = self.click_image_logic(step)
+        elif action == "click_image_if":
+            if self.click_image_logic(step):
+                # Nếu tìm thấy và click được ảnh chính, thực hiện thêm các bước phụ nếu có
+                for sub_step in step.get("then", []):
+                    if not self.execute_step(sub_step):
+                        break
+            res = True
+        elif action == "wait":
+            time.sleep(step.get("timeout", 1))
         elif action == "clear_android_data":
             pkg = step.get("package")
             self.call_adb(["shell", "pm", "clear", pkg])
