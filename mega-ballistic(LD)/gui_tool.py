@@ -143,17 +143,33 @@ class AutoClickerInstance:
             self.log(f"RESTART: Đang mở lại máy ảo index {idx}...")
             subprocess.run([ld_path, "launch", "--index", str(idx)], creationflags=subprocess.CREATE_NO_WINDOW)
             
-            # Đợi khởi động
-            for i in range(45, 0, -5):
-                self.status = f"Restart ({i}s)"
+            # 4. Đợi khởi động và kiểm tra boot hoàn tất qua ADB
+            boot_success = False
+            self.log("RESTART: Đang đợi máy ảo boot hoàn tất...")
+            for i in range(24): # Đợi tối đa 120s (24 * 5s)
+                if not self.running: break
+                
+                # Thử connect lại ADB liên tục
+                subprocess.run([self.adb_path, "connect", self.device_id], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                
+                # Kiểm tra thuộc tính boot_completed
+                check = self.call_adb(["shell", "getprop", "sys.boot_completed"], timeout=5)
+                if check.returncode == 0 and "1" in check.stdout.decode().strip():
+                    boot_success = True
+                    break
+                
+                self.status = f"Restarting ({i*5}s)"
                 self.update_ui_func()
                 time.sleep(5)
+
+            if not boot_success:
+                self.log("RESTART: Quá thời gian chờ (120s) hoặc không thể kết nối ADB.")
+                self.status = "Lỗi Boot"
+                self.update_ui_func()
+                return False
             
-            # 4. Connect lại ADB
-            # 4. Connect lại ADB
-            self.log("RESTART: Đang kết nối lại ADB...")
-            subprocess.run([self.adb_path, "connect", self.device_id], creationflags=subprocess.CREATE_NO_WINDOW)
-            
+            self.log("RESTART: Máy ảo đã khởi động và nhận ADB thành công!")
+            time.sleep(3) # Đợi thêm 3s để hệ thống ổn định hoàn toàn
             self.status = "Đang chạy"
             self.update_ui_func()
             
