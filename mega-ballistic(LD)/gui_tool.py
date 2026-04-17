@@ -150,16 +150,34 @@ class AutoClickerInstance:
                 time.sleep(5)
             
             # 4. Connect lại ADB
+            # 4. Connect lại ADB
             self.log("RESTART: Đang kết nối lại ADB...")
             subprocess.run([self.adb_path, "connect", self.device_id], creationflags=subprocess.CREATE_NO_WINDOW)
+            
             self.status = "Đang chạy"
             self.update_ui_func()
+            
+            # Sau khi restart thành công, tự động chạy setup 1111
+            self.setup_1111()
             return True
         except Exception as e:
             self.log(f"RESTART ERROR: {str(e)}")
             self.status = "Lỗi Restart"
             self.update_ui_func()
             return False
+
+    def setup_1111(self):
+        self.log("SETUP: Đang bật 1.1.1.1...")
+        vpn_script = [
+            {"action": "click_image_if", "target": "images/1111.png", "timeout": 20},
+            {"action": "click_image", "target": "images/warp.png", "timeout": 420},
+            {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
+            {"action": "click_image_if", "target": "images/pause.png", "timeout": 5},
+            {"action": "press_esc", "timeout": 2},
+        ]
+        for step in vpn_script:
+            if not self.running: break
+            self.execute_step(step)
 
     def escape_adb_text(self, text):
         chars = ['\\', '"', "'", '&', '>', '<', '|', ';', '(', ')', '*', '?', '$', '!', '#', '%', '{', '}', '~', '[', ']', '^', '@']
@@ -236,21 +254,7 @@ class AutoClickerInstance:
         self.running = True
         self.script = [
             {"action": "clear_android_data", "package": "com.vnggames.ballisticherovn"},
-            # {"action": "click_image_if", "target": "images/1111.png", "timeout": 20},
-            # {"action": "click_image", "target": "images/warp.png", "timeout": 420},
-            # {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
-            # {"action": "click_image_if", "target": "images/pause.png", "timeout": 5},
-            # {"action": "click_coords", "x": 484, "y": 210, "timeout": 2},
-            # {"action": "press_esc", "wait": 2} ,
-            # # # # {"action": "swipe", "x1": 0.5, "y1": 0.5, "x2": 0.4, "y2": 0.6, "duration": 800},
-            # # # {"action": "click_coords", "x": 325, "y": 550}, 
-            
-            
-            
-            
             {"action": "click_image_if", "target": "images/logo.png", "timeout": 20},
-            # {"action": "click_image", "target": "images/click.png", "timeout": 420},
-            # {"action": "click_image", "target": "images/dongy.png", "timeout": 60},
             {"action": "click_image_if", "target": "images/taotaikhoan.png", "timeout": 200},
             {"action": "click_image_if", "target": "images/click.png", "timeout": 5},
             {"action": "click_image_if", "target": "images/dongy.png", "timeout": 5},
