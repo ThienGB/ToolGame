@@ -179,6 +179,9 @@ class AutoClickerInstance:
             res = self.swipe_logic(step)
         elif action == "click_coords":
             res = self.click_coords_logic(step)
+        elif action == "press_esc":
+            self.call_adb(["shell", "input", "keyevent", "111"])
+            self.log("EVENT: Nhấn ESC (Key 111)")
         
         self.status, self.is_lagging = "Đang chạy", (time.time() - start) > 35
         self.update_ui_func()
@@ -471,36 +474,50 @@ class MultiPremiumApp(ctk.CTk):
         
         device_serials = []
         try:
-            base_path = self.ld_path_entry.get().strip()
-            ldconsole_path = os.path.join(base_path, "ldconsole.exe")
+            # 1. Tìm file console điều khiển
+            ldconsole_path = None
+            for exe in ["ldconsole.exe", "dnconsole.exe", "ld.exe"]:
+                p = os.path.join(base_path, exe)
+                if os.path.exists(p):
+                    ldconsole_path = p
+                    break
             
-            # 1. Thử dùng ldconsole để lấy chính xác các máy ảo đang chạy (Cách chính xác nhất)
-            if os.path.exists(ldconsole_path):
+            # 2. Ép ADB kết nối dựa trên danh sách máy ảo thực tế trong LD
+            if ldconsole_path:
                 try:
                     res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                     for line in res_ld.stdout.splitlines():
                         parts = line.split(',')
-                        if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON
+                        if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON (Status = 1)
                             idx = parts[0]
                             port = 5554 + (int(idx) * 2)
-                            subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
-                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+                            # Kết nối cả localhost và 127.0.0.1 để đảm bảo nhảy đúng port
+                            for host in ["127.0.0.1", "localhost"]:
+                                subprocess.Popen([self.adb_path, "connect", f"{host}:{port}"], 
+                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
                 except: pass
 
-            # 2. Dải quét dự phòng (Instance 0-59) cho trường hợp LDPlayer nhảy port
-            for i in range(60):
+            # 3. Quét dải port rộng hơn (0-30 máy ảo) đề phòng ADB chưa nhận
+            for i in range(30):
                 port = 5554 + (i * 2)
                 subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
                                creationflags=subprocess.CREATE_NO_WINDOW)
             
-            # Tăng thời gian đợi lên 2.5s để ADB "bắt" đủ 20-30 thiết bị
-            time.sleep(2.5)
+            # Đợi ADB cập nhật danh sách
+            time.sleep(2)
 
-            # 3. Lấy danh sách thiết bị thực tế đang có
+            # 4. Lấy danh sách thiết bị cuối cùng
             res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
-            device_serials = [l.split('\t')[0] for l in res.stdout.strip().split('\n') if "device" in l and "\tdevice" in l]
-        except: pass
+            # Lọc bỏ header và chỉ lấy các serial có chữ "device"
+            for line in res.stdout.strip().split('\n'):
+                if "\tdevice" in line:
+                    serial = line.split('\t')[0]
+                    if serial not in device_serials:
+                        device_serials.append(serial)
+        except Exception as e:
+            print(f"SCAN ERROR: {e}")
+            pass
 
         # Cập nhật UI trên main thread
         self.after(0, lambda: self._update_device_ui(device_serials))
