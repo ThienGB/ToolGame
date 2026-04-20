@@ -137,13 +137,31 @@ class AutoClickerInstance:
 
     def get_screenshot(self):
         try:
-            cmd = [self.adb_path, "-s", self.device_id, "shell", "screencap", "-p"]
-            process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            if process.returncode != 0: return None
-            image_bytes = process.stdout.replace(b"\r\n", b"\n")
+            # Sử dụng exec-out để tránh lỗi ký tự xuống dòng trên Windows cho thiết bị thật
+            cmd = [self.adb_path, "-s", self.device_id, "exec-out", "screencap", "-p"]
+            process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
+            
+            if process.returncode != 0:
+                # Nếu exec-out lỗi, thử lại bằng shell (dành cho adb cực cũ)
+                cmd = [self.adb_path, "-s", self.device_id, "shell", "screencap", "-p"]
+                process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
+                image_bytes = process.stdout.replace(b"\r\n", b"\n")
+            else:
+                image_bytes = process.stdout
+
+            if not image_bytes:
+                self.log("LỖI: Trống dữ liệu ảnh từ thiết bị.")
+                return None
+                
             image_array = np.frombuffer(image_bytes, dtype=np.uint8)
-            return cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-        except: return None
+            img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+            if img is None:
+                self.log("LỖI: Không thể giải mã ảnh (imdecode fail).")
+            return img
+        except Exception as e:
+            self.log(f"LỖI Chụp màn hình: {str(e)}")
+            return None
+
 
     def restart_device(self):
         self.log("BoxPhone: Đang khởi động lại thiết bị (Reboot)...")
@@ -246,28 +264,49 @@ class AutoClickerInstance:
             else: self.log(f"Thiếu ảnh mẫu: {t_path}")
 
         start = time.time()
+        best_match = {"val": 0, "name": ""}
+        last_screen = None
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
+                last_screen = screen
                 h_screen, w_screen = screen.shape[:2]
-                scale = w_screen / BASE_WIDTH # Tỷ lệ so với 960x540
+                scale = h_screen / BASE_HEIGHT # TỈ LỆ CHUẨN: Tính theo chiều dọc
+
                 screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 
                 for t_path, t_img in target_imgs:
-                    if abs(scale - 1.0) > 0.01:
-                        tw, th = int(t_img.shape[1]*scale), int(t_img.shape[0]*scale)
-                        t_scaled = cv2.resize(t_img, (tw, th), interpolation=cv2.INTER_AREA)
-                    else: t_scaled = t_img
+                    # Thử 3 tỉ lệ nhỏ xung quanh scale chuẩn để bù đắp sai lệch aspect ratio
+                    for s_mod in [1.0, 0.98, 1.02]:
+                        curr_scale = scale * s_mod
+                        # Chọn phép nội suy phù hợp: CUBIC cho phóng to, AREA cho thu nhỏ
+                        interp = cv2.INTER_CUBIC if curr_scale > 1.0 else cv2.INTER_AREA
+                        
+                        tw, th = int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)
+                        t_scaled = cv2.resize(t_img, (tw, th), interpolation=interp)
 
-                    res = cv2.matchTemplate(screen_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
-                    _, mv, _, ml = cv2.minMaxLoc(res)
-                    if mv >= confidence:
-                        th_s, tw_s = t_scaled.shape[:2]
-                        self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
-                        self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f})")
-                        return True
+                        res = cv2.matchTemplate(screen_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
+                        _, mv, _, ml = cv2.minMaxLoc(res)
+                        
+                        if mv > best_match["val"]:
+                            best_match = {"val": mv, "name": os.path.basename(t_path)}
+                            
+                        if mv >= confidence:
+                            th_s, tw_s = t_scaled.shape[:2]
+                            self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
+                            self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f} @ {curr_scale:.2f}x)")
+                            return True
+
             time.sleep(1)
+        
+        if last_screen is not None:
+            cv2.imwrite("debug_fail.png", last_screen)
+            self.log("!! Đã lưu ảnh chụp màn hình lỗi vào: debug_fail.png")
+            
+        self.log(f"!! Timeout: Không thấy ảnh. Cao nhất: {best_match['name']} ({best_match['val']:.2f})")
         return False
+
+
 
     def search_logic(self, step):
         target = step.get("target")
@@ -282,7 +321,8 @@ class AutoClickerInstance:
             screen = self.get_screenshot()
             if screen is not None:
                 h_screen, w_screen = screen.shape[:2]
-                scale = w_screen / BASE_WIDTH
+                scale = h_screen / BASE_HEIGHT
+
                 screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 if abs(scale - 1.0) > 0.01:
                     t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*scale), int(t_img.shape[0]*scale)), interpolation=cv2.INTER_AREA)
@@ -390,7 +430,8 @@ class AutoClickerInstance:
         
         screen = self.get_screenshot()
         if screen is None: return False
-        scale = screen.shape[1] / BASE_WIDTH
+        scale = screen.shape[0] / BASE_HEIGHT
+
 
         for digit in rid:
             if not self.running: return False
@@ -440,63 +481,129 @@ class AutoClickerInstance:
         
         # --- FULL SCRIPTS FROM LD VERSION ---
         login_script = [
-            {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.8},
-            {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
-            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "timeout": 60},
+            {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "timeout": 60, "confidence": 0.7},
             {"action": "input_account"},
-            {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "timeout": 60},
+            {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "timeout": 60, "confidence": 0.7},
             {"action": "input_password"},
-            {"action": "click_image", "target": "images/login.png", "timeout": 30},
+            {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 5},
-            {"action": "click_image", "target": "images/ok2.png", "timeout": 30},
-            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 10},
+            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ok2.png", "timeout": 30, "confidence": 0.7},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
+            {
+                "action": "click_image_if", 
+                "target": "images/vao_tran_button_1.png", 
+                "timeout": 20, 
+                "confidence": 0.7,
+                "then": [
+                    {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.7},
+                    {"action": "wait", "timeout": 5},
+                    {"action": "click_image", "target": "images/vao_tran_button_2.png", "timeout": 30, "confidence": 0.7},
+                    {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 4, "confidence": 0.7}
+                ]
+            },
+            {"action": "click_image_if", "target": "images/skip.png", "timeout": 45, "confidence": 0.7},
+            {
+                "action": "click_image_if", 
+                "target": "images/vao_button.png", 
+                "timeout": 10, 
+                "confidence": 0.7,
+                "then": [
+                   {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
+                   {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.7},
+                   {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.7},
+                   {"action": "click_any", "wait": 30},
+                   {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
+                   {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.7},
+                ]
+            },
+            {"action": "wait", "timeout": 5},
+            {"action": "click_any"},
+            {"action": "press_esc", "wait": 3},
+            {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
         
         tutorial_script = [
-            {"action": "click_image", "target": "images/pvp.png", "timeout": 20},
-            {"action": "click_image", "target": "images/pve.png", "timeout": 20},
-            # ... full tutorial logic simplified here but keep structure ...
-            {"action": "click_image", "target": "images/victory.png", "timeout": 120},
+            {"action": "click_image", "target": "images/pvp.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/1v1.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image", "target": "images/pve.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/tuong2.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.7},
+            {"action": "wait", "timeout": 20},
+            {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.7},
+            {"action": "press_esc", "wait": 5},
+            {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.7},
+            {"action": "press_esc", "wait": 3},
         ]
 
         dinh_game_script = [
-            {"action": "click_image", "target": "images/dauthuong.png", "timeout": 60},
-            {"action": "click_image", "target": "images/victory.png", "timeout": 120},
+            {"action": "click_image", "target": "images/dauthuong.png", "timeout": 60, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/sansang5v5.png", "timeout": 20, "confidence": 0.7},
+            {"action": "wait", "timeout": 7},
+            {"action": "click_image_if", "target": "images/ok3.png", "timeout": 15, "confidence": 0.7},
+            {"action": "click_image", "target": "images/victory.png", "timeout": 600, "confidence": 0.7},
+            {"action": "wait", "timeout": 10},
+            {"action": "press_esc", "wait": 2},
         ]
 
         teamup_host_script = [
-            {"action": "click_image", "target": "images/team5.png", "timeout": 60},
-            {"action": "get_room_id", "timeout": 45},
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_image", "target": "images/team5.png", "timeout": 60, "confidence": 0.7},
+            {"action": "get_room_id", "timeout": 30, "roi": [0.50, 0.0, 0.30, 0.10]},
             {"action": "wait_for_players", "count": 4, "timeout": 300},
-            {"action": "click_image", "target": "images/ready.png", "timeout": 30},
+            {"action": "click_image", "target": "images/pve.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ready.png", "timeout": 30, "confidence": 0.7},
         ]
         
         teamup_guest_script = [
-            {"action": "click_image", "target": "images/pvp.png", "timeout": 60},
-            {"action": "click_image", "target": "images/idphong.png", "timeout": 20},
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_image", "target": "images/pvp.png", "timeout": 60, "confidence": 0.7},
+            {"action": "click_image", "target": "images/idphong.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait_for_room", "timeout": 300},
             {"action": "input_room_id"},
-            {"action": "click_image", "target": "images/vao.png", "timeout": 30},
+            {"action": "click_image", "target": "images/vao.png", "timeout": 30, "confidence": 0.7},
         ]
 
+        tuong_target = f"images/tuong{(self.worker_index % 5) + 1}.png"
         shared_battle_script = [
-            {"action": "click_image", "target": "images/logo1.png", "timeout": 50},
-            {"action": "sync_autowin", "timeout": 120},
-            {"action": "click_image", "target": "images/victory.png", "timeout": 120},
-            {"action": "click_image", "target": "images/daulai.png", "timeout": 20},
+            {"action": "click_image", "target": "images/logo1.png", "timeout": 50, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/sansang5v5.png", "timeout": 50, "confidence": 0.7},
+            {"action": "click_image_if", "target": tuong_target, "timeout": 10, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
+            {"action": "wait", "timeout": 10},
+            {"action": "click_image", "target": "images/victory.png", "timeout": 600, "confidence": 0.7},
+            {"action": "click_image", "target": "images/tiep_tuc1.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.7},
         ]
 
         uplevel_script = [
-            {"action": "click_image", "target": "images/logo.png", "timeout": 30},
-            {"action": "click_image", "target": "images/home.png", "timeout": 30},
-            {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30},
-            {"action": "click_image", "target": "images/logout.png", "timeout": 30},
-            {"action": "click_image", "target": "images/ok.png", "timeout": 30},
+            {"action": "click_image", "target": "images/logo.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.7},
+            {"action": "wait", "timeout": 15},
         ]
         
         # Assemble script based on modes
         self.script = []
-        if self.modes.get("login"): self.script += login_script
+        if self.modes.get("login"): 
+            self.script += login_script
+
         if self.modes.get("tutorial"): self.script += tutorial_script
         if self.modes.get("dinh_game"): self.script += dinh_game_script
         if self.modes.get("teamup"):
@@ -542,18 +649,25 @@ class MultiPremiumApp(ctk.CTk):
         self.account_file_path = None
         self.instances = []
         self.active_workers = []
-        self.adb_path = "adb"
         self.success_count = 0
         self.failure_count = 0
         self.shared_data = {"room_ids": {}, "joined_counts": {}, "autowin_barrier": {}, "lock": threading.Lock()}
+        self.adb_path = self.find_adb()
         self.device_map = {}
+        self.device_cards = {}
+        self.device_cards = {}
         
-        try: self.logo_img = ctk.CTkImage(Image.open(resource_path("logo.png")), size=(64, 64))
-        except: self.logo_img = None
+        try:
+            self.logo_img = ctk.CTkImage(Image.open(resource_path("logo.png")), size=(64, 64))
+            self.start_icon = ctk.CTkImage(Image.open(resource_path("start.png")), size=(20, 20))
+            self.stop_icon = ctk.CTkImage(Image.open(resource_path("stop.png")), size=(20, 20))
+        except:
+            self.logo_img = self.start_icon = self.stop_icon = None
         
         self.setup_layout()
         self.scan_devices()
         threading.Thread(target=init_ocr_reader, args=(self.add_log,), daemon=True).start()
+
 
     def setup_layout(self):
         # Sidebar
@@ -564,8 +678,19 @@ class MultiPremiumApp(ctk.CTk):
         self.account_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR); self.account_card.pack(padx=20, pady=20, fill="x")
         ctk.CTkButton(self.account_card, text="NẠP FILE ACC", command=self.load_accounts, fg_color="#EAB308", text_color="#000").pack(pady=10, padx=10, fill="x")
 
-        self.btn_start = ctk.CTkButton(self.sidebar, text="🚀 CHẠY TẤT CẢ", command=self.start_all, height=45, font=("Arial", 14, "bold")); self.btn_start.pack(side="bottom", padx=20, pady=10, fill="x")
-        self.btn_stop = ctk.CTkButton(self.sidebar, text="🛑 DỪNG TẤT CẢ", command=self.stop_all, fg_color="#333", height=40); self.btn_stop.pack(side="bottom", padx=20, pady=5, fill="x")
+        # ADB Config
+        self.adb_config_frame = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR); self.adb_config_frame.pack(padx=20, pady=5, fill="x")
+        ctk.CTkLabel(self.adb_config_frame, text="ADB PATH", font=("Arial", 10, "bold")).pack(pady=(5,0))
+        self.adb_path_entry = ctk.CTkEntry(self.adb_config_frame, height=28, placeholder_text="adb")
+        self.adb_path_entry.pack(padx=10, pady=5, fill="x")
+        self.adb_path_entry.insert(0, self.adb_path)
+        ctk.CTkButton(self.adb_config_frame, text="Lưu & Refresh", command=self.save_adb_and_refresh, height=24).pack(padx=10, pady=(0,5), fill="x")
+
+        self.btn_start = ctk.CTkButton(self.sidebar, text=" CHẠY TẤT CẢ", image=self.start_icon, compound="left", command=self.start_all, height=45, font=("Arial", 14, "bold"), fg_color="#10b981", hover_color="#059669")
+        self.btn_start.pack(side="bottom", padx=20, pady=(10, 20), fill="x")
+        self.btn_stop = ctk.CTkButton(self.sidebar, text=" DỪNG TẤT CẢ", image=self.stop_icon, compound="left", command=self.stop_all, fg_color="#4b5563", hover_color="#374151", height=40)
+        self.btn_stop.pack(side="bottom", padx=20, pady=0, fill="x")
+
 
         # Main Area
         self.main_content = ctk.CTkFrame(self, fg_color="transparent"); self.main_content.pack(side="right", fill="both", expand=True, padx=20, pady=20)
@@ -573,7 +698,8 @@ class MultiPremiumApp(ctk.CTk):
         # Device List
         inst_header = ctk.CTkFrame(self.main_content, fg_color="transparent"); inst_header.pack(fill="x")
         ctk.CTkLabel(inst_header, text="DANH SÁCH BOXPHONE", font=("Arial", 14, "bold"), text_color=ACCENT_GREEN).pack(side="left")
-        ctk.CTkButton(inst_header, text="Làm Mới", command=self.scan_devices, width=80).pack(side="right")
+        self.btn_refresh = ctk.CTkButton(inst_header, text="Làm Mới", command=self.scan_devices, width=80)
+        self.btn_refresh.pack(side="right")
         
         self.device_list_frame = ctk.CTkScrollableFrame(self.main_content, height=200, fg_color=CARD_COLOR); self.device_list_frame.pack(fill="x", pady=10)
         
@@ -594,23 +720,113 @@ class MultiPremiumApp(ctk.CTk):
         self.battle_count_entry.pack(pady=5); self.battle_count_entry.insert(0, "2")
 
         # Stats
-        self.stats_inner = ctk.CTkFrame(self.main_content, fg_color="transparent"); self.stats_inner.pack(fill="both", expand=True, pady=20)
+        self.stats_inner = ctk.CTkFrame(self.main_content, fg_color="transparent"); self.stats_inner.pack(fill="x", pady=10)
         self.success_val = ctk.CTkLabel(self.stats_inner, text="0", font=("Arial", 50, "bold"), text_color="#4ADE80"); self.success_val.pack()
         ctk.CTkLabel(self.stats_inner, text="TÀI KHOẢN THÀNH CÔNG", font=("Arial", 14)).pack()
+        
+        # Log Window
+        ctk.CTkLabel(self.main_content, text="LOG HỆ THỐNG", font=("Arial", 12, "bold"), text_color="#888").pack(pady=(10,0))
+        self.log_txt = ctk.CTkTextbox(self.main_content, height=150, fg_color="#18181b", text_color="#d1d5db", font=("Consolas", 11))
+        self.log_txt.pack(fill="both", expand=True, pady=10)
+        self.load_adb_config()
+        self.load_adb_config()
+
+    def find_adb(self):
+        paths = ["adb", resource_path("adb.exe"), r"C:\LDPlayer\LDPlayer9\adb.exe", r"C:\LDPlayer\LDPlayer4\adb.exe"]
+        for p in paths:
+            try:
+                if p == "adb" or os.path.exists(p):
+                    subprocess.run([p, "version"], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                    return p
+            except: continue
+        return "adb"
+
+    def save_adb_and_refresh(self):
+        path = self.adb_path_entry.get().strip()
+        if not path:
+            self.adb_path = "adb"
+        else:
+            # Nếu người dùng chỉ dán đường dẫn thư mục, tự động thêm \adb.exe
+            if os.path.isdir(path):
+                path = os.path.join(path, "adb.exe")
+            
+            if os.path.exists(path) or path == "adb":
+                self.adb_path = path
+            else:
+                self.add_log(f"LỖI: Không tìm thấy file adb tại {path}")
+                return
+
+        try:
+            with open("adb_config.txt", "w") as f: f.write(self.adb_path)
+            self.adb_path_entry.delete(0, 'end')
+            self.adb_path_entry.insert(0, self.adb_path)
+        except: pass
+        
+        self.add_log(f"Đã cập nhật ADB: {self.adb_path}")
+        self.scan_devices()
+
+    def load_adb_config(self):
+        if os.path.exists("adb_config.txt"):
+            try:
+                with open("adb_config.txt", "r") as f:
+                    path = f.read().strip()
+                    if path:
+                        self.adb_path = path
+                        self.adb_path_entry.delete(0, 'end')
+                        self.adb_path_entry.insert(0, self.adb_path)
+            except: pass
 
     def scan_devices(self):
+        self.btn_refresh.configure(state="disabled", text="Đang quét...")
+        threading.Thread(target=self._scan_devices_thread, daemon=True).start()
+
+    def _scan_devices_thread(self):
         self.device_map = {}
-        for w in self.device_list_frame.winfo_children(): w.destroy()
+        serials = []
         try:
-            res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
             serials = [l.split('\t')[0] for l in res.stdout.strip().split('\n')[1:] if "device" in l]
             serials.sort()
-            for i, s in enumerate(serials):
-                self.device_map[s] = i
-                card = ctk.CTkFrame(self.device_list_frame, height=45, fg_color="#252525"); card.pack(fill="x", pady=2, padx=5)
-                ctk.CTkLabel(card, text=f"Phone {i+1}: {s}", font=("Arial", 11, "bold")).pack(side="left", padx=15)
-                ctk.CTkLabel(card, text="Ready", text_color="#888").pack(side="right", padx=15)
-        except: pass
+        except Exception as e:
+            print(f"Lỗi quét ADB: {e}")
+
+        # Update UI in main thread
+        self.after(0, lambda: self._update_device_list_ui(serials))
+
+    def _update_device_list_ui(self, serials):
+        for w in self.device_list_frame.winfo_children(): w.destroy()
+        self.device_cards = {}
+        
+        for i, s in enumerate(serials):
+            self.device_map[s] = i
+            card = ctk.CTkFrame(self.device_list_frame, height=55, fg_color="#252525", corner_radius=8)
+            card.pack(fill="x", pady=4, padx=8)
+            
+            # Left side: Phone index and Serial
+            info_frame = ctk.CTkFrame(card, fg_color="transparent")
+            info_frame.pack(side="left", padx=15)
+            ctk.CTkLabel(info_frame, text=f"PHONE {i+1}", font=("Arial", 11, "bold"), text_color=ACCENT_GREEN).pack(anchor="w")
+            ctk.CTkLabel(info_frame, text=s, font=("Arial", 10), text_color="#888").pack(anchor="w")
+            
+            # Right side: Control buttons and Status
+            ctrl_frame = ctk.CTkFrame(card, fg_color="transparent")
+            ctrl_frame.pack(side="right", padx=10)
+            
+            status_lbl = ctk.CTkLabel(ctrl_frame, text="Ready", text_color="#888", font=("Arial", 11))
+            status_lbl.pack(side="left", padx=10)
+            
+            btn_start_sq = ctk.CTkButton(ctrl_frame, text="", image=self.start_icon, width=32, height=32, fg_color="#2d3748", hover_color="#10b981", command=lambda sn=s: self.start_single_device(sn))
+            btn_start_sq.pack(side="left", padx=2)
+            
+            btn_stop_sq = ctk.CTkButton(ctrl_frame, text="", image=self.stop_icon, width=32, height=32, fg_color="#2d3748", hover_color=ACCENT_RED, command=lambda sn=s: self.stop_single_device(sn))
+            btn_stop_sq.pack(side="left", padx=2)
+            
+            self.device_cards[s] = {"status": status_lbl, "start_btn": btn_start_sq, "stop_btn": btn_stop_sq}
+            
+        self.btn_refresh.configure(state="normal", text="Làm Mới")
+        if not serials:
+            ctk.CTkLabel(self.device_list_frame, text="Không tìm thấy thiết bị nào.", text_color="#888").pack(pady=10)
+
 
     def load_accounts(self):
         p = fd.askopenfilename(filetypes=[("Text Files", "*.txt")])
@@ -624,20 +840,52 @@ class MultiPremiumApp(ctk.CTk):
         self.add_log(f"Đã nạp {len(self.accounts_data)} acc.")
 
     def start_all(self):
-        if not self.accounts_data: return
+        if not self.accounts_data: 
+            self.add_log("Vui lòng nạp file tài khoản trước.")
+            return
+        for s in self.device_map:
+            self.start_single_device(s)
+
+    def stop_all(self):
+        for w in self.active_workers[:]:
+            w.running = False
+            self.active_workers.remove(w)
+        for s in self.device_cards:
+            self.device_cards[s]["status"].configure(text="Stopping...", text_color="#888")
+
+    def start_single_device(self, serial):
+        # Prevent duplicate workers for same device
+        for w in self.active_workers:
+            if w.device_id == serial and w.running:
+                return
+
         b_count = 2
         try: b_count = int(self.battle_count_entry.get().strip())
         except: pass
         modes = {"login":self.mode_login.get(), "tutorial":self.mode_tutorial.get(), "dinh_game":self.mode_dinh_game.get(), "teamup":self.mode_teamup.get(), "battle_count":b_count}
         
-        for s in self.device_map:
-            worker = AutoClickerInstance(s, self.adb_path, self.add_log, self.update_all_ui, self.report_stats)
-            self.active_workers.append(worker)
-            threading.Thread(target=worker.run, args=(self.accounts_data, modes, self.device_map[s], self.shared_data), daemon=True).start()
+        def update_single_status():
+             # Find status label for this serial
+             if serial in self.device_cards:
+                 for w in self.active_workers:
+                     if w.device_id == serial:
+                         self.device_cards[serial]["status"].configure(text=w.status, text_color="#4ADE80" if not w.is_lagging else "#FB7185")
+                         break
+             self.update_all_ui()
 
-    def stop_all(self):
-        for w in self.active_workers: w.running = False
-        self.active_workers = []
+        worker = AutoClickerInstance(serial, self.adb_path, self.add_log, update_single_status, self.report_stats)
+        self.active_workers.append(worker)
+        threading.Thread(target=worker.run, args=(self.accounts_data, modes, self.device_map[serial], self.shared_data), daemon=True).start()
+        self.add_log(f"Đã bắt chạy thiết bị: {serial}")
+
+    def stop_single_device(self, serial):
+        for w in self.active_workers[:]:
+            if w.device_id == serial:
+                w.running = False
+                self.active_workers.remove(w)
+        if serial in self.device_cards:
+            self.device_cards[serial]["status"].configure(text="Stopped", text_color="#888")
+
 
     def report_stats(self, success, account):
         if success: self.success_count += 1
@@ -656,18 +904,111 @@ class MultiPremiumApp(ctk.CTk):
     def update_all_ui(self):
         self.success_val.configure(text=str(self.success_count))
 
-    def add_log(self, msg): print(msg)
+    def add_log(self, text):
+        now = datetime.now().strftime("%H:%M:%S")
+        full_text = f"[{now}] {text}"
+        print(full_text)
+        try:
+            self.log_txt.insert("end", full_text + "\n")
+            self.log_txt.see("end")
+        except: pass
 
 # --- License Logic ---
-def get_hwid(): return hashlib.sha256(str(uuid.getnode()).encode()).hexdigest()[:20].upper()
-def verify_license(key, hwid): 
+def get_hwid():
+    try:
+        def get_cmd(cmd):
+            try:
+                res = subprocess.check_output(cmd, shell=True, creationflags=subprocess.CREATE_NO_WINDOW).decode().strip()
+                lines = [l.strip() for l in res.split('\n') if l.strip()]
+                if len(lines) > 1:
+                    val = lines[1].strip()
+                    trash = ["filled", "default", "none", "00000000", "ffffffff", "unknown", "to be"]
+                    if any(t in val.lower() for t in trash): return ""
+                    return val
+                return ""
+            except: return ""
+
+        hw_uuid = get_cmd("wmic csproduct get uuid")
+        disk_serial = get_cmd("wmic diskdrive where 'index=0' get serialnumber")
+        cpu_id = get_cmd("wmic cpu get processorid")
+        board_serial = get_cmd("wmic baseboard get serialnumber")
+        
+        machine_guid = ""
+        try:
+            registry_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography", 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY)
+            machine_guid, _ = winreg.QueryValueEx(registry_key, "MachineGuid")
+            winreg.CloseKey(registry_key)
+        except: pass
+
+        mac = str(uuid.getnode())
+        combined = f"U:{hw_uuid}|D:{disk_serial}|C:{cpu_id}|B:{board_serial}|G:{machine_guid}|M:{mac}"
+        return hashlib.sha256(combined.encode()).hexdigest()[:20].upper()
+    except:
+        return hashlib.sha256(str(uuid.getnode()).encode()).hexdigest()[:20].upper()
+
+def verify_license(key, hwid):
     try:
         decoded = base64.b64decode(key).decode()
-        exp, sig = decoded.split('|')
-        if sig == hashlib.sha256(f"{exp}{hwid}{SECRET_KEY}".encode()).hexdigest()[:10]: return True, exp
-    except: pass
-    return False, "Key lỗi"
+        expiry_str, signature = decoded.split('|')
+        expected_sig = hashlib.sha256(f"{expiry_str}{hwid}{SECRET_KEY}".encode()).hexdigest()[:10]
+        if signature != expected_sig: return False, "Key không hợp lệ cho máy này!"
+        expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+        if datetime.now() > expiry_date: return False, f"Key đã hết hạn vào {expiry_str}!"
+        return True, expiry_str
+    except:
+        return False, "Key sai định dạng!"
+
+class LoginApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("KÍCH HOẠT MegaUpLvLQTool(BoxPhone)")
+        self.geometry("500x550")
+        self.resizable(False, False)
+        self.configure(fg_color=BG_COLOR)
+        self.hwid = get_hwid()
+        self.setup_ui()
+
+    def setup_ui(self):
+        ctk.CTkLabel(self, text="MegaUpLvLQTool(BoxPhone)", font=ctk.CTkFont(size=24, weight="bold"), text_color=ACCENT_GREEN).pack(pady=(40, 10))
+        ctk.CTkLabel(self, text="HỆ THỐNG QUẢN LÝ BẢN QUYỀN", font=ctk.CTkFont(size=12)).pack(pady=(0, 30))
+        hwid_frame = ctk.CTkFrame(self, fg_color=CARD_COLOR, corner_radius=10); hwid_frame.pack(padx=40, fill="x")
+        ctk.CTkLabel(hwid_frame, text="MÃ MÁY CỦA BẠN (HWID):", font=ctk.CTkFont(size=11, weight="bold")).pack(pady=(10, 0))
+        self.hwid_entry = ctk.CTkEntry(hwid_frame, placeholder_text=self.hwid, height=35, font=ctk.CTkFont(size=12))
+        self.hwid_entry.insert(0, self.hwid); self.hwid_entry.configure(state="readonly"); self.hwid_entry.pack(padx=20, pady=(5, 10), fill="x")
+        ctk.CTkLabel(self, text="Hãy gửi mã trên cho Admin để nhận Key kích hoạt.", font=ctk.CTkFont(size=10), text_color="#888").pack(pady=5)
+        self.key_input = ctk.CTkEntry(self, placeholder_text="Nhập Key kích hoạt tại đây...", height=40)
+        self.key_input.pack(padx=40, pady=20, fill="x")
+        self.btn_activate = ctk.CTkButton(self, text="KÍCH HOẠT NGAY", command=self.activate, height=45, corner_radius=10, font=ctk.CTkFont(weight="bold"))
+        self.btn_activate.pack(padx=40, pady=5, fill="x")
+        self.status_label = ctk.CTkLabel(self, text="", text_color=ACCENT_RED); self.status_label.pack(pady=10)
+        ctk.CTkLabel(self, text="Nguồn: RyoUTE", font=ctk.CTkFont(size=12, weight="bold"), text_color="#777").pack(pady=(30, 20))
+
+    def activate(self):
+        key = self.key_input.get().strip()
+        if not key: self.status_label.configure(text="Vui lòng nhập Key!"); return
+        valid, msg = verify_license(key, self.hwid)
+        if valid:
+            with open(LICENSE_FILE, "w") as f: f.write(key)
+            self.status_label.configure(text=f"Kích hoạt thành công! Hạn dùng: {msg}", text_color="#4ADE80")
+            self.after(1500, self.launch_main)
+        else: self.status_label.configure(text=msg, text_color=ACCENT_RED)
+
+    def launch_main(self):
+        self.destroy(); app = MultiPremiumApp(); app.mainloop()
 
 if __name__ == "__main__":
-    app = MultiPremiumApp()
-    app.mainloop()
+    hwid = get_hwid()
+    need_login = True
+    if os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, "r") as f:
+            saved_key = f.read().strip()
+        if saved_key:
+            valid, _ = verify_license(saved_key, hwid)
+            if valid: need_login = False
+    
+    if need_login:
+        login = LoginApp()
+        login.mainloop()
+    else:
+        app = MultiPremiumApp()
+        app.mainloop()
