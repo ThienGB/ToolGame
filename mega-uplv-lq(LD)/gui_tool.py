@@ -764,7 +764,7 @@ class AutoClickerInstance:
         login_script = [
             
 
-            {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
 
