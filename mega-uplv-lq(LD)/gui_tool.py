@@ -225,67 +225,65 @@ class AutoClickerInstance:
         subprocess.run([self.ld_console_path, "launch", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW)
         
         # 3. Chờ máy ảo lên và sẵn sàng
-        self.log(f"Đang đợi máy ảo (Index {index}) ổn định ADB...")
+        self.log(f"Đang đợi máy ảo (Index {index}) ổn định ADB (Tối đa 70s)...")
         start_wait = time.time()
         
         guest_port = 5554 + (index * 2)
         guest_serial = f"127.0.0.1:{guest_port}"
 
-        while time.time() - start_wait < 150:
+        while time.time() - start_wait < 70: # Rút ngắn xuống còn khoảng 1 phút như yêu cầu
             if not self.running: return False
             
             # Thử connect liên tục vào port tiêu chuẩn
             subprocess.run([self.adb_path, "connect", guest_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
 
-            # Cập nhật serial thực tế từ list2 (nếu LDPlayer nhảy port khác)
+            # Cập nhật serial thực tế từ list2 (Nguồn tin cậy nhất để quét lại device)
             current_ld_serial = None
             try:
                 res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 for line in res.stdout.splitlines():
                     parts = line.split(',')
-                    if parts[0] == str(index):
-                        # Quét tất cả các cột để tìm chuỗi có định dạng Serial ADB
+                    if len(parts) >= 7 and parts[0] == str(index):
                         for p in parts:
                             p = p.strip()
-                            if (":" in p or p.startswith("emulator-")) and p != "null":
+                            if (":" in p or p.startswith("emulator-")) and p != "null" and "." in p:
                                 current_ld_serial = p
                                 break
                         break
             except: pass
 
-            # Nếu list2 có serial mới, ưu tiên dùng nó
-            if current_ld_serial and current_ld_serial != self.device_id:
-                self.log(f"Cập nhật Serial: {self.device_id} -> {current_ld_serial}")
-                self.device_id = current_ld_serial
+            # Nếu list2 báo có serial mới, thử connect và cập nhật ngay
+            if current_ld_serial:
+                subprocess.run([self.adb_path, "connect", current_ld_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                if current_ld_serial != self.device_id:
+                    self.log(f"Quét lại phát hiện Serial mới: {current_ld_serial}")
+                    self.device_id = current_ld_serial
             
-            # Kiểm tra xem device_id hiện tại (hoặc guest_serial) đã online chưa
+            # Kiểm tra xem device_id hiện tại đã online chưa
             res_adb = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
             is_connected = False
             for line in res_adb.stdout.splitlines():
-                if (self.device_id in line or guest_serial in line) and "device" in line and "offline" not in line:
-                    # Nếu guest_serial online mà device_id chưa đổi, thì ép device_id sang guest_serial
-                    if guest_serial in line and self.device_id not in line:
-                        self.device_id = guest_serial
+                if self.device_id in line and "device" in line and "offline" not in line and "unauthorized" not in line:
                     is_connected = True
                     break
             
             if is_connected:
-                # Kiểm tra phản hồi shell thực tế
+                # Kiểm tra phản hồi shell thực tế (getprop hoặc wm size)
                 res_boot = self.call_adb(["shell", "getprop", "sys.boot_completed"])
                 if b"1" in res_boot.stdout:
-                    self.log("==> KẾT NỐI THÀNH CÔNG! Máy ảo đã sẵn sàng.")
-                    time.sleep(10) # Chờ service Android ổn định hoàn toàn
+                    self.log("==> KẾT NỐI THÀNH CÔNG! Thiết bị đã sẵn sàng.")
+                    time.sleep(5) # Giảm thời gian chờ sau khi lên hẳn
                     return True
                 
-                # Dự phòng nếu boot_completed bị treo
-                if time.time() - start_wait > 60:
+                # Dự phòng nếu boot_completed bị treo lâu nhưng shell đã chạy
+                if time.time() - start_wait > 45:
                     res_wm = self.call_adb(["shell", "wm", "size"])
                     if b"Physical size" in res_wm.stdout:
                         self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)!")
-                        time.sleep(10)
+                        time.sleep(5)
                         return True
 
-            time.sleep(5)
+            time.sleep(3) # Tần suất quét lại dầy hơn (mỗi 3s)
         
         return False
 
@@ -1073,8 +1071,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
-            {"action": "wait", "timeout": 25},
-            
+            {"action": "wait", "timeout": 25},    
         ]
 
         # GHÉP SCRIPT DỰA TRÊN LỰA CHỌN
@@ -1106,16 +1103,13 @@ class AutoClickerInstance:
             }
             self.script.append(battle_loop)
 
-        # 4. GIAI ĐOẠN XUẤT FILE & ĐĂNG XUẤT (CHẠY CUỐI CÙNG SAU KHI XONG HẾT)
-        if self.modes.get("uplevel"):
-            self.script += uplevel_script
-            # Hành động xuất file thành công vào TXT
-            self.script.append({"action": "export_success"})
+        # 4. GIAI ĐOẠN XUẤT FILE & ĐĂNG XUẤT (LUÔN CHẠY CUỐI CÙNG SAU KHI XONG HẾT)
+        self.script += uplevel_script
 
         while self.running:
             # Tìm tài khoản chưa dùng
             self.current_account = None
-            with threading.Lock():
+            with FILE_LOCK:
                 for acc in self.accounts_list:
                     if not acc.get("used"):
                         acc["used"] = True
@@ -1175,6 +1169,7 @@ class MultiPremiumApp(ctk.CTk):
         self.configure(fg_color=BG_COLOR)
         
         self.accounts_data = []
+        self.account_file_path = None # Đường dẫn file tài khoản đang nạp
         self.instances = [] # Danh sách các máy thực tế đang chạy ADB
         self.active_workers = [] # Các thread đang chạy
         self.adb_path = self.find_adb()
@@ -1299,7 +1294,7 @@ class MultiPremiumApp(ctk.CTk):
         
         self.mode_frame = ctk.CTkFrame(self.stats_card, fg_color="transparent")
         self.mode_frame.pack(fill="x", padx=15, pady=5)
-        self.mode_frame.columnconfigure((0, 1, 2, 3, 4), weight=1)
+        self.mode_frame.columnconfigure((0, 1, 2, 3), weight=1)
 
         self.mode_login = ctk.CTkCheckBox(self.mode_frame, text="LOGIN", font=ctk.CTkFont(size=11))
         self.mode_login.grid(row=0, column=0); self.mode_login.select()
@@ -1313,8 +1308,7 @@ class MultiPremiumApp(ctk.CTk):
         self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI", font=ctk.CTkFont(size=11), text_color=ACCENT_GREEN)
         self.mode_teamup.grid(row=0, column=3); self.mode_teamup.select()
 
-        self.mode_uplevel = ctk.CTkCheckBox(self.mode_frame, text="XUẤT FILE", font=ctk.CTkFont(size=11))
-        self.mode_uplevel.grid(row=0, column=4); self.mode_uplevel.select()
+
 
         # Số trận Battle (Battle Loop Count)
         self.battle_count_frame = ctk.CTkFrame(self.stats_card, fg_color="transparent")
@@ -1354,8 +1348,33 @@ class MultiPremiumApp(ctk.CTk):
             else:
                 self.failure_count += 1
                 if account: self.export_account(account, "FAILED_ACC.txt")
+            
+            # Xóa tài khoản khỏi file nguồn khi hoàn thành (Dù thành công hay thất bại)
+            if account:
+                self.remove_account_from_file(account)
+                
             self.update_stats_ui()
         self.after(0, _update)
+
+    def remove_account_from_file(self, account):
+        if not hasattr(self, "account_file_path") or not self.account_file_path or not os.path.exists(self.account_file_path):
+            return
+        
+        acc_str = f"{account['tk']}|{account['mk']}"
+        with FILE_LOCK:
+            try:
+                # Đọc toàn bộ nội dung
+                with open(self.account_file_path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+                
+                # Ghi lại những dòng không trùng với acc vừa chạy
+                with open(self.account_file_path, "w", encoding="utf-8") as f:
+                    for line in lines:
+                        if line.strip() != acc_str:
+                            f.write(line)
+                self.add_log(f"Đã xóa acc {account['tk']} khỏi file nguồn.")
+            except Exception as e:
+                self.add_log(f"LỖI XÓA ACC TRONG FILE: {e}")
 
     def export_account(self, account, filename):
         try:
@@ -1449,10 +1468,21 @@ class MultiPremiumApp(ctk.CTk):
             lines = res.stdout.strip().split('\n')[1:]
             device_serials = [line.split('\t')[0] for line in lines if "device" in line]
             
-            # Gán index theo thứ tự quét: tab scan đầu tiên = 0 (host team 1),
-            # tab thứ 6 = 5 (host team 2), v.v. Không phụ thuộc vào port ADB.
-            for i, serial in enumerate(device_serials):
+            # Lấy tất cả serials và gán index dựa trên port ADB để sắp xếp
+            # Việc sắp xếp giúp thứ tự máy ổn định (máy index thấp luôn đứng trước)
+            serials_with_idx = []
+            for serial in device_serials:
+                abs_idx = self.get_absolute_index(serial)
+                serials_with_idx.append((serial, abs_idx))
+            
+            # Sắp xếp theo LD index tăng dần
+            serials_with_idx.sort(key=lambda x: x[1])
+            
+            # Gán worker_index (0, 1, 2...) theo thứ tự đã sắp xếp
+            for i, (serial, abs_idx) in enumerate(serials_with_idx):
                 self.device_map[serial] = i
+                machine_num = abs_idx + 1 if abs_idx != -1 else "?? "
+                self.add_log(f"Thiết bị: {serial} -> Index: {i} (LD Máy: {machine_num})")
             
             if not self.device_map:
                 self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào.")
@@ -1512,6 +1542,7 @@ class MultiPremiumApp(ctk.CTk):
     def load_accounts(self):
         file_path = fd.askopenfilename(filetypes=[("Text Files", "*.txt")])
         if not file_path: return
+        self.account_file_path = file_path
         
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -1593,7 +1624,6 @@ class MultiPremiumApp(ctk.CTk):
             "dinh_game": self.mode_dinh_game.get(),
             "teamup": self.mode_teamup.get(),
             "battle_count": b_count,
-            "uplevel": self.mode_uplevel.get(),
         }
 
         # Chạy đa luồng cho các máy trong team
