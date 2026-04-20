@@ -33,16 +33,26 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 if getattr(sys, 'frozen', False):
     import os
     import sys
-    _meipass = getattr(sys, '_MEIPASS', os.path.abspath("."))
-    torch_lib = os.path.join(_meipass, 'torch', 'lib')
-    if os.path.exists(torch_lib):
-        if hasattr(os, 'add_dll_directory'):
-            try:
-                os.add_dll_directory(torch_lib)
-                os.add_dll_directory(_meipass)
-            except:
-                pass
-        os.environ['PATH'] = torch_lib + os.pathsep + _meipass + os.pathsep + os.environ.get('PATH', '')
+    # Ở phiên bản PyInstaller mới, _MEIPASS là thư mục chứa EXE hoặc thư mục chứa _internal
+    _meipass = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    
+    # Danh sách các thư mục tiềm năng chứa DLL của torch
+    dll_paths = [
+        _meipass,
+        os.path.join(_meipass, '_internal'),
+        os.path.join(_meipass, 'torch', 'lib'),
+        os.path.join(_meipass, '_internal', 'torch', 'lib')
+    ]
+    
+    for dp in dll_paths:
+        if os.path.exists(dp):
+            if hasattr(os, 'add_dll_directory'):
+                try:
+                    os.add_dll_directory(dp)
+                except:
+                    pass
+            # Cập nhật cả PATH để đảm bảo các tiến trình con cũng thấy
+            os.environ['PATH'] = dp + os.pathsep + os.environ.get('PATH', '')
 
 import tkinter.filedialog as fd
 
@@ -78,6 +88,15 @@ def resource_path(relative_path):
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
+
+class StdoutRedirector:
+    def __init__(self, log_func):
+        self.log_func = log_func
+    def write(self, s):
+        if s.strip():
+            self.log_func(s.strip())
+    def flush(self):
+        pass
 
 # --- Theme Configuration ---
 ctk.set_appearance_mode("Dark")
@@ -484,9 +503,9 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "timeout": 60, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg","timeout": 60, "confidence": 0.9},
             {"action": "input_account"},
-            {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "timeout": 60, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "target3": "images/matkhau.jpg", "timeout": 60, "confidence": 0.9},
             {"action": "input_password"},
             {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 5},
@@ -666,6 +685,11 @@ class MultiPremiumApp(ctk.CTk):
         
         self.setup_layout()
         self.scan_devices()
+        
+        # Redirect stdout và stderr về log UI
+        sys.stdout = StdoutRedirector(self.add_log)
+        sys.stderr = StdoutRedirector(self.add_log)
+        
         threading.Thread(target=init_ocr_reader, args=(self.add_log,), daemon=True).start()
 
 
@@ -728,7 +752,6 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(self.main_content, text="LOG HỆ THỐNG", font=("Arial", 12, "bold"), text_color="#888").pack(pady=(10,0))
         self.log_txt = ctk.CTkTextbox(self.main_content, height=150, fg_color="#18181b", text_color="#d1d5db", font=("Consolas", 11))
         self.log_txt.pack(fill="both", expand=True, pady=10)
-        self.load_adb_config()
         self.load_adb_config()
 
     def find_adb(self):
@@ -907,11 +930,18 @@ class MultiPremiumApp(ctk.CTk):
     def add_log(self, text):
         now = datetime.now().strftime("%H:%M:%S")
         full_text = f"[{now}] {text}"
-        print(full_text)
+        # print(full_text) # Bỏ print trực tiếp ở đây để tránh lặp vô tận khi đã redirect stdout
         try:
-            self.log_txt.insert("end", full_text + "\n")
+            self.after(0, lambda: self._safe_append_log(full_text))
+        except:
+            pass
+
+    def _safe_append_log(self, msg):
+        try:
+            self.log_txt.insert("end", msg + "\n")
             self.log_txt.see("end")
-        except: pass
+        except:
+            pass
 
 # --- License Logic ---
 def get_hwid():
