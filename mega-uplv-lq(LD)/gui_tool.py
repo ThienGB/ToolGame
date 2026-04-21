@@ -795,7 +795,7 @@ class AutoClickerInstance:
                     {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 4, "confidence": 0.9}
                 ]
             },
-            {"action": "click_image_if", "target": "images/skip.png", "timeout": 45, "confidence": 0.9},
+            {"action": "click_image_if", "target1": "images/skip.png","target2": "images/dang_ky_sau.jpg", "timeout": 45, "confidence": 0.9},
             {
                 "action": "click_image_if", 
                 "target": "images/vao_button.png", 
