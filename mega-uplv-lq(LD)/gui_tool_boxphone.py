@@ -730,10 +730,11 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/team5.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
             {"action": "get_room_id", "timeout": 30, "roi": [0.50, 0.0, 0.30, 0.10]},
             {"action": "wait_for_players", "count": 4, "timeout": 300},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/da_ro.png", "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/daro.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images/pve.png", "timeout": 30, "confidence": 0.7},
@@ -758,15 +759,21 @@ class AutoClickerInstance:
         tuong_target = f"images/tuong{(self.worker_index % 5) + 1}.png"
         shared_battle_script = [
             {"action": "click_image", "target": "images/logo1.png", "timeout": 50, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/autowin.png", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 2, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/sansang5v5.png", "timeout": 50, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok3.png", "timeout": 25, "confidence": 0.7},
-            {"action": "click_image_if", "target": tuong_target, "timeout": 10, "confidence": 0.7},
+{
+                "action": "loop",
+                "count": 2,
+                "steps": [
+                    {"action": "click_image_if", "target": tuong_target, "timeout": 2, "confidence": 0.7},
+                ]
+            },
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
-            {"action": "wait", "timeout": 10},
+            {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target1": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 10},
             {
