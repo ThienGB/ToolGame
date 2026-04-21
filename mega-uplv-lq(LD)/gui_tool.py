@@ -1345,8 +1345,17 @@ class MultiPremiumApp(ctk.CTk):
         self.stats_inner.columnconfigure((0, 1), weight=1)
 
         self.success_val = self.create_stat_item(self.stats_inner, "THÀNH CÔNG", "0", 0, 0, "#4ADE80")
-        self.total_devices_val = self.create_stat_item(self.stats_inner, "TỔNG MÁY", "0", 0, 1, "#888")
-        self.total_accounts_val = self.create_stat_item(self.stats_inner, "TỔNG ACC", "0", 1, 0, "#888")
+        self.active_device_val = self.create_stat_item(self.stats_inner, "ĐANG CHẠY", "0", 0, 1, "#00D2FF")
+        self.lag_val = self.create_stat_item(self.stats_inner, "LAG", "0", 1, 0, "#EF4444")
+        self.total_devices_val = self.create_stat_item(self.stats_inner, "TỔNG MÁY", "0", 1, 1, "#888")
+        self.total_accounts_val = self.create_stat_item(self.stats_inner, "TỔNG ACC", "0", 2, 0, "#888")
+
+        # Battle count field (Required for start_team logic)
+        ctk.CTkLabel(self.stats_card, text="SỐ TRẬN BATTLE", font=ctk.CTkFont(size=10, weight="bold"), text_color="#888").pack(pady=(12, 0))
+        self.battle_count_entry = ctk.CTkEntry(self.stats_card, placeholder_text="Mặc định: 5", height=28)
+        self.battle_count_entry.pack(padx=15, pady=5, fill="x")
+        self.battle_count_entry.insert(0, "5")
+
 
     def create_stat_item(self, parent, title, value, row, col, color):
         frame = ctk.CTkFrame(parent, fg_color="#252525", corner_radius=6, height=30)

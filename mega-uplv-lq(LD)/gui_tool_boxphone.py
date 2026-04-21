@@ -598,6 +598,17 @@ class AutoClickerInstance:
                    {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
                 ]
             },
+            {
+                "action": "click_image_if", 
+                "target": "images/an_de_tro_lai.jpg", 
+                "timeout": 10, 
+                "confidence": 0.7,
+                "then": [
+                   {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "timeout": 7, "confidence": 0.7},
+                   {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "timeout": 7, "confidence": 0.7},
+                   {"action": "click_image_if", "target": "images/x_start.jpg", "timeout": 20, "confidence": 0.7},
+                ]
+            },
             {"action": "wait", "timeout": 5},
             {"action": "click_any"},
             {"action": "press_esc", "wait": 3},
@@ -639,7 +650,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target": "images/nhan_sktt.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.7},
-            {"action": "click_image", "target": "images/krixi.png", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/krixi.png", "target2": "images/krixi_no_download.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_any", "wait": 4},
             {"action": "click_any", "wait": 4},
             {"action": "wait", "timeout": 5},
