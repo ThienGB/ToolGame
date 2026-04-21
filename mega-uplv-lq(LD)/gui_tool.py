@@ -27,23 +27,36 @@ try:
 except Exception:
     pass
 
-# --- Fix WinError 1114 for torch/easyocr in PyInstaller ---
+# --- Fix WinError 1114 & SSL for torch/easyocr ---
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+import ssl
+try:
+    ssl._create_default_https_context = ssl._create_unverified_context
+except: pass
 
 if getattr(sys, 'frozen', False):
-    import os
-    import sys
-    # Đảm bảo các thư viện DLL của torch được tìm thấy trong thư mục tạm của PyInstaller
-    _meipass = getattr(sys, '_MEIPASS', os.path.abspath("."))
-    torch_lib = os.path.join(_meipass, 'torch', 'lib')
-    if os.path.exists(torch_lib):
-        if hasattr(os, 'add_dll_directory'):
-            try:
-                os.add_dll_directory(torch_lib)
-                os.add_dll_directory(_meipass) # Thêm cả thư mục gốc của EXE
-            except:
-                pass
-        os.environ['PATH'] = torch_lib + os.pathsep + _meipass + os.pathsep + os.environ.get('PATH', '')
+    _meipass = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    _internal = os.path.join(_meipass, '_internal')
+    # Add paths for DLL search
+    for dp in [_meipass, _internal, os.path.join(_internal, 'torch', 'lib'), os.path.join(_meipass, 'torch', 'lib')]:
+        if os.path.exists(dp):
+            if hasattr(os, 'add_dll_directory'):
+                try: os.add_dll_directory(dp)
+                except: pass
+            os.environ['PATH'] = dp + os.pathsep + os.environ.get('PATH', '')
+    
+    # Force load OpenMP to avoid 1114 conflict
+    try:
+        import ctypes
+        for dll_name in ['libiomp5md.dll', 'libiomp5.dll']:
+            for base in [_meipass, _internal]:
+                dp = os.path.join(base, 'torch', 'lib', dll_name)
+                if os.path.exists(dp):
+                    try: 
+                        ctypes.CDLL(dp)
+                        break
+                    except: pass
+    except: pass
 
 import tkinter.filedialog as fd
 
@@ -583,6 +596,13 @@ class AutoClickerInstance:
             scale = 2
             crop  = cv2.resize(crop, (crop.shape[1] * scale, crop.shape[0] * scale),
                                interpolation=cv2.INTER_CUBIC)
+
+            # Xóa ID cũ trước khi lấy ID mới để Guest không đọc nhầm
+            with self.shared_data["lock"]:
+                if "room_ids" in self.shared_data and self.group_id in self.shared_data["room_ids"]:
+                    del self.shared_data["room_ids"][self.group_id]
+                if "joined_counts" in self.shared_data:
+                    self.shared_data["joined_counts"][self.group_id] = 1 # Host tự tính là 1
 
             # === ĐỌC OCR ===
             # Thêm allowlist='0123456789ID: ' để chỉ nhận diện số và chữ ID, giúp ID không bị dính chùm thành 10
@@ -1124,6 +1144,14 @@ class AutoClickerInstance:
 
             self.log(f">> BẮT ĐẦU VÒNG: Acc {self.current_account['tk']}")
             
+            # Host reset dữ liệu nhóm khi bắt đầu acc mới
+            if self.worker_index % 5 == 0:
+                with self.shared_data["lock"]:
+                    if "room_ids" in self.shared_data and self.group_id in self.shared_data["room_ids"]:
+                        del self.shared_data["room_ids"][self.group_id]
+                    if "joined_counts" in self.shared_data:
+                        self.shared_data["joined_counts"][self.group_id] = 0
+
             success = True
             for step in self.script:
                 if not self.running: break
@@ -1310,34 +1338,24 @@ class MultiPremiumApp(ctk.CTk):
 
 
 
-        # Số trận Battle (Battle Loop Count)
-        self.battle_count_frame = ctk.CTkFrame(self.stats_card, fg_color="transparent")
-        self.battle_count_frame.pack(fill="x", padx=15, pady=(5, 0))
-        ctk.CTkLabel(self.battle_count_frame, text="Số trận Battle:", font=ctk.CTkFont(size=11, weight="bold")).pack(side="left", padx=(5, 10))
-        self.battle_count_entry = ctk.CTkEntry(self.battle_count_frame, width=60, height=24, corner_radius=6)
-        self.battle_count_entry.pack(side="left")
-        self.battle_count_entry.insert(0, "2")
-
         ctk.CTkLabel(self.stats_card, text="THÔNG SỐ THỜI GIAN THỰC", font=ctk.CTkFont(size=12, weight="bold"), text_color="#888").pack(pady=(15, 5))
         
         self.stats_inner = ctk.CTkFrame(self.stats_card, fg_color="transparent")
         self.stats_inner.pack(fill="both", expand=True, padx=15, pady=(0, 10))
-        self.stats_inner.columnconfigure(0, weight=1)
+        self.stats_inner.columnconfigure((0, 1), weight=1)
 
-        self.active_device_val = self.create_stat_item(self.stats_inner, "ĐANG CHẠY", "0", 0, 0, ACCENT_PURPLE)
-        self.success_val = self.create_stat_item(self.stats_inner, "THÀNH CÔNG", "0", 1, 0, "#4ADE80")
-        self.lag_val = self.create_stat_item(self.stats_inner, "LỖI/LAG", "0", 2, 0, "#FB923C")
-        self.total_devices_val = self.create_stat_item(self.stats_inner, "TỔNG MÁY", "0", 3, 0, "#888")
-        self.total_accounts_val = self.create_stat_item(self.stats_inner, "TỔNG ACC", "0", 4, 0, "#888")
+        self.success_val = self.create_stat_item(self.stats_inner, "THÀNH CÔNG", "0", 0, 0, "#4ADE80")
+        self.total_devices_val = self.create_stat_item(self.stats_inner, "TỔNG MÁY", "0", 0, 1, "#888")
+        self.total_accounts_val = self.create_stat_item(self.stats_inner, "TỔNG ACC", "0", 1, 0, "#888")
 
     def create_stat_item(self, parent, title, value, row, col, color):
-        frame = ctk.CTkFrame(parent, fg_color="#252525", corner_radius=8, height=35)
-        frame.grid(row=row, column=col, padx=5, pady=2, sticky="nsew")
+        frame = ctk.CTkFrame(parent, fg_color="#252525", corner_radius=6, height=30)
+        frame.grid(row=row, column=col, padx=3, pady=2, sticky="nsew")
         frame.grid_propagate(False)
         
-        ctk.CTkLabel(frame, text=title, font=ctk.CTkFont(size=10, weight="bold"), text_color="#888").pack(side="left", padx=15)
-        val_label = ctk.CTkLabel(frame, text=value, font=ctk.CTkFont(size=14, weight="bold"), text_color=color)
-        val_label.pack(side="right", padx=15)
+        ctk.CTkLabel(frame, text=title, font=ctk.CTkFont(size=9, weight="bold"), text_color="#888").pack(side="left", padx=10)
+        val_label = ctk.CTkLabel(frame, text=value, font=ctk.CTkFont(size=12, weight="bold"), text_color=color)
+        val_label.pack(side="right", padx=10)
         return val_label
 
     def report_stats(self, success=True, account=None):
@@ -1497,42 +1515,44 @@ class MultiPremiumApp(ctk.CTk):
                 
             # Hiển thị các Team đã gom nhóm
             for team_idx in sorted(teams_data.keys()):
-                team_frame = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=8, border_width=1, border_color="#333")
-                team_frame.pack(pady=4, padx=5, fill="x")
+                team_frame = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=6, border_width=1, border_color="#333")
+                team_frame.pack(pady=2, padx=5, fill="x")
                 
-                # Header cho Team
-                team_title = ctk.CTkLabel(team_frame, text=f"TEAM {team_idx + 1}", font=ctk.CTkFont(size=12, weight="bold"), text_color=ACCENT_GREEN)
-                team_title.pack(pady=(5, 0))
+                # Header Team + Nút
+                header_row = ctk.CTkFrame(team_frame, fg_color="transparent", height=24)
+                header_row.pack(fill="x", padx=5, pady=2)
+                header_row.pack_propagate(False)
+
+                ctk.CTkLabel(header_row, text=f"T{team_idx + 1}", font=ctk.CTkFont(size=11, weight="bold"), text_color=ACCENT_GREEN).pack(side="left", padx=2)
+                
+                btn_stop_team = ctk.CTkButton(header_row, text="Dừng", command=lambda t=team_idx: self.stop_team(t), fg_color="#333", height=18, width=50, font=ctk.CTkFont(size=10))
+                btn_stop_team.pack(side="right", padx=2)
+                
+                btn_start_team = ctk.CTkButton(header_row, text=f"Chạy", command=lambda t=team_idx: self.start_team(t), height=18, width=50, font=ctk.CTkFont(size=10, weight="bold"))
+                btn_start_team.pack(side="right", padx=2)
 
                 devices_frame = ctk.CTkFrame(team_frame, fg_color="transparent")
-                devices_frame.pack(fill="x", padx=5, pady=2)
+                devices_frame.pack(fill="x", padx=5, pady=(0, 3))
                 devices_frame.columnconfigure(list(range(5)), weight=1)
                 
                 current_team_devices = sorted(teams_data[team_idx], key=lambda s: self.device_map[s])
                 
                 for i, serial in enumerate(current_team_devices):
                     abs_idx = self.device_map[serial]
-                    machine_num = abs_idx + 1
                     is_host = (abs_idx % 5 == 0)
                     
                     card_color = "#2d3748" if is_host else "#252525"
                     border_color = ACCENT_GREEN if is_host else "#383838"
                     
-                    card = ctk.CTkFrame(devices_frame, fg_color=card_color, corner_radius=4, border_width=1, border_color=border_color, height=35)
-                    card.grid(row=0, column=abs_idx % 5, padx=2, pady=2, sticky="nsew"); card.grid_propagate(False)
+                    card = ctk.CTkFrame(devices_frame, fg_color=card_color, corner_radius=4, border_width=1, border_color=border_color, height=20)
+                    card.grid(row=0, column=i, padx=1, pady=1, sticky="nsew"); card.grid_propagate(False)
                     
-                    lbl_text = f"M{machine_num}\n{serial.split(':')[-1] if ':' in serial else serial}"
-                    ctk.CTkLabel(card, text=lbl_text, font=ctk.CTkFont(size=9, weight="bold" if is_host else "normal")).pack(expand=True)
+                    lbl_text = f"M{abs_idx + 1}"
+                    ctk.CTkLabel(card, text=lbl_text, font=ctk.CTkFont(size=10, weight="bold" if is_host else "normal")).pack(expand=True)
                     
                     status_lbl = ctk.CTkLabel(card, text="", font=ctk.CTkFont(size=1))
                     self.device_cards[serial] = {"card": card, "status": status_lbl}
                 
-                btns_frame = ctk.CTkFrame(team_frame, fg_color="transparent")
-                btns_frame.pack(fill="x", padx=5, pady=(0, 5))
-                btn_start_team = ctk.CTkButton(btns_frame, text=f"Chạy Team {team_idx + 1}", image=self.start_icon, compound="left", command=lambda t=team_idx: self.start_team(t), height=24, font=ctk.CTkFont(size=11, weight="bold"))
-                btn_start_team.pack(side="left", padx=2, expand=True, fill="x")
-                btn_stop_team = ctk.CTkButton(btns_frame, text="Dừng", image=self.stop_icon, compound="left", command=lambda t=team_idx: self.stop_team(t), fg_color="#333", height=24, font=ctk.CTkFont(size=11))
-                btn_stop_team.pack(side="right", padx=2, expand=True, fill="x")
                 self.team_frames[team_idx] = {"frame": team_frame, "devices": current_team_devices, "start_btn": btn_start_team, "stop_btn": btn_stop_team}
             
             self.update_stats_ui()
