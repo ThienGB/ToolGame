@@ -230,6 +230,8 @@ class AutoClickerInstance:
             res = self.get_room_id_logic(step)
         elif action == "wait_for_players":
             res = self.wait_for_players_logic(step)
+        elif action == "notify_joined":
+            res = self.notify_joined_logic()
         elif action == "wait_for_room":
             res = self.wait_for_room_logic(step)
         elif action == "input_room_id":
@@ -476,13 +478,22 @@ class AutoClickerInstance:
                 time.sleep(0.5)
         return True
 
+    def notify_joined_logic(self):
+        """Guest gọi sau khi đã vào phòng thành công để thông báo cho host biết."""
+        with self.shared_data["lock"]:
+            old = self.shared_data["joined_counts"].get(self.group_id, 0)
+            self.shared_data["joined_counts"][self.group_id] = old + 1
+        self.log(f"===> Đã thông báo vào phòng. Tổng: {self.shared_data['joined_counts'].get(self.group_id, 0)}")
+        return True
+
     def wait_for_players_logic(self, step):
         target = step.get("count", 4) + 1
         start = time.time()
         while time.time() - start < step.get("timeout", 300) and self.running:
-            with self.shared_data["lock"]: curr = self.shared_data.get("joined_counts", {}).get(self.group_id, 0)
+            with self.shared_data["lock"]: curr = self.shared_data["joined_counts"].get(self.group_id, 0)
             if curr >= target: return True
             self.update_status(f"Team {curr}/{target}"); time.sleep(2)
+        self.log(f"!! wait_for_players timeout. Hiện tại: {self.shared_data['joined_counts'].get(self.group_id, 0)}/{target}")
         return False
 
     def sync_autowin_logic(self, step):
@@ -600,6 +611,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/thoat_5v5.png", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/thoat_sk_tan_thu1.png", "timeout": 10, "confidence": 0.7},
+            {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.7},
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
@@ -608,11 +620,11 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/event.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/qua_tan_thu.png", "target2": "images/skttt.png","timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/qua_tan_thu.png", "target2": "images/skttt.png", "target3": "images/qua_tan_thu1.jpg","timeout": 10, "confidence": 0.8},
             {"action": "wait", "timeout": 5},
             {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.2, "duration": 600},
             {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target1": "images/sktt.jpg", "target2": "images/sktt1.jpg", "target3": "images/sktt2.jpg", "target4": "images/sktt3.jpg", "target5": "images/sktt4.jpg", "target6": "images/sktt5.jpg", "target7": "images/sktt6.jpg", "target8": "images/sktt7.jpg", "target9": "images/sktt8.jpg", "target10": "images/sktt9.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/sktt.jpg", "target2": "images/sktt1.jpg", "target3": "images/sktt2.jpg", "target4": "images/sktt3.jpg", "target5": "images/sktt4.jpg", "target6": "images/sktt5.jpg", "target7": "images/sktt6.jpg", "target8": "images/sktt7.jpg", "target9": "images/sktt8.jpg", "target10": "images/sktt9.jpg", "target11": "images/sktt10.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/nhan_ruby_button.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_any", "wait": 3},
             {"action": "click_image", "target1": "images/thoat_sk.png","target2": "images/quaylaisktt.png", "timeout": 20, "confidence": 0.7},
@@ -680,6 +692,8 @@ class AutoClickerInstance:
             {"action": "input_room_id"},
             {"action": "click_image", "target": "images/vao.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/da_ro.png", "timeout": 300, "confidence": 0.7},
+            # Thông báo cho host biết guest đã vào phòng thành công
+            {"action": "notify_joined"},
         ]
 
         # 5. CÁC HÀNH ĐỘNG LẶP LẠI (SHARED BATTLE LOGIC)
@@ -732,10 +746,13 @@ class AutoClickerInstance:
         if self.modes.get("tutorial"): self.script += tutorial_script
         if self.modes.get("dinh_game"): self.script += dinh_game_script
         if self.modes.get("teamup"):
-            if self.worker_index % 5 == 0: self.script += teamup_host_script
-            else: self.script += teamup_guest_script
-            
-            self.script.append({"action": "wait_for_players", "count": 4, "timeout": 300})
+            if self.worker_index % 5 == 0:
+                # Host: wait_for_players đã có sẵn trong teamup_host_script
+                self.script += teamup_host_script
+            else:
+                # Guest: vào phòng → notify_joined (đã có trong script) → chờ host bắt đầu
+                self.script += teamup_guest_script
+                self.script.append({"action": "wait_for_players", "count": 4, "timeout": 300})
             
             battle_loop = {
                 "action": "loop", 
