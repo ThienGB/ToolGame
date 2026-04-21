@@ -27,23 +27,36 @@ try:
 except Exception:
     pass
 
-# --- Fix WinError 1114 for torch/easyocr in PyInstaller ---
+# --- Fix WinError 1114 & SSL for torch/easyocr ---
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+import ssl
+try:
+    ssl._create_default_https_context = ssl._create_unverified_context
+except: pass
 
 if getattr(sys, 'frozen', False):
-    import os
-    import sys
-    # Đảm bảo các thư viện DLL của torch được tìm thấy trong thư mục tạm của PyInstaller
-    _meipass = getattr(sys, '_MEIPASS', os.path.abspath("."))
-    torch_lib = os.path.join(_meipass, 'torch', 'lib')
-    if os.path.exists(torch_lib):
-        if hasattr(os, 'add_dll_directory'):
-            try:
-                os.add_dll_directory(torch_lib)
-                os.add_dll_directory(_meipass) # Thêm cả thư mục gốc của EXE
-            except:
-                pass
-        os.environ['PATH'] = torch_lib + os.pathsep + _meipass + os.pathsep + os.environ.get('PATH', '')
+    _meipass = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    _internal = os.path.join(_meipass, '_internal')
+    # Add paths for DLL search
+    for dp in [_meipass, _internal, os.path.join(_internal, 'torch', 'lib'), os.path.join(_meipass, 'torch', 'lib')]:
+        if os.path.exists(dp):
+            if hasattr(os, 'add_dll_directory'):
+                try: os.add_dll_directory(dp)
+                except: pass
+            os.environ['PATH'] = dp + os.pathsep + os.environ.get('PATH', '')
+    
+    # Force load OpenMP to avoid 1114 conflict
+    try:
+        import ctypes
+        for dll_name in ['libiomp5md.dll', 'libiomp5.dll']:
+            for base in [_meipass, _internal]:
+                dp = os.path.join(base, 'torch', 'lib', dll_name)
+                if os.path.exists(dp):
+                    try: 
+                        ctypes.CDLL(dp)
+                        break
+                    except: pass
+    except: pass
 
 import tkinter.filedialog as fd
 
@@ -583,6 +596,13 @@ class AutoClickerInstance:
             scale = 2
             crop  = cv2.resize(crop, (crop.shape[1] * scale, crop.shape[0] * scale),
                                interpolation=cv2.INTER_CUBIC)
+
+            # Xóa ID cũ trước khi lấy ID mới để Guest không đọc nhầm
+            with self.shared_data["lock"]:
+                if "room_ids" in self.shared_data and self.group_id in self.shared_data["room_ids"]:
+                    del self.shared_data["room_ids"][self.group_id]
+                if "joined_counts" in self.shared_data:
+                    self.shared_data["joined_counts"][self.group_id] = 1 # Host tự tính là 1
 
             # === ĐỌC OCR ===
             # Thêm allowlist='0123456789ID: ' để chỉ nhận diện số và chữ ID, giúp ID không bị dính chùm thành 10
@@ -1124,6 +1144,14 @@ class AutoClickerInstance:
 
             self.log(f">> BẮT ĐẦU VÒNG: Acc {self.current_account['tk']}")
             
+            # Host reset dữ liệu nhóm khi bắt đầu acc mới
+            if self.worker_index % 5 == 0:
+                with self.shared_data["lock"]:
+                    if "room_ids" in self.shared_data and self.group_id in self.shared_data["room_ids"]:
+                        del self.shared_data["room_ids"][self.group_id]
+                    if "joined_counts" in self.shared_data:
+                        self.shared_data["joined_counts"][self.group_id] = 0
+
             success = True
             for step in self.script:
                 if not self.running: break
