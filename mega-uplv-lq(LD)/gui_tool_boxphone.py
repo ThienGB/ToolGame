@@ -244,6 +244,8 @@ class AutoClickerInstance:
             res = self.press_esc_logic(step)
         elif action == "sync_autowin":
             res = self.sync_autowin_logic(step)
+        elif action == "buy_exp":
+            res = self.buy_exp_logic(step)
         elif action == "loop":
             count = step.get("count", 1)
             sub_steps = step.get("steps", [])
@@ -405,6 +407,13 @@ class AutoClickerInstance:
         global _ocr_reader
         reader = init_ocr_reader(self.log)
         if reader is None: return False
+        
+        # Xóa ID cũ trước khi lấy ID mới
+        with self.shared_data["lock"]:
+            if self.group_id in self.shared_data["room_ids"]:
+                del self.shared_data["room_ids"][self.group_id]
+            self.shared_data["joined_counts"][self.group_id] = 1 # Host tự tính là 1
+
         roi = step.get("roi", [0.50, 0.0, 0.30, 0.10])
         timeout = step.get("timeout", 45)
         start = time.time()
@@ -496,6 +505,35 @@ class AutoClickerInstance:
         self.log(f"!! wait_for_players timeout. Hiện tại: {self.shared_data['joined_counts'].get(self.group_id, 0)}/{target}")
         return False
 
+    def buy_exp_logic(self, step):
+        # Vật phẩm 1: 1 ngày x2
+        self.log("Đang mua vật phẩm EXP 1 ngày...")
+        if self.search_logic({"target": "images/1ngay_x2.jpg", "timeout": 10}):
+            self.click_image_logic({"target": "images/1ngay_x2.jpg", "timeout": 5})
+            self.click_image_logic({"target": "images/100_ruby.jpg", "timeout": 10})
+            self.click_image_logic({"target": "images/buy_button.png", "timeout": 10})
+            time.sleep(2)
+            if self.search_logic({"target": "images/chua_du_ruby.jpg", "timeout": 5}):
+                self.log("!! KHÔNG ĐỦ RUBY - Bỏ qua.")
+                self.press_esc_logic({"wait": 1})
+                return True
+            self.click_image_logic({"target": "images/mo_button.png", "timeout": 10})
+            time.sleep(1)
+
+        # Vật phẩm 2: 4 ngày (tháng) x2
+        self.log("Đang mua vật phẩm EXP 4 ngày...")
+        if self.search_logic({"target": "images/4thang_x2.jpg", "timeout": 10}):
+            self.click_image_logic({"target": "images/4thang_x2.jpg", "timeout": 5})
+            self.click_image_logic({"target": "images/100_ruby.jpg", "timeout": 10})
+            self.click_image_logic({"target": "images/buy_button.png", "timeout": 10})
+            time.sleep(2)
+            if self.search_logic({"target": "images/chua_du_ruby.jpg", "timeout": 5}):
+                self.log("!! KHÔNG ĐỦ RUBY - Bỏ qua.")
+                self.press_esc_logic({"wait": 2})
+                return True
+            self.click_image_logic({"target": "images/mo_button.png", "timeout": 10})
+        return True
+
     def sync_autowin_logic(self, step):
         start = time.time()
         with self.shared_data["lock"]:
@@ -579,7 +617,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target1": "images/tuong2.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/tuong3.png", "target2": "images/tuong4.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.7},
             {"action": "wait", "timeout": 20},
@@ -635,23 +673,25 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target1": "images/ok.png","target2": "images/ok1.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
-            {"action": "press_esc", "wait": 2} ,
+            {"action": "press_esc", "wait": 2}
+        ]
+
+        # 2.5 GIAI ĐOẠN MUA EXP
+        mua_exp_script = [
+            {"action": "click_image", "target": "images/hop_thu.jpg", "timeout": 20, "confidence": 0.6},
+            {"action": "click_image", "target": "images/he_thong.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/nhan_nhanh.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target": "images/shop.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target1": "images/vat_pham_shop.png","target2": "images/vatpham.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/shopruby.png", "timeout": 20, "confidence": 0.7},
-            {"action": "swipe", "x1": 0.5, "y1": 0.8, "x2": 0.5, "y2": 0.4, "duration": 600},
             {"action": "wait", "timeout": 2},
-            {"action": "swipe", "x1": 0.5, "y1": 0.8, "x2": 0.5, "y2": 0.4, "duration": 600},
+            {"action": "swipe", "x1": 0.5, "y1": 0.8, "x2": 0.5, "y2": 0.5, "duration": 600},
             {"action": "wait", "timeout": 2},
-            {"action": "swipe", "x1": 0.5, "y1": 0.8, "x2": 0.5, "y2": 0.4, "duration": 600},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/10_win_x2_exp1.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.7},
-            {"action": "wait", "timeout": 3},
-            {"action": "press_esc", "wait": 2} ,
-            {"action": "press_esc", "wait": 2} ,
+            {"action": "buy_exp"},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
         ]
 
         # 3. GIAI ĐOẠN DÍNH GAME
@@ -709,11 +749,13 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": tuong_target, "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 10},
+            {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 30, "confidence": 0.7},
+            {"action": "wait", "timeout": 10},
             {
                 "action": "loop",
                 "count": 11,
                 "steps": [
-                    {"action": "click_image", "target1": "images/biencanh.png", "target2": "images/bienve.png", "timeout": 200, "confidence": 0.7},
+                    {"action": "click_image", "target": "images/bienve.png", "timeout": 200, "confidence": 0.7},
                     {"action": "wait", "timeout": 15}
                 ]
             },
@@ -722,10 +764,23 @@ class AutoClickerInstance:
             {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/victory.png", "timeout": 600, "confidence": 0.7},
             {"action": "wait", "timeout": 10},
-            {"action": "click_image", "target1": "images/tiep_tuc1.png", "target2": "images/tiep_tuc2.png", "timeout": 120, "confidence": 0.7},
-            {"action": "wait", "timeout": 5},
-            {"action": "click_image", "target": "images/daulai.png", "timeout": 30, "confidence": 0.7},
-            {"action": "wait", "timeout": 10},
+            {"action": "click_any", "wait": 6},
+            {"action": "click_any", "wait": 6},
+            {"action": "click_any", "wait": 6},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.7},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.7},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.7},
+            {"action": "wait", "timeout": 15},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.7},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.7},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.7},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 2, "confidence": 0.7},
+            {"action": "wait", "timeout": 3}
         ]
 
         # 6. GIAI ĐOẠN ĐĂNG XUẤT
@@ -744,6 +799,7 @@ class AutoClickerInstance:
         self.script = []
         if self.modes.get("login"): self.script += login_script
         if self.modes.get("tutorial"): self.script += tutorial_script
+        if self.modes.get("mua_exp"): self.script += mua_exp_script
         if self.modes.get("dinh_game"): self.script += dinh_game_script
         if self.modes.get("teamup"):
             if self.worker_index % 5 == 0:
@@ -772,6 +828,13 @@ class AutoClickerInstance:
                         self.update_ui_func(); break
             if not self.current_account: break
             self.log(f">> START: {self.current_account['tk']}")
+            
+            # Host reset dữ liệu nhóm khi bắt đầu acc mới
+            if self.worker_index % 5 == 0:
+                with self.shared_data["lock"]:
+                    if self.group_id in self.shared_data["room_ids"]:
+                        del self.shared_data["room_ids"][self.group_id]
+                    self.shared_data["joined_counts"][self.group_id] = 0
             
             success = True
             for step in self.script:
@@ -865,8 +928,9 @@ class MultiPremiumApp(ctk.CTk):
         
         self.mode_login = ctk.CTkCheckBox(self.mode_frame, text="LOGIN"); self.mode_login.grid(row=0, column=0, pady=10); self.mode_login.select()
         self.mode_tutorial = ctk.CTkCheckBox(self.mode_frame, text="TÂN THỦ"); self.mode_tutorial.grid(row=0, column=1); self.mode_tutorial.select()
-        self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME"); self.mode_dinh_game.grid(row=0, column=2); self.mode_dinh_game.select()
-        self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI"); self.mode_teamup.grid(row=0, column=3); self.mode_teamup.select()
+        self.mode_mua_exp = ctk.CTkCheckBox(self.mode_frame, text="MUA EXP"); self.mode_mua_exp.grid(row=0, column=2); self.mode_mua_exp.select()
+        self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME"); self.mode_dinh_game.grid(row=0, column=3); self.mode_dinh_game.select()
+        self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI"); self.mode_teamup.grid(row=0, column=4); self.mode_teamup.select()
         
         self.battle_count_entry = ctk.CTkEntry(self.main_content, width=80, placeholder_text="Số trận Battle (2)")
         self.battle_count_entry.pack(pady=5); self.battle_count_entry.insert(0, "2")
@@ -1050,7 +1114,7 @@ class MultiPremiumApp(ctk.CTk):
         b_count = 2
         try: b_count = int(self.battle_count_entry.get().strip())
         except: pass
-        modes = {"login":self.mode_login.get(), "tutorial":self.mode_tutorial.get(), "dinh_game":self.mode_dinh_game.get(), "teamup":self.mode_teamup.get(), "battle_count":b_count}
+        modes = {"login":self.mode_login.get(), "tutorial":self.mode_tutorial.get(), "mua_exp":self.mode_mua_exp.get(), "dinh_game":self.mode_dinh_game.get(), "teamup":self.mode_teamup.get(), "battle_count":b_count}
         
         def update_single_status():
              # Find status label for this serial
