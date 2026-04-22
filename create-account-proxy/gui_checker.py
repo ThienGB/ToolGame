@@ -176,8 +176,9 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/search_input.png", "timeout": 180, "name": "Mở ô tìm kiếm"},
             {"action": "input_text", "text": "https://kientuong.lienquan.garena.vn/trang-chu", "name": "Nhập địa chỉ Web"},
             {"action": "click_image", "target": "images/search.png", "timeout": 30, "name": "Nhấn nút Tìm kiếm"},
+            
             {"action": "click_image", "target": "images/garena.png", "timeout": 60, "name": "Chọn Login Garena"},
-            {"action": "click_image", "target": "images/account_input.png", "timeout": 60, "name": "Nhấn vào ô Tài khoản"},
+            {"action": "click_image", "target1": "images/account_input.png","target2": "images/account.png", "timeout": 60, "name": "Nhấn vào ô Tài khoản"},
             {"action": "input_account_logic", "name": "Điền User Garena"},
             {"action": "click_image", "target": "images/password_input.png", "timeout": 30, "name": "Nhấn vào ô Mật khẩu"},
             {"action": "input_password_logic", "name": "Điền Pass Garena"},
