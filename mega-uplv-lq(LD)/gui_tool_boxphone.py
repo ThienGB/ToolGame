@@ -272,10 +272,13 @@ class AutoClickerInstance:
         confidence = step.get("confidence", 0.8)
 
         target_imgs = []
+        use_color = step.get("use_color", False)
+
         for t_path in targets:
             real_path = resource_path(t_path)
             if os.path.exists(real_path):
-                img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
+                read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
+                img = cv2.imread(real_path, read_mode)
                 if img is not None: target_imgs.append((t_path, img))
             else: self.log(f"Thiếu ảnh mẫu: {t_path}")
 
@@ -287,14 +290,16 @@ class AutoClickerInstance:
             if screen is not None:
                 last_screen = screen
                 h_screen, w_screen = screen.shape[:2]
-                scale = h_screen / BASE_HEIGHT # TỈ LỆ CHUẨN: Tính theo chiều dọc
+                scale = h_screen / BASE_HEIGHT
 
-                screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                # Nếu không dùng color, chuyển màn hình sang gray
+                if not use_color:
+                    compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                else:
+                    compare_screen = screen
                 
                 for t_path, t_img in target_imgs:
-                    # Thử cả tỉ lệ scale (cho ảnh 540p cũ) và tỉ lệ 1.0 (cho ảnh tự chụp trên BoxPhone)
                     for curr_scale in [scale, 1.0, scale*0.98, scale*1.02]:
-                        # Chọn phép nội suy phù hợp: CUBIC cho phóng to, AREA cho thu nhỏ
                         if abs(curr_scale - 1.0) < 0.001:
                             t_scaled = t_img
                         else:
@@ -302,7 +307,7 @@ class AutoClickerInstance:
                             tw, th = int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)
                             t_scaled = cv2.resize(t_img, (tw, th), interpolation=interp)
 
-                        res = cv2.matchTemplate(screen_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
+                        res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
                         _, mv, _, ml = cv2.minMaxLoc(res)
                         
                         if mv > best_match["val"]:
@@ -311,7 +316,7 @@ class AutoClickerInstance:
                         if mv >= confidence:
                             th_s, tw_s = t_scaled.shape[:2]
                             self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
-                            self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f} @ {curr_scale:.2f}x)")
+                            self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f} @ {curr_scale:.2f}x) {'[COLOR]' if use_color else ''}")
                             return True
 
             time.sleep(1)
@@ -329,9 +334,12 @@ class AutoClickerInstance:
         target = step.get("target")
         timeout = step.get("timeout", 10)
         conf = step.get("confidence", 0.8)
+        use_color = step.get("use_color", False)
         real_path = resource_path(target)
         if not os.path.exists(real_path): return False
-        t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
+        
+        read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
+        t_img = cv2.imread(real_path, read_mode)
         
         start = time.time()
         while time.time() - start < timeout and self.running:
@@ -340,15 +348,18 @@ class AutoClickerInstance:
                 h_screen, w_screen = screen.shape[:2]
                 scale = h_screen / BASE_HEIGHT
 
-                screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-                # Thử cả scale chuẩn và native 1.0
+                if not use_color:
+                    compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                else:
+                    compare_screen = screen
+
                 for curr_scale in [scale, 1.0]:
                     if abs(curr_scale - 1.0) < 0.001:
                         t_scaled = t_img
                     else:
                         t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_AREA)
 
-                    res = cv2.matchTemplate(screen_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
+                    res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
                     _, mv, _, _ = cv2.minMaxLoc(res)
                     if mv >= conf: return True
             time.sleep(1)
@@ -522,7 +533,7 @@ class AutoClickerInstance:
 
         # Vật phẩm 2: 4 ngày (tháng) x2
         self.log("Đang mua vật phẩm EXP 4 ngày...")
-        if self.search_logic({"target": "images/4thang_x2.jpg", "timeout": 10}):
+        if self.search_logic({"target1": "images/4thang_x2.jpg", "target2": "images/4thang_x2_1.jpg", "timeout": 10}):
             self.click_image_logic({"target": "images/4thang_x2.jpg", "target1": "images/4thang_x2_1.jpg", "timeout": 5})
             self.click_image_logic({"target1": "images/100_ruby.jpg", "target2": "images/60ruby.jpg", "timeout": 10})
             self.click_image_logic({"target": "images/buy_button.png", "timeout": 10})
@@ -586,20 +597,6 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
             {
                 "action": "click_image_if", 
-                "target": "images/vao_button.png", 
-                "timeout": 10, 
-                "confidence": 0.7,
-                "then": [
-                   {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
-                   {"action": "click_image_if", "target1": "images/autowin.png", "timeout": 20, "confidence": 0.7},
-                   {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
-                   {"action": "click_any", "wait": 30},
-                   {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
-                   {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
-                ]
-            },
-            {
-                "action": "click_image_if", 
                 "target": "images/an_de_tro_lai.jpg", 
                 "timeout": 10, 
                 "confidence": 0.7,
@@ -625,7 +622,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images/pve.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
             {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
@@ -673,7 +670,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/event.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images/qua_tan_thu.png", "target2": "images/skttt.png", "target3": "images/qua_tan_thu1.jpg","timeout": 10, "confidence": 0.8},
             {"action": "wait", "timeout": 5},
-            {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.4, "duration": 600},
+            {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.6, "duration": 600},
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target1": "images/sktt.jpg", "target2": "images/sktt1.jpg", "target3": "images/sktt2.jpg", "target4": "images/sktt3.jpg", "target5": "images/sktt4.jpg", "target6": "images/sktt5.jpg", "target7": "images/sktt6.jpg", "target8": "images/sktt7.jpg", "target9": "images/sktt8.jpg", "target10": "images/sktt9.jpg", "target11": "images/sktt10.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/nhan_ruby_button.png", "timeout": 20, "confidence": 0.7},
@@ -692,6 +689,7 @@ class AutoClickerInstance:
         # 2.5 GIAI ĐOẠN MUA EXP
         mua_exp_script = [
             {"action": "click_image", "target": "images/hop_thu.jpg", "timeout": 20, "confidence": 0.6},
+            {"action": "click_image_if", "target": "images/ok_ruby.jpg", "timeout": 7, "confidence": 0.7},
             {"action": "click_image", "target": "images/he_thong.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/nhan_nhanh.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "press_esc", "wait": 2},
@@ -759,7 +757,7 @@ class AutoClickerInstance:
         tuong_target = f"images/tuong0{(self.worker_index % 5) + 1}.jpg"
         shared_battle_script = [
             {"action": "click_image", "target": "images/logo1.png", "timeout": 50, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/autowin1.jpg", "timeout": 10, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/autowin1.jpg", "timeout": 10, "confidence": 0.85, "use_color": True},
             {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 2, "confidence": 0.7},
@@ -772,7 +770,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 10},
             {
                 "action": "loop",
-                "count": 10,
+                "count": 11,
                 "steps": [
                     {"action": "click_image", "target": "images/bienve.png", "timeout": 200, "confidence": 0.7},
                     {"action": "wait", "timeout": 15}
@@ -791,6 +789,7 @@ class AutoClickerInstance:
             {"action": "click_any", "wait": 6},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 2, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.7},
@@ -808,7 +807,7 @@ class AutoClickerInstance:
         # 6. GIAI ĐOẠN ĐĂNG XUẤT
         uplevel_script = [
             {"action": "click_image", "target": "images/logo.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
             {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.7},
