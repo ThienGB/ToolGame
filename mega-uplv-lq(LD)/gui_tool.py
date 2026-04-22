@@ -873,6 +873,8 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 5},
             {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
+            {"action": "click_any", "wait": 3},
+            {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/nhan_sktt.png", "timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
@@ -908,6 +910,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image", "target1": "images/vat_pham.png", "target2": "images/vat_pham1.png","target3": "images/vat_pham2.png","target4": "images/vat_pham3.png","target5": "images/vat_pham4.png","timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
             {"action": "click_image", "target1": "images/su_dung_button.png","target2": "images/su_dung.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/ok.png","target2": "images/ok1.png", "timeout": 20, "confidence": 0.9},
@@ -966,11 +969,14 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 20},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
+            {"action": "press_esc", "wait": 2} ,
+            {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
             {"action": "press_esc", "wait": 2},
             {"action": "wait", "timeout": 5},
             {"action": "press_esc", "wait": 2} ,
+            
         ]
 
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)
