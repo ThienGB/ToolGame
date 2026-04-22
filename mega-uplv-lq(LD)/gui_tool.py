@@ -1433,10 +1433,10 @@ class MultiPremiumApp(ctk.CTk):
         active_in_team = sum(1 for w in self.active_workers if w.running and hasattr(w, 'device_id') and w.device_id in devices)
         total_in_team = len(devices)
         if active_in_team > 0:
-            team_data["start_btn"].configure(text=f"Running ({active_in_team}/{total_in_team})", state="disabled", fg_color="#FFA500")
-            team_data["stop_btn"].configure(state="normal", fg_color=ACCENT_RED)
+            team_data["start_btn"].configure(text=f"RUNNING ({active_in_team}/{total_in_team})", state="disabled", fg_color="#FFA500")
+            team_data["stop_btn"].configure(state="normal", fg_color="#ef4444")
         else:
-            team_data["start_btn"].configure(text=f"Team {team_idx + 1}", state="normal", fg_color="#1F6AA5")
+            team_data["start_btn"].configure(text="START", state="normal", fg_color="#10b981")
             team_data["stop_btn"].configure(state="disabled", fg_color="#333")
 
     def update_all_ui(self):
@@ -1540,10 +1540,10 @@ class MultiPremiumApp(ctk.CTk):
 
                 ctk.CTkLabel(header_row, text=f"T{team_idx + 1}", font=ctk.CTkFont(size=11, weight="bold"), text_color=ACCENT_GREEN).pack(side="left", padx=2)
                 
-                btn_stop_team = ctk.CTkButton(header_row, text="Dừng", command=lambda t=team_idx: self.stop_team(t), fg_color="#333", height=18, width=50, font=ctk.CTkFont(size=10))
+                btn_stop_team = ctk.CTkButton(header_row, text="STOP", command=lambda t=team_idx: self.stop_team(t), fg_color="#ef4444", hover_color="#dc2626", height=18, width=50, font=ctk.CTkFont(size=10, weight="bold"))
                 btn_stop_team.pack(side="right", padx=2)
                 
-                btn_start_team = ctk.CTkButton(header_row, text=f"Chạy", command=lambda t=team_idx: self.start_team(t), height=18, width=50, font=ctk.CTkFont(size=10, weight="bold"))
+                btn_start_team = ctk.CTkButton(header_row, text="START", command=lambda t=team_idx: self.start_team(t), fg_color="#10b981", hover_color="#059669", height=18, width=50, font=ctk.CTkFont(size=10, weight="bold"))
                 btn_start_team.pack(side="right", padx=2)
 
                 devices_frame = ctk.CTkFrame(team_frame, fg_color="transparent")
