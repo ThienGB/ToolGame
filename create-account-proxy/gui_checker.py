@@ -127,6 +127,9 @@ class AutoClickerInstance:
             self.call_adb(["shell", "input", "text", self.escape_adb_text(self.current_account["mk"])])
         elif action == "read_result":
             res = self.read_result_logic()
+        elif action == "click_image_if":
+            self.click_image_logic(step)
+            res = True # click_image_if luôn trả về True để không dừng script
         
         if not res and action == "click_image":
             self.log(f"  [!] KHÔNG TÌM THẤY ẢNH: {step.get('target')}")
@@ -157,15 +160,20 @@ class AutoClickerInstance:
         return False
 
     def check_image(self, target, timeout=5, conf=0.8):
-        t_img = get_cached_image(target)
-        if t_img is None: return False
+        # Hỗ trợ truyền vào 1 ảnh hoặc 1 danh sách ảnh để kiểm tra đồng thời
+        targets = [target] if isinstance(target, str) else target
+        imgs = [(t, get_cached_image(t)) for t in targets if get_cached_image(t) is not None]
+        if not imgs: return False
+        
         start = time.time()
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
-                res = cv2.matchTemplate(screen, t_img, cv2.TM_CCOEFF_NORMED)
-                _, val, _, _ = cv2.minMaxLoc(res)
-                if val >= conf: return True
+                for path, t_img in imgs:
+                    res = cv2.matchTemplate(screen, t_img, cv2.TM_CCOEFF_NORMED)
+                    _, val, _, _ = cv2.minMaxLoc(res)
+                    if val >= conf: 
+                        return True
             time.sleep(1)
         return False
 
@@ -173,20 +181,26 @@ class AutoClickerInstance:
         self.log("Đang kiểm tra kết quả đăng nhập...")
         
         # 1. Kiểm tra Ban
-        is_banned = self.check_image("images/banned.png", timeout=10)
+        is_banned = self.check_image("images/banned.png", timeout=30)
         if is_banned:
             self.log("KẾT QUẢ: ACCOUNT BỊ BAN")
             self.report_stats_func("banned", self.current_account)
             return True # Trả về True để tiếp tục chạy bước Đăng xuất
             
-        # 2. Kiểm tra Sai Pass/TK
-        is_fail = self.check_image("images/login_fail.png", timeout=10)
+        # 2. Kiểm tra Sai Pass/TK (Kiểm tra ĐỒNG THỜI 3 mẫu ảnh)
+        is_fail = self.check_image([
+            "images/login_fail.png", 
+            "images/login_fail1.png", 
+            "images/login_fail2.png",
+            "images/login_fail3.png",
+        ], timeout=10)
+        
         if is_fail:
             self.log("KẾT QUẢ: SAI TÀI KHOẢN / MẬT KHẨU")
             return "RETRY_LOGIN" 
             
         # 3. Kiểm tra Thành công (ảnh trang chủ hoặc ảnh nhận diện login xong)
-        is_success = self.check_image("images/binhthuong.png", timeout=12)
+        is_success = self.check_image("images/binhthuong.png", timeout=30)
         if is_success:
             self.log("KẾT QUẢ: THÀNH CÔNG")
             self.report_stats_func("success", self.current_account)
@@ -210,6 +224,9 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/login.png", "timeout": 60, "name": "Nhấn Đăng nhập"},
             {"action": "read_result", "name": "Kiểm tra kết quả"},
             {"action": "click_image", "target": "images/logout.png", "timeout": 60, "name": "Đăng xuất acc"},
+            {"action": "click_image_if", "target": "images/logout.png", "timeout": 1, "name": "Đăng xuất acc"},
+            {"action": "click_image_if", "target": "images/logout.png", "timeout": 1, "name": "Đăng xuất acc"},
+            {"action": "click_image_if", "target": "images/logout.png", "timeout": 1, "name": "Đăng xuất acc"},
         ]
 
         while self.running:
@@ -234,7 +251,7 @@ class AutoClickerInstance:
                 if res == "RETRY_LOGIN":
                     self.log(f"!! KẾT QUẢ: {target['tk']} SAI MẬT KHẨU. Đang chuyển acc...")
                     self.report_stats_func("wrong_pass", target)
-                    self.click_image_logic({"target": "images/reload.jpg", "timeout": 10})
+                    self.click_image_logic({"target1": "images/reload.jpg", "target2": "images/reload.png", "timeout": 10})
                     target['done'] = True
                     success = False
                     next_start_idx = 4 # Sai pass thì acc sau chạy từ bước 4
