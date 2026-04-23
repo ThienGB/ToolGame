@@ -8,6 +8,7 @@ import threading
 import random
 import string
 import re
+import shlex
 import base64
 import hashlib
 import uuid
@@ -134,30 +135,25 @@ class AutoClickerInstance:
         self.update_ui_func()
 
     def input_text_robust(self, text):
-        if not text: return
-        # Tách chuỗi thành các phần để gửi. Các ký tự đặc biệt sẽ được gửi trong 
-        # các phiên ADB riêng biệt để đảm bảo shell không hiểu lầm (đặc biệt là dấu | và &)
-        safe_chars = string.ascii_letters + string.digits + "._-/:@"
-        current_safe = ""
-        for char in text:
-            if char in safe_chars:
-                current_safe += char
-            else:
-                # Gửi nhóm ký tự an toàn tích lũy được
-                if current_safe:
-                    self.call_adb(["shell", "input", "text", current_safe])
-                    current_safe = ""
-                
-                # Gửi ký tự đặc biệt trong một phiên ADB độc lập
-                if char == ' ':
-                    self.call_adb(["shell", "input", "text", "%s"])
-                else:
-                    # Escape và gửi đơn lẻ
-                    self.call_adb(["shell", "input", "text", f"\\{char}"])
+        """Nhập text qua ADB, hỗ trợ mọi ký tự đặc biệt.
         
-        # Gửi nốt phần an toàn còn lại
-        if current_safe:
-            self.call_adb(["shell", "input", "text", current_safe])
+        Giải thích kỹ thuật:
+        - ADB shell chạy lệnh qua /bin/sh -c trên thiết bị, nên ký tự |&<>()[] đếu bị interpret.
+        - shlex.quote() tạo chuỗi single-quoted an toàn: 'abc|&<>' → Android shell giữ nguyên.
+        - Gửi qua một arg duy nhất sau 'shell' để ADB không join/split lại args.
+        """
+        if not text: return
+        # Tách theo space vì space phải dùng %s trong adb input text
+        parts = text.split(' ')
+        for i, part in enumerate(parts):
+            if part:
+                # shlex.quote tạo: 'kí tự đặc biệt' → Android shell không interpret
+                # Ví dụ: "KI&&|<[}=GZ3" → "'KI&&|<[}=GZ3'"
+                quoted = shlex.quote(part)
+                cmd = [self.adb_path, "-s", self.device_id, "shell", f"input text {quoted}"]
+                subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            if i < len(parts) - 1:  # Có space phía sau
+                self.call_adb(["shell", "input", "text", "%s"])
 
     def escape_adb_text(self, text):
         if not text: return ""

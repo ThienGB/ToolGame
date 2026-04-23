@@ -8,6 +8,7 @@ import threading
 import random
 import string
 import re
+import shlex
 import base64
 import hashlib
 import uuid
@@ -143,34 +144,25 @@ class AutoClickerInstance:
         self.update_ui_func()
 
     def input_text_robust(self, text):
-        """Nhập text qua ADB input text.
+        """Nhập text qua ADB, hỗ trợ mọi ký tự đặc biệt.
         
-        Dùng subprocess args list → Windows KHÔNG interpret ký tự đặc biệt.
-        ADB truyền thẳng args sang thiết bị mà không qua Android shell.
-        Chỉ cần xử lý đặc biệt cho space (phải dùng %s) và các ký tự
-        mà ADB input text cần escape ở tầng Android (\\, $, `).
+        Giải thích kỹ thuật:
+        - ADB shell chạy lệnh qua /bin/sh -c trên thiết bị, nên ký tự |&<>()[] đếu bị interpret.
+        - shlex.quote() tạo chuỗi single-quoted an toàn: 'abc|&<>' → Android shell giữ nguyên.
+        - Gửi qua một arg duy nhất sau 'shell' để ADB không join/split lại args.
         """
         if not text: return
-        
         # Tách theo space vì space phải dùng %s trong adb input text
-        # Các ký tự đặc biệt khác (|, &, <, >, [, ], (, ), {, }, =, ^, %, #...)
-        # được truyền thẳng mà không cần escape vì subprocess list bypass Windows shell.
-        # Chỉ cần escape ký tự đặc biệt của Android input: \\ và $
         parts = text.split(' ')
-        chunks_to_send = []
         for i, part in enumerate(parts):
             if part:
-                # Escape ký tự mà Android input tool xử lý đặc biệt
-                escaped = part.replace('\\', '\\\\').replace('$', '\\$').replace('`', '\\`')
-                chunks_to_send.append(escaped)
+                # shlex.quote tạo: 'kí tự đặc biệt' → Android shell không interpret
+                # Ví dụ: "KI&&|<[}=GZ3" → "'KI&&|<[}=GZ3'"
+                quoted = shlex.quote(part)
+                cmd = [self.adb_path, "-s", self.device_id, "shell", f"input text {quoted}"]
+                subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
             if i < len(parts) - 1:  # Có space phía sau
-                chunks_to_send.append(None)  # None = gửi %s
-        
-        for chunk in chunks_to_send:
-            if chunk is None:
                 self.call_adb(["shell", "input", "text", "%s"])
-            elif chunk:
-                self.call_adb(["shell", "input", "text", chunk])
 
     def escape_adb_text(self, text):
         if not text: return ""
