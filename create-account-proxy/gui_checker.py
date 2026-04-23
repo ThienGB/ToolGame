@@ -485,4 +485,4 @@ class MultiPremiumApp(ctk.CTk):
 if __name__ == "__main__":
     MultiPremiumApp().mainloop()
 
-# pyinstaller --noconfirm --onefile --windowed --name "MegaLoginCF" --add-data "images;images" --add-data "logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool.py
+# pyinstaller --noconfirm --onefile --windowed --name "CheckerLQ" --add-data "images;images" --add-data "logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_checker.py
