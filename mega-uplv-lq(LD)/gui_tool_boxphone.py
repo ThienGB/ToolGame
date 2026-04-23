@@ -135,28 +135,29 @@ class AutoClickerInstance:
 
     def input_text_robust(self, text):
         if not text: return
-        # Tách chuỗi thành các lệnh riêng biệt để tránh shell hiểu lầm các ký tự đặc biệt như &, |, <, >
-        commands = []
+        # Tách chuỗi thành các phần để gửi. Các ký tự đặc biệt sẽ được gửi trong 
+        # các phiên ADB riêng biệt để đảm bảo shell không hiểu lầm (đặc biệt là dấu | và &)
         safe_chars = string.ascii_letters + string.digits + "._-/:@"
         current_safe = ""
         for char in text:
             if char in safe_chars:
                 current_safe += char
             else:
+                # Gửi nhóm ký tự an toàn tích lũy được
                 if current_safe:
-                    commands.append(f"input text {current_safe}")
+                    self.call_adb(["shell", "input", "text", current_safe])
                     current_safe = ""
+                
+                # Gửi ký tự đặc biệt trong một phiên ADB độc lập
                 if char == ' ':
-                    commands.append("input text %s")
+                    self.call_adb(["shell", "input", "text", "%s"])
                 else:
-                    commands.append(f"input text \\{char}")
-        if current_safe:
-            commands.append(f"input text {current_safe}")
+                    # Escape và gửi đơn lẻ
+                    self.call_adb(["shell", "input", "text", f"\\{char}"])
         
-        if commands:
-            # Gộp các lệnh bằng dấu chấm phẩy để chạy trong 1 phiên shell
-            full_cmd = " ; ".join(commands)
-            self.call_adb(["shell", full_cmd])
+        # Gửi nốt phần an toàn còn lại
+        if current_safe:
+            self.call_adb(["shell", "input", "text", current_safe])
 
     def escape_adb_text(self, text):
         if not text: return ""
@@ -640,7 +641,7 @@ class AutoClickerInstance:
             with self.shared_data["lock"]:
                 if self.shared_data["autowin_barrier"].get(self.group_id, 0) >= 5: break
             time.sleep(0.5)
-        self.click_image_logic({"action": "click_image_if", "target": "images/on_auto_win.jpg", "timeout": 20, "confidence": 0.7})
+        self.click_image_logic({"action": "click_image_if", "target": "images/on_auto_win.jpg", "timeout": 20, "confidence": 0.8})
         with self.shared_data["lock"]: self.shared_data["autowin_barrier"][self.group_id] = 0
         return True
 
@@ -1217,7 +1218,7 @@ class MultiPremiumApp(ctk.CTk):
         self.accounts_data = []
         with open(p, 'r', encoding='utf-8') as f:
             for l in f:
-                parts = l.strip().split('|')
+                parts = l.strip().split('|', 1)
                 if len(parts)>=2: self.accounts_data.append({"tk":parts[0], "mk":parts[1], "used":False})
         self.add_log(f"Đã nạp {len(self.accounts_data)} acc.")
 
