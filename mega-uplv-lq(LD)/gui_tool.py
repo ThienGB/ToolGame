@@ -143,17 +143,14 @@ class AutoClickerInstance:
         self.update_ui_func()
 
     def escape_adb_text(self, text):
-        """Escape special characters for 'adb shell input text'"""
         if not text: return ""
-        # Characters that need escaping in adb shell
-        # We also replace space with %s as it's more reliable for adb input text
-        chars_to_escape = ['\\', '"', "'", '&', '>', '<', '|', ';', '(', ')', '*', '?', '$', '!', '#', '%', '{', '}', '~', '[', ']', '^']
-        
+        # Ký tự an toàn không cần escape
+        safe_chars = string.ascii_letters + string.digits
         escaped_text = ""
         for char in text:
             if char == ' ':
                 escaped_text += "%s"
-            elif char in chars_to_escape:
+            elif char not in safe_chars:
                 escaped_text += f"\\{char}"
             else:
                 escaped_text += char

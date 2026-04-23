@@ -207,7 +207,7 @@ class AutoClickerInstance:
             return True # Tiếp tục chạy bước Đăng xuất
             
         self.log("KẾT QUẢ: KHÔNG XÁC ĐỊNH (Sẽ thử lại bước này)")
-        return False
+        return True
     def run(self, accounts):
         self.running = True
         next_start_idx = 0 # Khởi tạo lần đầu chạy từ bước 0
