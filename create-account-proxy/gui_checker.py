@@ -196,6 +196,7 @@ class AutoClickerInstance:
         return False
     def run(self, accounts):
         self.running = True
+        next_start_idx = 0 # Khởi tạo lần đầu chạy từ bước 0
         self.script = [
             {"action": "click_image", "target": "images/search_input.png", "timeout": 180, "name": "Mở ô tìm kiếm"},
             {"action": "input_text", "text": "https://kientuong.lienquan.garena.vn/trang-chu", "name": "Nhập địa chỉ Web"},
@@ -223,38 +224,33 @@ class AutoClickerInstance:
             success = True
             
             # Thực hiện script sử dụng index để có thể nhảy bước
-            step_idx = 0 if self.first_run else 3
+            step_idx = next_start_idx
+            res = None
             while step_idx < len(self.script):
                 if not self.running: break
                 step = self.script[step_idx]
                 res = self.execute_step(step)
                 
                 if res == "RETRY_LOGIN":
-                    # Tăng đếm lỗi ngay tại đây
-                    target['fail_count'] = target.get('fail_count', 0) + 1
-                    if target['fail_count'] >= 3:
-                        self.log(f"!! KẾT THÚC: {target['tk']} sai pass quá 3 lần.")
-                        self.report_stats_func("wrong_pass", target)
-                        success = False
-                        break
-                        
-                    self.log(f"!! Phát hiện sai pass (Lần {target['fail_count']}), đang thử lại...")
-                    # Click nút reload để xóa thông báo lỗi hoặc làm mới form
+                    self.log(f"!! KẾT QUẢ: {target['tk']} SAI MẬT KHẨU. Đang chuyển acc...")
+                    self.report_stats_func("wrong_pass", target)
                     self.click_image_logic({"target": "images/reload.jpg", "timeout": 10})
-                    
-                    step_idx = 4 
-                    continue
+                    target['done'] = True
+                    success = False
+                    next_start_idx = 4 # Sai pass thì acc sau chạy từ bước 4
+                    break
 
                 if not res:
                     success = False
+                    next_start_idx = 3 # Lỗi khác thì acc sau chạy từ bước 3
                     break
                 
                 step_idx += 1
             
             if success and self.running:
                 target['done'] = True
-                self.first_run = False 
-                self.report_stats_func("done_cycle", target) # Gọi để cập nhật file
+                next_start_idx = 3 # Thành công/Ban thì acc sau chạy từ bước 3
+                self.report_stats_func("done_cycle", target) 
                 self.update_ui_func()
             elif not success:
                 with self.account_lock:
