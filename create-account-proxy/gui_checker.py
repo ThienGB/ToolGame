@@ -177,7 +177,7 @@ class AutoClickerInstance:
         if is_banned:
             self.log("KẾT QUẢ: ACCOUNT BỊ BAN")
             self.report_stats_func("banned", self.current_account)
-            return False
+            return True # Trả về True để tiếp tục chạy bước Đăng xuất
             
         # 2. Kiểm tra Sai Pass/TK
         is_fail = self.check_image("images/login_fail.png", timeout=10)
@@ -190,9 +190,9 @@ class AutoClickerInstance:
         if is_success:
             self.log("KẾT QUẢ: THÀNH CÔNG")
             self.report_stats_func("success", self.current_account)
-            return True
+            return True # Tiếp tục chạy bước Đăng xuất
             
-        self.log("KẾT QUẢ: KHÔNG XÁC ĐỊNH (Timeout hoặc Giao diện lạ)")
+        self.log("KẾT QUẢ: KHÔNG XÁC ĐỊNH (Sẽ thử lại bước này)")
         return False
     def run(self, accounts):
         self.running = True
