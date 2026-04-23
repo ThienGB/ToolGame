@@ -160,24 +160,29 @@ class AutoClickerInstance:
 
     def read_result_logic(self):
         self.log("Đang kiểm tra kết quả đăng nhập...")
-        is_banned = self.check_image("images/banned.png", timeout=20)
-        if is_banned:
+    is_banned = self.check_image("images/banned.png", timeout=10)
+    if is_banned:
             self.log("KẾT QUẢ: ACCOUNT BỊ BAN")
             self.report_stats_func("banned", self.current_account)
-            return True
-        else:
+            return False
+    is_fail = self.check_image("images/login_fail.png", timeout=10)
+    if is_fail:
+            self.log("KẾT QUẢ: SAI TÀI KHOẢN / MẬT KHẨU")
+            return False  # ❗ Quan trọng: trả về False để retry
+    else:
             self.log("KẾT QUẢ: THÀNH CÔNG")
             self.report_stats_func("success", self.current_account)
+    is_success = self.check_image("images/binhthuong.png", timeout=10)        
             return True
-
     def run(self, accounts):
         self.running = True
         self.script = [
             {"action": "click_image", "target": "images/search_input.png", "timeout": 180, "name": "Mở ô tìm kiếm"},
             {"action": "input_text", "text": "https://kientuong.lienquan.garena.vn/trang-chu", "name": "Nhập địa chỉ Web"},
             {"action": "click_image", "target": "images/search.png", "timeout": 30, "name": "Nhấn nút Tìm kiếm"},
+            
             {"action": "click_image", "target": "images/garena.png", "timeout": 60, "name": "Chọn Login Garena"},
-            {"action": "click_image", "target": "images/account_input.png", "timeout": 60, "name": "Nhấn vào ô Tài khoản"},
+            {"action": "click_image", "target1": "images/account_input.png","target2": "images/account.png", "timeout": 60, "name": "Nhấn vào ô Tài khoản"},
             {"action": "input_account_logic", "name": "Điền User Garena"},
             {"action": "click_image", "target": "images/password_input.png", "timeout": 30, "name": "Nhấn vào ô Mật khẩu"},
             {"action": "input_password_logic", "name": "Điền Pass Garena"},
