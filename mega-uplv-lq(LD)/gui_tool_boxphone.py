@@ -133,9 +133,34 @@ class AutoClickerInstance:
         self.is_lagging = is_lagging
         self.update_ui_func()
 
+    def input_text_robust(self, text):
+        if not text: return
+        # Tách chuỗi thành các lệnh riêng biệt để tránh shell hiểu lầm các ký tự đặc biệt như &, |, <, >
+        commands = []
+        safe_chars = string.ascii_letters + string.digits + "._-/:@"
+        current_safe = ""
+        for char in text:
+            if char in safe_chars:
+                current_safe += char
+            else:
+                if current_safe:
+                    commands.append(f"input text {current_safe}")
+                    current_safe = ""
+                if char == ' ':
+                    commands.append("input text %s")
+                else:
+                    commands.append(f"input text \\{char}")
+        if current_safe:
+            commands.append(f"input text {current_safe}")
+        
+        if commands:
+            # Gộp các lệnh bằng dấu chấm phẩy để chạy trong 1 phiên shell
+            full_cmd = " ; ".join(commands)
+            self.call_adb(["shell", full_cmd])
+
     def escape_adb_text(self, text):
         if not text: return ""
-        # Ký tự an toàn không cần escape
+        # Dự phòng cho các hàm vẫn gọi escape_adb_text trực tiếp
         safe_chars = string.ascii_letters + string.digits
         escaped_text = ""
         for char in text:
@@ -459,21 +484,21 @@ class AutoClickerInstance:
 
     def input_text_logic(self, step):
         self.call_adb(["shell", "input", "keyevent"] + ["67"] * 20)
-        self.call_adb(["shell", "input", "text", self.escape_adb_text(step.get("content", ""))])
+        self.input_text_robust(step.get("content", ""))
         return True
 
     def input_account_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("tk", "")
         self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
-        self.call_adb(["shell", "input", "text", self.escape_adb_text(content)])
+        self.input_text_robust(content)
         return True
 
     def input_password_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("mk", "")
         self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
-        self.call_adb(["shell", "input", "text", self.escape_adb_text(content)])
+        self.input_text_robust(content)
         return True
 
     def get_room_id_logic(self, step=None):
