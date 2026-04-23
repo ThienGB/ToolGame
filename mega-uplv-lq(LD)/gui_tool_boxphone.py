@@ -135,12 +135,16 @@ class AutoClickerInstance:
 
     def escape_adb_text(self, text):
         if not text: return ""
-        chars_to_escape = ['\\', '"', "'", '&', '>', '<', '|', ';', '(', ')', '*', '?', '$', '!', '#', '%', '{', '}', '~', '[', ']', '^']
+        # Ký tự an toàn không cần escape
+        safe_chars = string.ascii_letters + string.digits
         escaped_text = ""
         for char in text:
-            if char == ' ': escaped_text += "%s"
-            elif char in chars_to_escape: escaped_text += f"\\{char}"
-            else: escaped_text += char
+            if char == ' ':
+                escaped_text += "%s"
+            elif char not in safe_chars:
+                escaped_text += f"\\{char}"
+            else:
+                escaped_text += char
         return escaped_text
 
     def call_adb(self, args):
@@ -677,6 +681,11 @@ class AutoClickerInstance:
                             {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
                             {"action": "click_image_if", "target1": "images/x_start1.jpg", "confidence": 0.7},
                         ]
+                    },
+                    {
+                        "trigger": "images/pvp.png",
+                        "confidence": 0.7,
+                        "script": []
                     }
                 ]
             },
@@ -826,7 +835,10 @@ class AutoClickerInstance:
         ]
 
         # 5. CÁC HÀNH ĐỘNG LẶP LẠI (SHARED BATTLE LOGIC)
-        tuong_target = f"images/tuong0{(self.worker_index % 5) + 1}.jpg"
+        idx = (self.worker_index % 5) + 1
+        t1 = f"images/tuong0{idx}.jpg"
+        t2 = f"images/tuong{idx+5:02d}.jpg" 
+        
         shared_battle_script = [
             {"action": "click_image", "target1": "images/logo1.png", "target2": "images/logo_auto.jpg", "timeout": 50, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/autowin1.jpg", "timeout": 3, "confidence": 0.85, "use_color": True},
@@ -835,7 +847,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 2, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/san_sang.jpg", "timeout": 40, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok3.png", "timeout": 25, "confidence": 0.7},
-            {"action": "click_image_if", "target": tuong_target, "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target1": t1, "target2": t2, "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 10},
             {"action": "click_image_if", "target1": "images/logo.png", "target2": "images/logo2.png", "timeout": 60, "confidence": 0.7},
