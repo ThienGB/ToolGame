@@ -86,8 +86,19 @@ class AutoClickerInstance:
         except: return None
 
     def escape_adb_text(self, text):
-        chars = ['\\', '"', "'", '&', '>', '<', '|', ';', '(', ')', '*', '?', '$', '!', '#', '%', '{', '}', '~', '[', ']', '^', '@']
-        return "".join([f"\\{c}" if c in chars else ("%s" if c == ' ' else c) for c in text])
+        if not text: return ""
+        # Danh sách các ký tự cần escape cho shell ADB
+        # Lưu ý: Khoảng trắng chuyển thành %s
+        chars_to_escape = ['\\', '(', ')', '<', '>', '|', ';', '&', '*', '$', '#', '!', '"', "'", '`']
+        escaped = ""
+        for char in str(text):
+            if char == ' ':
+                escaped += "%s"
+            elif char in chars_to_escape:
+                escaped += f"\\{char}"
+            else:
+                escaped += char
+        return escaped
 
     def execute_step(self, step):
         if not self.running: return False
@@ -160,20 +171,29 @@ class AutoClickerInstance:
 
     def read_result_logic(self):
         self.log("Đang kiểm tra kết quả đăng nhập...")
-    is_banned = self.check_image("images/banned.png", timeout=10)
-    if is_banned:
+        
+        # 1. Kiểm tra Ban
+        is_banned = self.check_image("images/banned.png", timeout=10)
+        if is_banned:
             self.log("KẾT QUẢ: ACCOUNT BỊ BAN")
             self.report_stats_func("banned", self.current_account)
             return False
-    is_fail = self.check_image("images/login_fail.png", timeout=10)
-    if is_fail:
+            
+        # 2. Kiểm tra Sai Pass/TK
+        is_fail = self.check_image("images/login_fail.png", timeout=10)
+        if is_fail:
             self.log("KẾT QUẢ: SAI TÀI KHOẢN / MẬT KHẨU")
-            return False  # ❗ Quan trọng: trả về False để retry
-    else:
+            return "RETRY_LOGIN" 
+            
+        # 3. Kiểm tra Thành công (ảnh trang chủ hoặc ảnh nhận diện login xong)
+        is_success = self.check_image("images/binhthuong.png", timeout=12)
+        if is_success:
             self.log("KẾT QUẢ: THÀNH CÔNG")
             self.report_stats_func("success", self.current_account)
-    is_success = self.check_image("images/binhthuong.png", timeout=10)        
             return True
+            
+        self.log("KẾT QUẢ: KHÔNG XÁC ĐỊNH (Timeout hoặc Giao diện lạ)")
+        return False
     def run(self, accounts):
         self.running = True
         self.script = [
@@ -202,15 +222,34 @@ class AutoClickerInstance:
             self.log(f">> CHẠY: {target['tk']}")
             success = True
             
-            # Thực hiện script
-            start_index = 0 if self.first_run else 3
-            current_script = self.script[start_index:]
-            
-            for step in current_script:
+            # Thực hiện script sử dụng index để có thể nhảy bước
+            step_idx = 0 if self.first_run else 3
+            while step_idx < len(self.script):
                 if not self.running: break
-                if not self.execute_step(step): 
+                step = self.script[step_idx]
+                res = self.execute_step(step)
+                
+                if res == "RETRY_LOGIN":
+                    # Tăng đếm lỗi ngay tại đây
+                    target['fail_count'] = target.get('fail_count', 0) + 1
+                    if target['fail_count'] >= 3:
+                        self.log(f"!! KẾT THÚC: {target['tk']} sai pass quá 3 lần.")
+                        self.report_stats_func("wrong_pass", target)
+                        success = False
+                        break
+                        
+                    self.log(f"!! Phát hiện sai pass (Lần {target['fail_count']}), đang thử lại...")
+                    # Click nút reload để xóa thông báo lỗi hoặc làm mới form
+                    self.click_image_logic({"target": "images/reload.jpg", "timeout": 10})
+                    
+                    step_idx = 4 
+                    continue
+
+                if not res:
                     success = False
                     break
+                
+                step_idx += 1
             
             if success and self.running:
                 target['done'] = True
@@ -220,10 +259,12 @@ class AutoClickerInstance:
             elif not success:
                 with self.account_lock:
                     target['processing'] = False
-                    target['fail_count'] = target.get('fail_count', 0) + 1
+                    # Nếu chưa đạt 3 lần thì mới tăng (để tránh tăng vọt khi đã xử lý ở trên)
+                    if target.get('fail_count', 0) < 3:
+                        target['fail_count'] = target.get('fail_count', 0) + 1
+                        
                     if target['fail_count'] >= 3:
                         target['done'] = True
-                        self.log(f"!! BỎ QUA: {target['tk']} do lỗi quá 3 lần.")
                 self.report_stats_func("fail", target)
             
             self.log(">> Đã xong lượt, chuẩn bị tài khoản tiếp theo...")
@@ -401,6 +442,13 @@ class MultiPremiumApp(ctk.CTk):
                 try:
                     with self.account_lock:
                         with open("ban.txt", "a", encoding="utf-8") as f:
+                            f.write(f"{account['tk']}|{account['mk']}\n")
+                except: pass
+        elif status == "wrong_pass":
+            if account:
+                try:
+                    with self.account_lock:
+                        with open("wrong_pass.txt", "a", encoding="utf-8") as f:
                             f.write(f"{account['tk']}|{account['mk']}\n")
                 except: pass
         
