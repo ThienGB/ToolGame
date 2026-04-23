@@ -173,20 +173,21 @@ class AutoClickerInstance:
         self.log("Đang kiểm tra kết quả đăng nhập...")
         
         # 1. Kiểm tra Ban
-        is_banned = self.check_image("images/banned.png", timeout=10)
+        is_banned = self.check_image("images/banned.png", timeout=30)
         if is_banned:
             self.log("KẾT QUẢ: ACCOUNT BỊ BAN")
             self.report_stats_func("banned", self.current_account)
             return True # Trả về True để tiếp tục chạy bước Đăng xuất
             
-        # 2. Kiểm tra Sai Pass/TK
-        is_fail = self.check_image("images/login_fail.png", timeout=10)
+        # 2. Kiểm tra Sai Pass/TK (Kiểm tra cả 2 mẫu ảnh báo lỗi)
+        is_fail = self.check_image("images/login_fail.png", timeout=10) or \
+                  self.check_image("images/login_fail1.png", timeout=5)
         if is_fail:
             self.log("KẾT QUẢ: SAI TÀI KHOẢN / MẬT KHẨU")
             return "RETRY_LOGIN" 
             
         # 3. Kiểm tra Thành công (ảnh trang chủ hoặc ảnh nhận diện login xong)
-        is_success = self.check_image("images/binhthuong.png", timeout=12)
+        is_success = self.check_image("images/binhthuong.png", timeout=30)
         if is_success:
             self.log("KẾT QUẢ: THÀNH CÔNG")
             self.report_stats_func("success", self.current_account)
