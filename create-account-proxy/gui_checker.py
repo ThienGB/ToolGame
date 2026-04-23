@@ -160,16 +160,20 @@ class AutoClickerInstance:
 
     def read_result_logic(self):
         self.log("Đang kiểm tra kết quả đăng nhập...")
-        is_banned = self.check_image("images/banned.png", timeout=20)
-        if is_banned:
+    is_banned = self.check_image("images/banned.png", timeout=10)
+    if is_banned:
             self.log("KẾT QUẢ: ACCOUNT BỊ BAN")
             self.report_stats_func("banned", self.current_account)
-            return True
-        else:
+            return False
+    is_fail = self.check_image("images/login_fail.png", timeout=10)
+    if is_fail:
+            self.log("KẾT QUẢ: SAI TÀI KHOẢN / MẬT KHẨU")
+            return False  # ❗ Quan trọng: trả về False để retry
+    else:
             self.log("KẾT QUẢ: THÀNH CÔNG")
             self.report_stats_func("success", self.current_account)
+    is_success = self.check_image("images/binhthuong.png", timeout=10)        
             return True
-
     def run(self, accounts):
         self.running = True
         self.script = [
