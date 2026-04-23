@@ -229,7 +229,7 @@ class AutoClickerInstance:
 class MultiPremiumApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("MegaUpLvCFTool(LD)")
+        self.title("Checker(LD)")
         self.geometry("450x420")
         self.configure(fg_color=BG_COLOR)
         

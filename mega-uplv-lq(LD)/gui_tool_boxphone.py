@@ -246,6 +246,8 @@ class AutoClickerInstance:
             res = self.sync_autowin_logic(step)
         elif action == "buy_exp":
             res = self.buy_exp_logic(step)
+        elif action == "cases":
+            res = self.cases_logic(step)
         elif action == "loop":
             count = step.get("count", 1)
             sub_steps = step.get("steps", [])
@@ -327,6 +329,62 @@ class AutoClickerInstance:
             
         self.log(f"!! Timeout: Không thấy ảnh. Cao nhất: {best_match['name']} ({best_match['val']:.2f})")
         return False
+
+    def cases_logic(self, step):
+        cases = step.get("cases", [])
+        if not cases: return True
+        
+        timeout = step.get("timeout", 10)
+        confidence = step.get("confidence", 0.8)
+        
+        start_time = time.time()
+        while time.time() - start_time < timeout and self.running:
+            screen = self.get_screenshot()
+            if screen is None:
+                time.sleep(1)
+                continue
+            
+            h_screen, w_screen = screen.shape[:2]
+            scale = h_screen / BASE_HEIGHT
+            
+            for case in cases:
+                triggers = []
+                if case.get("trigger"): triggers.append(case.get("trigger"))
+                idx = 1
+                while f"trigger{idx}" in case:
+                    triggers.append(case.get(f"trigger{idx}"))
+                    idx += 1
+                
+                case_conf = case.get("confidence", confidence)
+                sub_script = case.get("script", [])
+                
+                for t_path in triggers:
+                    real_path = resource_path(t_path)
+                    if not os.path.exists(real_path): continue
+                    
+                    t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
+                    if t_img is None: continue
+                    
+                    scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                    
+                    # Thử cả scale và native
+                    for curr_scale in [scale, 1.0]:
+                        if abs(curr_scale - 1.0) < 0.001:
+                            t_scaled = t_img
+                        else:
+                            t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_AREA)
+                        
+                        res = cv2.matchTemplate(scr_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
+                        _, mv, _, _ = cv2.minMaxLoc(res)
+                        if mv >= case_conf:
+                            self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({mv:.2f})")
+                            for s_step in sub_script:
+                                if not self.running: break
+                                self.execute_step(s_step)
+                            return True 
+            time.sleep(1)
+        return False
+
 
 
 
@@ -581,32 +639,47 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 5, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 10, "confidence": 0.7},
             {
-                "action": "click_image_if", 
-                "target": "images/vao_tran_button_1.png", 
-                "timeout": 10, 
-                "confidence": 0.7,
-                "then": [
-                    {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.7},
-                    {"action": "wait", "timeout": 5},
-                    {"action": "click_image", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "timeout": 30, "confidence": 0.7},
-                    {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "timeout": 4, "confidence": 0.7}
+                "action": "cases",
+                "timeout" : 120,
+                "cases": [
+                    {
+                        "trigger": "images/vao_tran_button_1.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.7},
+                            {"action": "wait", "timeout": 5},
+                            {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "timeout": 30, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "timeout": 4, "confidence": 0.7}
+                        ]
+                    },
+                    {
+                        "trigger": "images/an_de_tro_lai.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7}
+                        ]
+                    },
+                    {
+                        "trigger": "images/x_start.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/x_start1.jpg", "confidence": 0.7},
+                        ]
+                    }
                 ]
             },
-            {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
-            {
-                "action": "click_image_if", 
-                "target": "images/an_de_tro_lai.jpg", 
-                "timeout": 10, 
-                "confidence": 0.7,
-                "then": [
-                   {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "timeout": 7, "confidence": 0.7},
-                   {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "timeout": 7, "confidence": 0.7}
-                ]
-            },
-            {"action": "click_image_if", "target": "images/x_start.jpg", "timeout": 5, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/x_start1.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/x_start1.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "press_esc", "wait": 3},
             {"action": "click_any"},
             {"action": "press_esc", "wait": 3},
@@ -736,8 +809,8 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/daro.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image", "target": "images/pve.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images/ready.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 2, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/ready.png", "timeout": 2, "confidence": 0.7},
         ]
         
         teamup_guest_script = [
@@ -755,12 +828,12 @@ class AutoClickerInstance:
         # 5. CÁC HÀNH ĐỘNG LẶP LẠI (SHARED BATTLE LOGIC)
         tuong_target = f"images/tuong0{(self.worker_index % 5) + 1}.jpg"
         shared_battle_script = [
-            {"action": "click_image", "target": "images/logo1.png", "timeout": 50, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/autowin1.jpg", "timeout": 5, "confidence": 0.85, "use_color": True},
+            {"action": "click_image", "target1": "images/logo1.png", "target2": "images/logo_auto.jpg", "timeout": 50, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/autowin1.jpg", "timeout": 3, "confidence": 0.85, "use_color": True},
             {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 2, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/sansang5v5.png", "timeout": 50, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/san_sang.jpg", "timeout": 40, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok3.png", "timeout": 25, "confidence": 0.7},
             {"action": "click_image_if", "target": tuong_target, "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},

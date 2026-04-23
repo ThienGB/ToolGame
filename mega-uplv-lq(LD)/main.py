@@ -445,3 +445,4 @@ if __name__ == "__main__":
 
 
 #pyinstaller --noconfirm MegaUpLvTool.spec
+#pyinstaller --noconfirm MegaUpLvTool_BoxPhone.spec
