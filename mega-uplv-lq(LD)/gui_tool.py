@@ -143,30 +143,34 @@ class AutoClickerInstance:
         self.update_ui_func()
 
     def input_text_robust(self, text):
-        if not text: return
-        # Tách chuỗi thành các phần để gửi. Các ký tự đặc biệt sẽ được gửi trong 
-        # các phiên ADB riêng biệt để đảm bảo shell không hiểu lầm (đặc biệt là dấu | và &)
-        safe_chars = string.ascii_letters + string.digits + "._-/:@"
-        current_safe = ""
-        for char in text:
-            if char in safe_chars:
-                current_safe += char
-            else:
-                # Gửi nhóm ký tự an toàn tích lũy được
-                if current_safe:
-                    self.call_adb(["shell", "input", "text", current_safe])
-                    current_safe = ""
-                
-                # Gửi ký tự đặc biệt trong một phiên ADB độc lập
-                if char == ' ':
-                    self.call_adb(["shell", "input", "text", "%s"])
-                else:
-                    # Escape và gửi đơn lẻ
-                    self.call_adb(["shell", "input", "text", f"\\{char}"])
+        """Nhập text qua ADB input text.
         
-        # Gửi nốt phần an toàn còn lại
-        if current_safe:
-            self.call_adb(["shell", "input", "text", current_safe])
+        Dùng subprocess args list → Windows KHÔNG interpret ký tự đặc biệt.
+        ADB truyền thẳng args sang thiết bị mà không qua Android shell.
+        Chỉ cần xử lý đặc biệt cho space (phải dùng %s) và các ký tự
+        mà ADB input text cần escape ở tầng Android (\\, $, `).
+        """
+        if not text: return
+        
+        # Tách theo space vì space phải dùng %s trong adb input text
+        # Các ký tự đặc biệt khác (|, &, <, >, [, ], (, ), {, }, =, ^, %, #...)
+        # được truyền thẳng mà không cần escape vì subprocess list bypass Windows shell.
+        # Chỉ cần escape ký tự đặc biệt của Android input: \\ và $
+        parts = text.split(' ')
+        chunks_to_send = []
+        for i, part in enumerate(parts):
+            if part:
+                # Escape ký tự mà Android input tool xử lý đặc biệt
+                escaped = part.replace('\\', '\\\\').replace('$', '\\$').replace('`', '\\`')
+                chunks_to_send.append(escaped)
+            if i < len(parts) - 1:  # Có space phía sau
+                chunks_to_send.append(None)  # None = gửi %s
+        
+        for chunk in chunks_to_send:
+            if chunk is None:
+                self.call_adb(["shell", "input", "text", "%s"])
+            elif chunk:
+                self.call_adb(["shell", "input", "text", chunk])
 
     def escape_adb_text(self, text):
         if not text: return ""
