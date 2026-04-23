@@ -141,16 +141,7 @@ class AutoClickerInstance:
     def click_image_logic(self, step):
         targets = [step.get("target")] if step.get("target") else [step.get(f"target{i}") for i in range(1, 11) if step.get(f"target{i}")]
         timeout, conf = step.get("timeout", 10), step.get("confidence", 0.8)
-        
-        imgs = []
-        for t in targets:
-            img = get_cached_image(t)
-            if img is not None:
-                imgs.append((t, img))
-            else:
-                self.log(f"  [!] Lỗi: Không tìm thấy file ảnh: {t}")
-        
-        if not imgs: return False
+        imgs = [(t, get_cached_image(t)) for t in targets if get_cached_image(t) is not None]
         
         start = time.time()
         while time.time() - start < timeout and self.running:
@@ -216,7 +207,7 @@ class AutoClickerInstance:
             return True # Tiếp tục chạy bước Đăng xuất
             
         self.log("KẾT QUẢ: KHÔNG XÁC ĐỊNH (Sẽ thử lại bước này)")
-        return False
+        return True
     def run(self, accounts):
         self.running = True
         next_start_idx = 0 # Khởi tạo lần đầu chạy từ bước 0
@@ -260,31 +251,16 @@ class AutoClickerInstance:
                 if res == "RETRY_LOGIN":
                     self.log(f"!! KẾT QUẢ: {target['tk']} SAI MẬT KHẨU. Đang chuyển acc...")
                     self.report_stats_func("wrong_pass", target)
-                    # Hạ confidence xuống 0.7 để dễ click nút reload hơn
-                    self.click_image_logic({"target1": "images/reload.jpg", "target2": "images/reload.png", "timeout": 10, "confidence": 0.7})
+                    self.click_image_logic({"target1": "images/reload.jpg", "target2": "images/reload.png", "timeout": 10})
                     target['done'] = True
                     success = False
                     next_start_idx = 4 # Sai pass thì acc sau chạy từ bước 4
                     break
 
                 if not res:
-                    # --- CƠ CHẾ TỰ THOÁT KẸT ---
-                    if self.check_image("images/logout.png", timeout=3):
-                        self.log("!! Phát hiện kẹt màn hình acc cũ, đang cố gắng Đăng xuất dự phòng...")
-                        self.click_image_logic({"target": "images/logout.png", "timeout": 5})
-                        time.sleep(2)
-                        res = self.execute_step(step)
-                    
-                    if not res:
-                        # NẾU LÀ BƯỚC ĐỌC KẾT QUẢ MÀ THẤT BẠI, VẪN CHO CHẠY TIẾP XUỐNG CÁC BƯỚC LOGOUT
-                        if step.get("action") == "read_result":
-                            self.log("!! Không rõ kết quả, vẫn sẽ thực hiện Đăng xuất...")
-                            step_idx += 1
-                            continue
-                            
-                        success = False
-                        next_start_idx = 3 
-                        break
+                    success = False
+                    next_start_idx = 3 # Lỗi khác thì acc sau chạy từ bước 3
+                    break
                 
                 step_idx += 1
             
