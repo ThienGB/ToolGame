@@ -318,6 +318,15 @@ class AutoClickerInstance:
             time.sleep(3) # Tần suất quét lại dầy hơn (mỗi 3s)
         
         return False
+    def click_coords_logic(self, step):
+        x, y = step.get("x"), step.get("y")
+        if x is not None and y is not None:
+            delay = step.get("timeout", 0)
+            if delay > 0: time.sleep(delay)
+            self.call_adb(["shell", "input", "tap", str(x), str(y)])
+            self.log(f"CLICK TỌA ĐỘ: ({x}, {y})")
+            return True
+        return False
 
     def execute_step(self, step):
         if not self.running: return False
@@ -326,7 +335,6 @@ class AutoClickerInstance:
         self.log(f"==> Bước: {action} {f'({target_info})' if target_info else ''}")
         self.last_step_time = time.time()
         res = True
-        
         if action == "click_image":
             res = self.click_image_logic(step)
         elif action == "click_image_if":
@@ -362,6 +370,8 @@ class AutoClickerInstance:
             res = self.wait_for_room_logic(step)
         elif action == "input_room_id":
             res = self.input_room_id_logic()
+        elif action == "click_coords":
+            res = self.click_coords_logic(step)
         elif action == "click_any":
             res = self.click_any_logic(step)
         elif action == "swipe":
@@ -816,6 +826,12 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.9},
+            {"action": "clear_android_data", "package": "com.garena.gaslite"},
+
+        ]
+
+        # 2. GIAI ĐOẠN VƯỢT TÂN THỦ
+        tutorial_script = [
             {
                 "action": "click_image_if", 
                 "target": "images/vao_tran_button_1.png", 
@@ -831,7 +847,7 @@ class AutoClickerInstance:
                     {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 4, "confidence": 0.9}
                 ]
             },
-            {"action": "click_image_if", "target1": "images/skip.png","target2": "images/dkysau.jpg", "timeout": 45, "confidence": 0.9},
+            {"action": "click_image_if", "target1": "images/skip.png","target2": "images/dkysau.jpg", "timeout": 20, "confidence": 0.9},
             {
                 "action": "click_image_if", 
                 "target": "images/vao_button.png", 
@@ -855,13 +871,9 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 2},
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
-            {"action": "clear_android_data", "package": "com.garena.gaslite"},
-        ]
-
-        # 2. GIAI ĐOẠN VƯỢT TÂN THỦ
-        tutorial_script = [
             {"action": "click_image", "target": "images/pvp.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/1v1.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/x2.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/pve.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.9},
@@ -896,11 +908,11 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/krixi.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_any", "wait": 4},
-            {"action": "click_any", "wait": 4},
+            {"action": "press_esc", "wait": 2} ,
             {"action": "wait", "timeout": 5},
             {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 10, "confidence": 0.9},
             {"action": "press_esc", "wait": 2} ,
-            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 10, "confidence": 0.9},
+            
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/thoat_5v5.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_image", "target": "images/thoat_sk_tan_thu1.png", "timeout": 10, "confidence": 0.9},
@@ -908,10 +920,12 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "wait", "timeout": 7},
-            {"action": "click_image", "target": "images/dau_hang_button.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/dau_hang_button.png", "timeout": 12, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
-            {"action": "press_esc", "wait": 2} ,
-            {"action": "click_image", "target": "images/event.png", "timeout": 20, "confidence": 0.9},
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
+            {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
+            {"action": "press_esc", "wait": 3} ,
             {"action": "click_image_if", "target": "images/qua_tan_thu.png", "target": "images/skttt.png","timeout": 10, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/qua_tan_thu.png", "target": "images/skttt.png","timeout": 5, "confidence": 0.9},
             {"action": "wait", "timeout": 5},
@@ -925,7 +939,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/thoat_sk.png","target2": "images/quaylaisktt.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
-            {"action": "click_image", "target1": "images/vat_pham.png", "target2": "images/vat_pham1.png","target3": "images/vat_pham2.png","target4": "images/vat_pham3.png","target5": "images/vat_pham4.png","timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/vat_pham.png", "target2": "images/vat_pham1.png","target3": "images/vat_pham2.png","target4": "images/vat_pham3.png","target5": "images/vat_pham4.png","target6": "images/vat_pham5.png","timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target1": "images/su_dung_button.png","target2": "images/su_dung.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
@@ -933,13 +947,12 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/shop.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/vat_pham_shop.png","target2": "images/vatpham.png", "timeout": 20, "confidence": 0.9},
+            
+            {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
+            {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
             {"action": "click_image", "target": "images/shopruby.png", "timeout": 20, "confidence": 0.9},
-            {"action": "swipe", "x1": 0.5, "y1": 0.8, "x2": 0.5, "y2": 0.4, "duration": 600},
-            {"action": "wait", "timeout": 2},
-            {"action": "swipe", "x1": 0.5, "y1": 0.8, "x2": 0.5, "y2": 0.4, "duration": 600},
-            {"action": "wait", "timeout": 2},
-            {"action": "swipe", "x1": 0.5, "y1": 0.8, "x2": 0.5, "y2": 0.4, "duration": 600},
+            {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
+            {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/10_win_x2_exp1.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.9},
@@ -1000,6 +1013,7 @@ class AutoClickerInstance:
         teamup_host_script = [
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/team5.png", "timeout": 60},
+            {"action": "click_image_if", "target": "images/x2.png", "timeout": 7, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
