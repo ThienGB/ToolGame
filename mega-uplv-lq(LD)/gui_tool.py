@@ -948,15 +948,17 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/ok.png","target2": "images/ok1.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2} ,
+        ]
+
+        # 2.5 GIAI ĐOẠN MUA EXP
+        mua_exp_script = [
             {"action": "click_image", "target": "images/shop.png", "timeout": 20, "confidence": 0.9},
-            
             {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
             {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
             {"action": "click_image", "target": "images/shopruby.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
             {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
             {"action": "wait", "timeout": 2},
-            
             {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
@@ -1139,6 +1141,8 @@ class AutoClickerInstance:
             self.script += login_script
         if self.modes.get("tutorial"):
             self.script += tutorial_script
+        if self.modes.get("buy_exp"):
+            self.script += mua_exp_script
         if self.modes.get("dinh_game"):
             self.script += dinh_game_script
 
@@ -1361,7 +1365,7 @@ class MultiPremiumApp(ctk.CTk):
         
         self.mode_frame = ctk.CTkFrame(self.stats_card, fg_color="transparent")
         self.mode_frame.pack(fill="x", padx=15, pady=5)
-        self.mode_frame.columnconfigure((0, 1, 2, 3), weight=1)
+        self.mode_frame.columnconfigure((0, 1, 2, 3, 4), weight=1)
 
         self.mode_login = ctk.CTkCheckBox(self.mode_frame, text="LOGIN", font=ctk.CTkFont(size=11))
         self.mode_login.grid(row=0, column=0); self.mode_login.select()
@@ -1369,11 +1373,14 @@ class MultiPremiumApp(ctk.CTk):
         self.mode_tutorial = ctk.CTkCheckBox(self.mode_frame, text="TÂN THỦ", font=ctk.CTkFont(size=11))
         self.mode_tutorial.grid(row=0, column=1); self.mode_tutorial.select()
 
+        self.mode_buy_exp = ctk.CTkCheckBox(self.mode_frame, text="MUA EXP", font=ctk.CTkFont(size=11), text_color="#EAB308")
+        self.mode_buy_exp.grid(row=0, column=2); self.mode_buy_exp.select()
+
         self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME", font=ctk.CTkFont(size=11), text_color="#F59E0B")
-        self.mode_dinh_game.grid(row=0, column=2); self.mode_dinh_game.select()
+        self.mode_dinh_game.grid(row=0, column=3); self.mode_dinh_game.select()
 
         self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI", font=ctk.CTkFont(size=11), text_color=ACCENT_GREEN)
-        self.mode_teamup.grid(row=0, column=3); self.mode_teamup.select()
+        self.mode_teamup.grid(row=0, column=4); self.mode_teamup.select()
 
 
 
@@ -1689,6 +1696,7 @@ class MultiPremiumApp(ctk.CTk):
         modes = {
             "login": self.mode_login.get(),
             "tutorial": self.mode_tutorial.get(),
+            "buy_exp": self.mode_buy_exp.get(),
             "dinh_game": self.mode_dinh_game.get(),
             "teamup": self.mode_teamup.get(),
             "battle_count": b_count,
