@@ -1020,7 +1020,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/x2.png", "timeout": 7, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9},
             {
                 "action": "get_room_id",
                 "timeout": 30,
@@ -1125,7 +1125,7 @@ class AutoClickerInstance:
         
         # GIAI ĐĂNG XUẤT - XUẤT FILE
         uplevel_script = [
-            {"action": "click_image", "target": "images/logo.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/autowin.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.9},
