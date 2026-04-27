@@ -867,7 +867,7 @@ class AutoClickerInstance:
                 ]
             },
             {"action": "wait", "timeout": 5},
-            {"action": "click_any"},
+            {"action": "click_coords", "x": 48, "y": 92, "timeout": 2},
             {"action": "wait", "timeout": 2},
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
@@ -906,23 +906,25 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
-            {"action": "click_image", "target": "images/krixi.png", "timeout": 10, "confidence": 0.9},
+            {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
+            {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
             {"action": "click_any", "wait": 4},
             {"action": "press_esc", "wait": 2} ,
             {"action": "wait", "timeout": 5},
-            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 10, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 5, "confidence": 0.9},
             {"action": "press_esc", "wait": 2} ,
             
             {"action": "press_esc", "wait": 2} ,
-            {"action": "click_image", "target": "images/thoat_5v5.png", "timeout": 10, "confidence": 0.9},
-            {"action": "click_image", "target": "images/thoat_sk_tan_thu1.png", "timeout": 10, "confidence": 0.9},
+            
             {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 5, "confidence": 0.9},
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "wait", "timeout": 7},
-            {"action": "click_image_if", "target": "images/dau_hang_button.png", "timeout": 12, "confidence": 0.9},
+            {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png", "timeout": 12, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 3} ,
+            {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
             {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
             {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
             {"action": "press_esc", "wait": 3} ,
@@ -954,7 +956,7 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
             {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/10_win_x2_exp1.png", "timeout": 20, "confidence": 0.9},
+            
             {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
@@ -966,7 +968,7 @@ class AutoClickerInstance:
         # 3. GIAI ĐOẠN DÍNH GAME
         dinh_game_script = [
             {"action": "click_image", "target": "images/dauthuong.png", "timeout": 60, "confidence": 0.9},
-            {"action": "click_image", "target": "images/logo.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/logo.png","target2": "images/logo4.png","target3": "images/logo1.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.9},
@@ -1077,7 +1079,7 @@ class AutoClickerInstance:
             
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 7},
-            {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 60, "confidence": 0.9},
             {"action": "wait", "timeout": 10},
             # Lặp lại click bản đồ 18 lần, mỗi lần cách nhau khoảng 10 giây
             {
@@ -1090,6 +1092,7 @@ class AutoClickerInstance:
             },
 
             {"action": "wait", "timeout": 6},
+            {"action": "click_coords", "x": 2, "y": 23, "timeout": 2},
             {"action": "sync_autowin", "timeout": 120},
             
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
