@@ -175,17 +175,18 @@ class AutoClickerInstance:
 
     def get_screenshot(self):
         try:
-            # Sử dụng exec-out để tránh lỗi ký tự xuống dòng trên Windows cho thiết bị thật
+            # Thử dùng exec-out trước với timeout ngắn (5s) để xem ADB có hỗ trợ không
             cmd = [self.adb_path, "-s", self.device_id, "exec-out", "screencap", "-p"]
-            process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
-            
-            if process.returncode != 0:
-                # Nếu exec-out lỗi, thử lại bằng shell (dành cho adb cực cũ)
-                cmd = [self.adb_path, "-s", self.device_id, "shell", "screencap", "-p"]
-                process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
-                image_bytes = process.stdout.replace(b"\r\n", b"\n")
-            else:
+            try:
+                process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
+                if process.returncode != 0:
+                    raise Exception("Lỗi exec-out")
                 image_bytes = process.stdout
+            except Exception:
+                # Nếu timeout hoặc báo lỗi (do ADB của Xiaowei không hỗ trợ exec-out), chuyển sang shell
+                cmd_fallback = [self.adb_path, "-s", self.device_id, "shell", "screencap", "-p"]
+                process = subprocess.run(cmd_fallback, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
+                image_bytes = process.stdout.replace(b"\r\n", b"\n")
 
             if not image_bytes:
                 self.log("LỖI: Trống dữ liệu ảnh từ thiết bị.")
@@ -655,7 +656,7 @@ class AutoClickerInstance:
         login_script = [
             {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg","timeout": 60, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.7},
             {"action": "input_account"},
             {"action": "click_image", "target": "images/tiep_theo.jpg", "timeout": 60, "confidence": 0.7},
             {"action": "input_password"},
@@ -679,6 +680,22 @@ class AutoClickerInstance:
                             {"action": "wait", "timeout": 5},
                             {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "timeout": 30, "confidence": 0.7},
                             {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "timeout": 4, "confidence": 0.7}
+                        ]
+                    },
+                    {
+                        "trigger": "images/vao_button.png", 
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/vao_button.png", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/on_auto_win.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
+                            {"action": "click_image", "target1": "images/minimize.png", "target2":"images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_any", "wait": 30},
+                            {"action": "click_any", "wait": 10},
+                            {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/autowin1.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
+                            {"action": "click_image", "target1": "images/minimize.png", "target2":"images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_any", "wait": 10},
                         ]
                     },
                     {
