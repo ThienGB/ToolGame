@@ -798,9 +798,9 @@ class AutoClickerInstance:
 
         return True
 
-    def run(self, accounts, modes, worker_index, shared_data):
+    def run(self, accounts, modes_func, worker_index, shared_data):
         self.accounts_list = accounts
-        self.modes = modes
+        self.modes_func = modes_func
         self.worker_index = worker_index
         self.group_id = self.worker_index // 5
         self.shared_data = shared_data
@@ -1135,41 +1135,39 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 25},    
         ]
 
-        # GHÉP SCRIPT DỰA TRÊN LỰA CHỌN
-        self.script = []
-        if self.modes.get("login"):
-            self.script += login_script
-        if self.modes.get("tutorial"):
-            self.script += tutorial_script
-        if self.modes.get("buy_exp"):
-            self.script += mua_exp_script
-        if self.modes.get("dinh_game"):
-            self.script += dinh_game_script
-
-        # 4. GIAI ĐOẠN GHÉP ĐỘI & ĐÁNH TRẬN
-        if self.modes.get("teamup"):
-            # Thêm script Ghép đội (Host hoặc Guest)
-            if self.worker_index % 5 == 0:
-                self.script += teamup_host_script
-            else:
-                self.script += teamup_guest_script
-                
-            # Đợi cả 5 người vào phòng
-            wait_step = {"action": "wait_for_players", "count": 4, "timeout": 300}
-            self.script.append(wait_step)
-            
-            # Thực hiện logic đánh trận lặp lại N lần
-            battle_loop = {
-                "action": "loop", 
-                "count": self.modes.get("battle_count", 2),
-                "steps": shared_battle_script
-            }
-            self.script.append(battle_loop)
-
-        # 4. GIAI ĐOẠN XUẤT FILE & ĐĂNG XUẤT (LUÔN CHẠY CUỐI CÙNG SAU KHI XONG HẾT)
-        self.script += uplevel_script
-
         while self.running:
+            self.modes = self.modes_func() if callable(self.modes_func) else self.modes_func
+
+            # GHÉP SCRIPT DỰA TRÊN LỰA CHỌN MỚI NHẤT
+            self.script = []
+            if self.modes.get("login"):
+                self.script += login_script
+            if self.modes.get("tutorial"):
+                self.script += tutorial_script
+            if self.modes.get("buy_exp"):
+                self.script += mua_exp_script
+            if self.modes.get("dinh_game"):
+                self.script += dinh_game_script
+
+            # 4. GIAI ĐOẠN GHÉP ĐỘI & ĐÁNH TRẬN
+            if self.modes.get("teamup"):
+                if self.worker_index % 5 == 0:
+                    self.script += teamup_host_script
+                else:
+                    self.script += teamup_guest_script
+                    
+                wait_step = {"action": "wait_for_players", "count": 4, "timeout": 300}
+                self.script.append(wait_step)
+                
+                battle_loop = {
+                    "action": "loop", 
+                    "count": self.modes.get("battle_count", 3),
+                    "steps": shared_battle_script
+                }
+                self.script.append(battle_loop)
+
+            # LUÔN CHẠY CUỐI CÙNG SAU KHI XONG HẾT
+            self.script += uplevel_script
             # Tìm tài khoản chưa dùng
             self.current_account = None
             with FILE_LOCK:
@@ -1400,7 +1398,7 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(self.stats_card, text="SỐ TRẬN BATTLE", font=ctk.CTkFont(size=10, weight="bold"), text_color="#888").pack(pady=(12, 0))
         self.battle_count_entry = ctk.CTkEntry(self.stats_card, placeholder_text="Mặc định: 5", height=28)
         self.battle_count_entry.pack(padx=15, pady=5, fill="x")
-        self.battle_count_entry.insert(0, "5")
+        self.battle_count_entry.insert(0, "3")
 
 
     def create_stat_item(self, parent, title, value, row, col, color):
@@ -1672,6 +1670,20 @@ class MultiPremiumApp(ctk.CTk):
         
         self.add_log("!!! ĐANG DỪNG TẤT CẢ CÁC MÁY...")
 
+    def get_current_modes(self):
+        try:
+            b_count = int(self.battle_count_entry.get().strip())
+        except:
+            b_count = 3
+        return {
+            "login": self.mode_login.get(),
+            "tutorial": self.mode_tutorial.get(),
+            "buy_exp": self.mode_buy_exp.get(),
+            "dinh_game": self.mode_dinh_game.get(),
+            "teamup": self.mode_teamup.get(),
+            "battle_count": b_count,
+        }
+
     def start_team(self, team_idx):
         if team_idx not in self.team_frames:
             return
@@ -1687,21 +1699,6 @@ class MultiPremiumApp(ctk.CTk):
         team_data["start_btn"].configure(state="disabled")
         team_data["stop_btn"].configure(state="normal", fg_color=ACCENT_RED)
 
-        # Get modes from UI
-        try:
-            b_count = int(self.battle_count_entry.get().strip())
-        except:
-            b_count = 5
-
-        modes = {
-            "login": self.mode_login.get(),
-            "tutorial": self.mode_tutorial.get(),
-            "buy_exp": self.mode_buy_exp.get(),
-            "dinh_game": self.mode_dinh_game.get(),
-            "teamup": self.mode_teamup.get(),
-            "battle_count": b_count,
-        }
-
         # Chạy đa luồng cho các máy trong team
         for serial in devices:
             worker_index = self.device_map.get(serial, 0) # Lấy absolute index đã lưu
@@ -1715,7 +1712,7 @@ class MultiPremiumApp(ctk.CTk):
                 worker.restart_threshold = 3
                 
             self.active_workers.append(worker)
-            t = threading.Thread(target=worker.run, args=(self.accounts_data, modes, worker_index, self.shared_data), daemon=True)
+            t = threading.Thread(target=worker.run, args=(self.accounts_data, self.get_current_modes, worker_index, self.shared_data), daemon=True)
             t.start()
 
         self.add_log(f"!!! ĐANG KHỞI ĐỘNG TEAM {team_idx + 1}...")
