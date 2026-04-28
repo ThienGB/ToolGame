@@ -53,6 +53,7 @@ except: pass
 # --- Biến toàn cục để nạp OCR ---
 easyocr = None
 _ocr_reader = None
+OCR_LOCK = threading.Lock()
 
 def init_ocr_reader(log_func=None):
     global easyocr, _ocr_reader
@@ -200,7 +201,7 @@ class AutoClickerInstance:
             m = re.search(r'--([a-zA-Z0-9]{5,15})--', text)
             if m: return m.group(1)
             
-            # 2. Làm sạch text khỏi các ký tự rác UI ở đầu/cuối (nhầm từ dấu : hoặc icon)
+            # 2. Làm sạch text khỏi các ký tự rác UI ở đầu/cuối
             text = re.sub(r'^[icl:.\s]+', '', text)
             text = re.sub(r'[icl:.\s]+$', '', text)
             
@@ -208,8 +209,10 @@ class AutoClickerInstance:
             blacklist = ["ma", "moi", "cua", "toi", "sao", "chep"]
             words = text.replace(':', ' ').split()
             for word in words:
+                # Xử lý dính chữ (nếu OCR đọc dính "toi:ABCDEF")
                 clean = ''.join(c for c in word if c.isalnum())
-                if clean.lower() in blacklist: continue
+                if any(clean.lower().endswith(b) for b in blacklist): continue
+                if any(clean.lower().startswith(b) for b in blacklist): continue
                 
                 has_letter = any(c.isalpha() for c in clean)
                 has_digit  = any(c.isdigit() for c in clean)
@@ -242,15 +245,12 @@ class AutoClickerInstance:
             # Tăng độ tương phản
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             contrast = clahe.apply(gray)
-            # Phóng to 4 lần Lanczos
-            upscaled = cv2.resize(contrast, (gray.shape[1]*4, gray.shape[0]*4), interpolation=cv2.INTER_LANCZOS4)
-            # Nhị phân hóa thích nghi
-            binary = cv2.adaptiveThreshold(upscaled, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-            # Nở nét nhẹ để tách bạch các nét dính
-            kernel_d = np.ones((2,2), np.uint8)
-            dilated = cv2.dilate(binary, kernel_d, iterations=1)
-            # Làm mịn nét
-            processed = cv2.medianBlur(dilated, 3)
+            # Phóng to 5 lần Lanczos (cần thiết để tách nét 7/T)
+            upscaled = cv2.resize(contrast, (gray.shape[1]*5, gray.shape[0]*5), interpolation=cv2.INTER_LANCZOS4)
+            # Lọc Bilateral giữ cạnh sắc, khử nhiễu nền
+            denoised = cv2.bilateralFilter(upscaled, 9, 75, 75)
+            # Nhị phân hóa Otsu
+            _, processed = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             
             # OCR với Allowlist
             allow_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -631,8 +631,8 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "verify_or_restart", "target": "images/invite_friend.jpg", "timeout": 15, "script": restart_script},
             {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
-            # ROI hẹp hơn [x, y, w, h] - Dời x sang 0.44 để tránh hoàn toàn dấu hai chấm :
-            {"action": "get_code", "roi": [0.44, 0.73, 0.10, 0.06], "timeout": 15, "debug": True},
+            # ROI rộng hơn một chút [x, y, w, h] - Dời x về 0.41 để không bị mất chữ đầu
+            {"action": "get_code", "roi": [0.41, 0.73, 0.15, 0.06], "timeout": 15, "debug": True},
             {"action": "click_image", "target": "images/x_cs1.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/nhap_ma_moi1.jpg", "timeout": 2, "confidence": 0.7},

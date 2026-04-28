@@ -109,9 +109,18 @@ FILE_LOCK = threading.Lock()
 BASE_WIDTH = 960.0
 BASE_HEIGHT = 540.0
 
+def extract_device_number(serial):
+    """Trích xuất số từ serial (ví dụ: 192.168.1.61 -> 61, box61 -> 61)"""
+    nums = re.findall(r'\d+', serial)
+    if nums:
+        # Lấy số cuối cùng thường là định danh máy
+        return int(nums[-1])
+    return None
+
 class AutoClickerInstance:
-    def __init__(self, device_id, adb_path, log_func, update_ui_func, report_stats_func):
+    def __init__(self, device_id, device_index, adb_path, log_func, update_ui_func, report_stats_func):
         self.device_id = device_id
+        self.device_index = device_index # 0-based
         self.adb_path = adb_path
         self.log_func = log_func
         self.update_ui_func = update_ui_func
@@ -127,7 +136,7 @@ class AutoClickerInstance:
         self.restart_threshold = 10 
 
     def log(self, msg):
-        self.log_func(f"[{self.device_id}] {msg}")
+        self.log_func(f"[Máy {self.device_index + 1}] {msg}")
 
     def update_status(self, status, is_lagging=False):
         self.status = status
@@ -636,11 +645,10 @@ class AutoClickerInstance:
         with self.shared_data["lock"]: self.shared_data["autowin_barrier"][self.group_id] = 0
         return True
 
-    def run(self, accounts, modes, worker_index, shared_data):
+    def run(self, accounts, modes, shared_data):
         self.accounts_list = accounts
         self.modes = modes
-        self.worker_index = worker_index
-        self.group_id = self.worker_index // 5
+        self.group_id = self.device_index // 5
         self.shared_data = shared_data
         self.running = True
         
@@ -868,7 +876,7 @@ class AutoClickerInstance:
         ]
 
         # 5. CÁC HÀNH ĐỘNG LẶP LẠI (SHARED BATTLE LOGIC)
-        idx = (self.worker_index % 5) + 1
+        idx = (self.device_index % 5) + 1
         t1 = f"images/tuong0{idx}.jpg"
         t2 = f"images/tuong{idx+5:02d}.jpg" 
         
@@ -940,7 +948,7 @@ class AutoClickerInstance:
         if self.modes.get("mua_exp"): self.script += mua_exp_script
         if self.modes.get("dinh_game"): self.script += dinh_game_script
         if self.modes.get("teamup"):
-            if self.worker_index % 5 == 0:
+            if self.device_index % 5 == 0:
                 # Host: wait_for_players đã có sẵn trong teamup_host_script
                 self.script += teamup_host_script
             else:
@@ -968,7 +976,7 @@ class AutoClickerInstance:
             self.log(f">> START: {self.current_account['tk']}")
             
             # Host reset dữ liệu nhóm khi bắt đầu acc mới
-            if self.worker_index % 5 == 0:
+            if self.device_index % 5 == 0:
                 with self.shared_data["lock"]:
                     if self.group_id in self.shared_data["room_ids"]:
                         del self.shared_data["room_ids"][self.group_id]
@@ -1153,7 +1161,13 @@ class MultiPremiumApp(ctk.CTk):
         # Chia serials thành từng nhóm 5
         for i in range(0, len(serials), 5):
             team_serials = serials[i:i+5]
-            team_num = (i // 5) + 1
+            # Xác định Team dựa trên số máy (nếu có)
+            first_s = team_serials[0]
+            first_num = extract_device_number(first_s)
+            if first_num is not None:
+                team_num = ((first_num - 1) // 5) + 1
+            else:
+                team_num = (i // 5) + 1
             
             team_card = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=10, border_width=1, border_color="#333")
             team_card.pack(fill="x", pady=8, padx=10)
@@ -1176,7 +1190,11 @@ class MultiPremiumApp(ctk.CTk):
             device_grid.pack(fill="x", padx=10, pady=(0, 10))
             
             for idx_in_team, s in enumerate(team_serials):
-                global_idx = i + idx_in_team
+                dev_num = extract_device_number(s)
+                # Nếu có số thực tế thì dùng số đó, không thì dùng index 0-based
+                global_idx = (dev_num - 1) if dev_num is not None else (i + idx_in_team)
+                display_num = dev_num if dev_num is not None else (global_idx + 1)
+                
                 self.device_map[s] = global_idx
                 is_host = (idx_in_team == 0)
                 
@@ -1185,12 +1203,12 @@ class MultiPremiumApp(ctk.CTk):
                 
                 # Header ô máy
                 color = "#3b82f6" if is_host else "#888"
-                lbl_role = "HOST" if is_host else f"GUEST {idx_in_team}"
-                ctk.CTkLabel(dev_box, text=lbl_role, font=("Arial", 10, "bold"), text_color=color).pack(pady=(5,0))
+                lbl_role = f"MÁY {display_num} (HOST)" if is_host else f"MÁY {display_num} (GUEST)"
+                ctk.CTkLabel(dev_box, text=lbl_role, font=("Arial", 11, "bold"), text_color=color).pack(pady=(5,0))
                 
                 # Serial & Status
-                ctk.CTkLabel(dev_box, text=s, font=("Arial", 9), text_color="#555").pack()
-                status_lbl = ctk.CTkLabel(dev_box, text="Ready", font=("Arial", 11, "bold"), text_color="#888")
+                ctk.CTkLabel(dev_box, text=f"ID: {s}", font=("Arial", 9), text_color="#555").pack()
+                status_lbl = ctk.CTkLabel(dev_box, text="Sẵn sàng", font=("Arial", 11, "bold"), text_color="#888")
                 status_lbl.pack(pady=2)
                 
                 # Nút điều khiển riêng lẻ (nhỏ)
@@ -1261,10 +1279,10 @@ class MultiPremiumApp(ctk.CTk):
                          break
              self.update_all_ui()
 
-        worker = AutoClickerInstance(serial, self.adb_path, self.add_log, update_single_status, self.report_stats)
+        worker = AutoClickerInstance(serial, self.device_map[serial], self.adb_path, self.add_log, update_single_status, self.report_stats)
         self.active_workers.append(worker)
-        threading.Thread(target=worker.run, args=(self.accounts_data, modes, self.device_map[serial], self.shared_data), daemon=True).start()
-        self.add_log(f"Đã bắt chạy thiết bị: {serial}")
+        threading.Thread(target=worker.run, args=(self.accounts_data, modes, self.shared_data), daemon=True).start()
+        self.add_log(f"Đã bắt chạy thiết bị: {serial} (Máy {self.device_map[serial]+1})")
 
     def stop_single_device(self, serial):
         for w in self.active_workers[:]:
