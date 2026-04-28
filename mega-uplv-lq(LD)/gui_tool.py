@@ -948,10 +948,6 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/ok.png","target2": "images/ok1.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2} ,
-        ]
-
-        # 2.5 GIAI ĐOẠN MUA EXP
-        mua_exp_script = [
             {"action": "click_image", "target": "images/shop.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
             {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
@@ -960,6 +956,39 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            {"action": "press_esc", "wait": 2} ,
+            {"action": "press_esc", "wait": 2} ,
+        ]
+
+        # 2.5 GIAI ĐOẠN MUA EXP
+        mua_exp_script = [
+            {"action": "press_esc", "wait": 2} ,
+            {"action": "press_esc", "wait": 2} ,
+            {"action": "click_coords", "x": 782, "y": 20, "timeout": 2},
+            {"action": "click_coords", "x": 782, "y": 20, "timeout": 2},
+            {"action": "click_coords", "x": 72, "y": 153, "timeout": 2},
+            {"action": "click_coords", "x": 72, "y": 153, "timeout": 2},
+            {"action": "click_image", "target": "images/nhan_nhanh.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 229, "y": 490, "timeout": 2},
+            {"action": "click_coords", "x": 229, "y": 490, "timeout": 2},
+            {"action": "click_image", "target": "images/ok_ruby.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "press_esc", "wait": 2} ,
+            {"action": "click_image", "target": "images/shop.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
+            {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
+            {"action": "click_image", "target": "images/shopruby.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
+            {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 429, "y": 369, "timeout": 2},
+            {"action": "click_coords", "x": 429, "y": 369, "timeout": 2},
+            {"action": "click_image", "target": "images/buy.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
@@ -1037,12 +1066,12 @@ class AutoClickerInstance:
             
             {"action": "wait_for_players", "count": 4, "timeout": 300}, # Chờ 4 người khác vào
            
-            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/da_ro.png", "timeout": 3, "confidence": 0.9},
+            
+            {"action": "click_image_if", "target": "images/da_ro.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/pve.png", "timeout": 30},
             {"action": "click_image", "target": "images/ready.png", "timeout": 30},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ready.png", "timeout": 5, "confidence": 0.9},
         ]
         
         teamup_guest_script = [
@@ -1052,7 +1081,7 @@ class AutoClickerInstance:
             {"action": "wait_for_room", "timeout": 300}, # Chờ Host quét xong ID
             {"action": "input_room_id"},
             {"action": "click_image", "target": "images/vao.png", "timeout": 30},
-            {"action": "click_image", "target": "images/da_ro.png", "timeout": 300},
+           
 
         ]
 
@@ -1063,19 +1092,19 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/logo1.png", "timeout": 50, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/ready.png", "timeout": 2, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/sansang5v5.png", "timeout": 50, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/ok3.png", "timeout": 25, "confidence": 0.9},
+            
+            
+            {"action": "click_image_if", "target": "images/sansang5v5.png", "timeout": 60, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok3.png", "timeout": 50, "confidence": 0.9},
             
             
 
             # Ví dụ các hành động sau khi vào phòng thành công:
             {
                 "action": "loop",
-                "count": 2,
+                "count": 1,
                 "steps": [
-                    {"action": "click_image_if", "target": tuong_target, "timeout": 2, "confidence": 0.7},
+                    {"action": "click_image_if", "target": tuong_target, "timeout": 5, "confidence": 0.7},
                 ]
             },
             
@@ -1118,7 +1147,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/ok.png", "timeout": 2, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 2, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             
         ]
