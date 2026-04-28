@@ -1104,7 +1104,7 @@ class AutoClickerInstance:
                 "action": "loop",
                 "count": 1,
                 "steps": [
-                    {"action": "click_image_if", "target": tuong_target, "timeout": 5, "confidence": 0.7},
+                    {"action": "click_image_if", "target": tuong_target, "timeout": 30, "confidence": 0.7},
                 ]
             },
             
