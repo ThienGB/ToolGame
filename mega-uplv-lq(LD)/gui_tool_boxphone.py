@@ -638,7 +638,7 @@ class AutoClickerInstance:
             with self.shared_data["lock"]:
                 if self.shared_data["autowin_barrier"].get(self.group_id, 0) >= 5: break
             time.sleep(0.5)
-        self.click_image_logic({"action": "click_image_if", "target": "images/on_auto_win.jpg", "timeout": 20, "confidence": 0.8})
+        self.click_image_logic({"action": "click_image_if", "target1": "images/autowin1.jpg", "target2": "images/on_auto_win1.jpg", "timeout": 20, "confidence": 0.8})
         with self.shared_data["lock"]: self.shared_data["autowin_barrier"][self.group_id] = 0
         return True
 
@@ -658,12 +658,12 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.7},
             {"action": "input_account"},
-            {"action": "click_image", "target": "images/tiep_theo.jpg", "timeout": 60, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/tiep_theo.jpg", "target2": "images/tiep_theo1.jpg", "timeout": 60, "confidence": 0.7},
             {"action": "input_password"},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/xong.jpg", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 5},
-            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap.jpg", "timeout": 4, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 5, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 10, "confidence": 0.7},
@@ -688,13 +688,13 @@ class AutoClickerInstance:
                         "script": [
                             {"action": "click_image_if", "target": "images/vao_button.png", "timeout": 5, "confidence": 0.7},
                             {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/on_auto_win.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
-                            {"action": "click_image", "target1": "images/minimize.png", "target2":"images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/on_auto_win.jpg", "target2":"images/on_auto_win_1.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
+                            {"action": "click_image", "target1": "images/minimize.png", "target2":"images/minimize1.jpg", "target3":"images/minimize2.jpg", "timeout": 20, "confidence": 0.7},
                             {"action": "click_any", "wait": 30},
                             {"action": "click_any", "wait": 10},
                             {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/autowin1.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
-                            {"action": "click_image", "target1": "images/minimize.png", "target2":"images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/autowin1.jpg", "target2": "images/off_auto_win.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
+                            {"action": "click_image", "target1": "images/minimize.png", "target2":"images/minimize1.jpg", "target3":"images/minimize2.jpg", "timeout": 20, "confidence": 0.7},
                             {"action": "click_any", "wait": 10},
                         ]
                     },
@@ -742,8 +742,8 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images/pve.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
-            {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "target3": "images/on_auto_win.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
+            {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "target3": "images/minimize2.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.7},
@@ -880,8 +880,8 @@ class AutoClickerInstance:
         
         shared_battle_script = [
             {"action": "click_image", "target1": "images/logo1.png", "target2": "images/logo_auto.jpg", "timeout": 50, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/autowin1.jpg", "timeout": 3, "confidence": 0.85, "use_color": True},
-            {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/autowin1.jpg", "target2": "images/on_auto_win.jpg", "timeout": 3, "confidence": 0.85, "use_color": True},
+            {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "target3": "images/minimize2.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 2, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/san_sang.jpg", "timeout": 40, "confidence": 0.7},
@@ -901,7 +901,7 @@ class AutoClickerInstance:
             },
             {"action": "wait", "timeout": 6},
             {"action": "sync_autowin", "timeout": 120},
-            {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "target3": "images/minimize2.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/victory.png", "timeout": 600, "confidence": 0.7},
             {"action": "wait", "timeout": 10},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.7},
@@ -930,8 +930,8 @@ class AutoClickerInstance:
         # 6. GIAI ĐOẠN ĐĂNG XUẤT
         uplevel_script = [
             {"action": "click_image", "target": "images/logo.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
-            {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "target3": "images/off_auto_win.jpg", "timeout": 20, "confidence": 0.85, "use_color": True},
+            {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "target3": "images/minimize2.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.7},
