@@ -118,9 +118,10 @@ def extract_device_number(serial):
     return None
 
 class AutoClickerInstance:
-    def __init__(self, device_id, device_index, adb_path, log_func, update_ui_func, report_stats_func):
+    def __init__(self, device_id, device_index, is_host, adb_path, log_func, update_ui_func, report_stats_func):
         self.device_id = device_id
         self.device_index = device_index # 0-based
+        self.is_host = is_host
         self.adb_path = adb_path
         self.log_func = log_func
         self.update_ui_func = update_ui_func
@@ -948,7 +949,7 @@ class AutoClickerInstance:
         if self.modes.get("mua_exp"): self.script += mua_exp_script
         if self.modes.get("dinh_game"): self.script += dinh_game_script
         if self.modes.get("teamup"):
-            if self.device_index % 5 == 0:
+            if self.is_host:
                 # Host: wait_for_players đã có sẵn trong teamup_host_script
                 self.script += teamup_host_script
             else:
@@ -976,7 +977,7 @@ class AutoClickerInstance:
             self.log(f">> START: {self.current_account['tk']}")
             
             # Host reset dữ liệu nhóm khi bắt đầu acc mới
-            if self.device_index % 5 == 0:
+            if self.is_host:
                 with self.shared_data["lock"]:
                     if self.group_id in self.shared_data["room_ids"]:
                         del self.shared_data["room_ids"][self.group_id]
@@ -1147,7 +1148,8 @@ class MultiPremiumApp(ctk.CTk):
         try:
             res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
             serials = [l.split('\t')[0] for l in res.stdout.strip().split('\n')[1:] if "device" in l]
-            serials.sort()
+            # Sắp xếp theo số máy trích xuất được
+            serials.sort(key=lambda s: extract_device_number(s) or 0)
         except Exception as e:
             print(f"Lỗi quét ADB: {e}")
 
@@ -1158,19 +1160,27 @@ class MultiPremiumApp(ctk.CTk):
         for w in self.device_list_frame.winfo_children(): w.destroy()
         self.device_cards = {}
         
-        # Chia serials thành từng nhóm 5
-        for i in range(0, len(serials), 5):
-            team_serials = serials[i:i+5]
-            # Xác định Team dựa trên số máy (nếu có)
-            first_s = team_serials[0]
-            first_num = extract_device_number(first_s)
-            if first_num is not None:
-                team_num = ((first_num - 1) // 5) + 1
+        # Nhóm các serial theo Team ID thực tế
+        teams_dict = {}
+        for idx, s in enumerate(serials):
+            num = extract_device_number(s)
+            if num is not None:
+                team_id = ((num - 1) // 5) + 1
             else:
-                team_num = (i // 5) + 1
+                team_id = (idx // 5) + 1
             
-            team_card = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=10, border_width=1, border_color="#333")
-            team_card.pack(fill="x", pady=8, padx=10)
+            if team_id not in teams_dict:
+                teams_dict[team_id] = []
+            teams_dict[team_id].append(s)
+        
+        # Sắp xếp các Team theo thứ tự
+        sorted_team_ids = sorted(teams_dict.keys())
+        
+        for team_num in sorted_team_ids:
+            team_serials = teams_dict[team_num]
+            
+            team_card = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=8, border_width=1, border_color="#333")
+            team_card.pack(fill="x", pady=4, padx=10)
             
             # --- Team Header & Controls ---
             header = ctk.CTkFrame(team_card, fg_color="transparent", height=40)
@@ -1187,41 +1197,31 @@ class MultiPremiumApp(ctk.CTk):
 
             # --- Team Device Grid ---
             device_grid = ctk.CTkFrame(team_card, fg_color="transparent")
-            device_grid.pack(fill="x", padx=10, pady=(0, 10))
+            device_grid.pack(fill="x", padx=10, pady=(0, 5))
             
             for idx_in_team, s in enumerate(team_serials):
                 dev_num = extract_device_number(s)
-                # Nếu có số thực tế thì dùng số đó, không thì dùng index 0-based
-                global_idx = (dev_num - 1) if dev_num is not None else (i + idx_in_team)
+                global_idx = (dev_num - 1) if dev_num is not None else serials.index(s)
                 display_num = dev_num if dev_num is not None else (global_idx + 1)
                 
-                self.device_map[s] = global_idx
                 is_host = (idx_in_team == 0)
+                self.device_map[s] = {"idx": global_idx, "is_host": is_host}
                 
-                dev_box = ctk.CTkFrame(device_grid, fg_color="#252525", corner_radius=6, width=170)
-                dev_box.pack(side="left", padx=4, fill="y", expand=True)
+                # Ô thiết bị nhỏ gọn
+                dev_box = ctk.CTkFrame(device_grid, fg_color="#252525", corner_radius=4, width=150, height=50)
+                dev_box.pack(side="left", padx=2, fill="y", expand=True)
+                dev_box.pack_propagate(False)
                 
-                # Header ô máy
-                color = "#3b82f6" if is_host else "#888"
-                lbl_role = f"MÁY {display_num} (HOST)" if is_host else f"MÁY {display_num} (GUEST)"
-                ctk.CTkLabel(dev_box, text=lbl_role, font=("Arial", 11, "bold"), text_color=color).pack(pady=(5,0))
+                # Role & Number
+                role_color = "#3b82f6" if is_host else "#888"
+                lbl_name = ctk.CTkLabel(dev_box, text=f"MÁY {display_num}", font=("Arial", 11, "bold"), text_color=role_color)
+                lbl_name.pack(pady=(2, 0))
                 
-                # Serial & Status
-                ctk.CTkLabel(dev_box, text=f"ID: {s}", font=("Arial", 9), text_color="#555").pack()
-                status_lbl = ctk.CTkLabel(dev_box, text="Sẵn sàng", font=("Arial", 11, "bold"), text_color="#888")
-                status_lbl.pack(pady=2)
+                # Status (Gọn hơn)
+                status_lbl = ctk.CTkLabel(dev_box, text="Sẵn sàng", font=("Arial", 10), text_color="#666")
+                status_lbl.pack(pady=(0, 2))
                 
-                # Nút điều khiển riêng lẻ (nhỏ)
-                btn_frame = ctk.CTkFrame(dev_box, fg_color="transparent")
-                btn_frame.pack(pady=4)
-                
-                b_start = ctk.CTkButton(btn_frame, text="", image=self.start_icon, width=28, height=28, fg_color="#1f2937", command=lambda sn=s: self.start_single_device(sn))
-                b_start.pack(side="left", padx=2)
-                
-                b_stop = ctk.CTkButton(btn_frame, text="", image=self.stop_icon, width=28, height=28, fg_color="#1f2937", command=lambda sn=s: self.stop_single_device(sn))
-                b_stop.pack(side="left", padx=2)
-                
-                self.device_cards[s] = {"status": status_lbl, "start_btn": b_start, "stop_btn": b_stop}
+                self.device_cards[s] = {"status": status_lbl}
 
         self.btn_refresh.configure(state="normal", text="Làm Mới")
         if not serials:
@@ -1279,10 +1279,11 @@ class MultiPremiumApp(ctk.CTk):
                          break
              self.update_all_ui()
 
-        worker = AutoClickerInstance(serial, self.device_map[serial], self.adb_path, self.add_log, update_single_status, self.report_stats)
+        dev_info = self.device_map[serial]
+        worker = AutoClickerInstance(serial, dev_info["idx"], dev_info["is_host"], self.adb_path, self.add_log, update_single_status, self.report_stats)
         self.active_workers.append(worker)
         threading.Thread(target=worker.run, args=(self.accounts_data, modes, self.shared_data), daemon=True).start()
-        self.add_log(f"Đã bắt chạy thiết bị: {serial} (Máy {self.device_map[serial]+1})")
+        self.add_log(f"Đã bắt chạy thiết bị: {serial} (Máy {dev_info['idx']+1}, {'HOST' if dev_info['is_host'] else 'GUEST'})")
 
     def stop_single_device(self, serial):
         for w in self.active_workers[:]:
