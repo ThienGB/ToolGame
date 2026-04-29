@@ -695,7 +695,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap.jpg", "timeout": 4, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 5, "confidence": 0.7},{"action": "click_image_if", "target": "images/login_garena.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "target3": "images/dang_ky_sau1.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "target3": "images/dang_ky_sau1.jpg", "target4": "images/dkysau.png","timeout": 10, "confidence": 0.7},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
         
