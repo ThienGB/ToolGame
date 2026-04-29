@@ -216,12 +216,7 @@ class AutoClickerInstance:
             if not image_bytes: return None
             
             img = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
-            if img is None: return None
-            
-            # TỐI ƯU SIÊU TỐC: Resize màn hình xuống 0.5x ngay để toàn bộ logic sau này chạy nhanh gấp 4 lần
-            # Game mobile thường có UI to, nên 0.5x vẫn cực kỳ chính xác
-            small_img = cv2.resize(img, (0,0), fx=0.5, fy=0.5, interpolation=cv2.INTER_LINEAR)
-            return small_img
+            return img
         except Exception as e:
             self.log(f"LỖI Chụp màn hình: {str(e)}")
             return None
@@ -327,14 +322,13 @@ class AutoClickerInstance:
             screen = self.get_screenshot()
             if screen is not None:
                 last_screen = screen
-                # Tỉ lệ chuẩn để ảnh mẫu (vốn dựa trên 540p) khớp với màn hình 0.5x hiện tại
-                h_screen_small, w_screen_small = screen.shape[:2]
-                base_scale = h_screen_small / BASE_HEIGHT
+                # Tỉ lệ chuẩn để ảnh mẫu (540p) khớp với màn hình thực tế
+                h_screen, w_screen = screen.shape[:2]
+                base_scale = h_screen / BASE_HEIGHT
 
                 compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 
                 for t_path, t_img in target_data:
-                    # Chỉ quét duy nhất 1 scale chuẩn nhất để tối ưu tốc độ
                     cache_key = (t_path, base_scale, use_color)
                     if cache_key in self.template_cache:
                         t_scaled = self.template_cache[cache_key]
@@ -357,8 +351,7 @@ class AutoClickerInstance:
                         
                     if mv >= confidence:
                         th_s, tw_s = t_scaled.shape[:2]
-                        # Click nhân 2 tọa độ vì đang làm việc trên màn hình 0.5x
-                        self.call_adb(["shell", "input", "tap", str((ml[0]+tw_s//2)*2), str((ml[1]+th_s//2)*2)])
+                        self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
                         self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f})")
                         return True
             time.sleep(0.5) # Tăng lên 0.5s để tránh lag ADB
@@ -384,8 +377,8 @@ class AutoClickerInstance:
                 time.sleep(1)
                 continue
             
-            h_screen_small, w_screen_small = screen.shape[:2]
-            base_scale = h_screen_small / BASE_HEIGHT
+            h_screen, w_screen = screen.shape[:2]
+            base_scale = h_screen / BASE_HEIGHT
             
             for case in cases:
                 triggers = []
@@ -433,14 +426,11 @@ class AutoClickerInstance:
         x, y = step.get("x"), step.get("y")
         if x is not None and y is not None:
             # Scale tọa độ dựa trên thiết bị thực tế
-            # Chú ý: BASE_WIDTH/HEIGHT là 960x540
-            # get_screenshot đã trả về 0.5x, nhưng ta cần scale theo độ phân giải thật của máy
-            # Cách an toàn nhất là lấy độ phân giải thực qua wm size hoặc tính từ screenshot
-            screen = self.get_screenshot() # screen ở đây là 0.5x
+            screen = self.get_screenshot()
             if screen is not None:
-                h_small, w_small = screen.shape[:2]
-                real_x = int(x * (w_small * 2 / BASE_WIDTH))
-                real_y = int(y * (h_small * 2 / BASE_HEIGHT))
+                h_screen, w_screen = screen.shape[:2]
+                real_x = int(x * (w_screen / BASE_WIDTH))
+                real_y = int(y * (h_screen / BASE_HEIGHT))
             else:
                 real_x, real_y = int(x), int(y)
 
@@ -463,8 +453,8 @@ class AutoClickerInstance:
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
-                h_screen_small, w_screen_small = screen.shape[:2]
-                base_scale = h_screen_small / BASE_HEIGHT
+                h_screen, w_screen = screen.shape[:2]
+                base_scale = h_screen / BASE_HEIGHT
 
                 compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
 
@@ -598,11 +588,11 @@ class AutoClickerInstance:
             
             found = False
             for _ in range(3):
-                scr = self.get_screenshot() # scr là 0.5x
+                scr = self.get_screenshot() 
                 if scr is None: continue
                 scr_gray = cv2.cvtColor(scr, cv2.COLOR_BGR2GRAY)
-                h_small, w_small = scr_gray.shape[:2]
-                base_scale = h_small / BASE_HEIGHT
+                h_screen, w_screen = scr_gray.shape[:2]
+                base_scale = h_screen / BASE_HEIGHT
                 
                 cache_key = (f"digit_{digit}", base_scale, False)
                 if cache_key in self.template_cache:
@@ -618,7 +608,7 @@ class AutoClickerInstance:
                 res = cv2.matchTemplate(scr_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
                 _, mv, _, ml = cv2.minMaxLoc(res)
                 if mv >= 0.85:
-                    self.call_adb(["shell", "input", "tap", str((ml[0]+t_scaled.shape[1]//2)*2), str((ml[1]+t_scaled.shape[0]//2)*2)])
+                    self.call_adb(["shell", "input", "tap", str(ml[0]+t_scaled.shape[1]//2), str(ml[1]+t_scaled.shape[0]//2)])
                     found = True; break
                 if found:
                     time.sleep(0.2)
