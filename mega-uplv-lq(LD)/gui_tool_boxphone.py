@@ -200,28 +200,28 @@ class AutoClickerInstance:
 
     def get_screenshot(self):
         try:
-            # Thử dùng exec-out trước với timeout ngắn (5s) để xem ADB có hỗ trợ không
+            # Ưu tiên exec-out screencap -p (định dạng PNG đã nén, truyền qua USB nhanh hơn raw)
             cmd = [self.adb_path, "-s", self.device_id, "exec-out", "screencap", "-p"]
             try:
                 process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
-                if process.returncode != 0:
+                if process.returncode != 0 or not process.stdout:
                     raise Exception("Lỗi exec-out")
                 image_bytes = process.stdout
             except Exception:
-                # Nếu timeout hoặc báo lỗi (do ADB của Xiaowei không hỗ trợ exec-out), chuyển sang shell
+                # Fallback cho các dòng máy cũ/ADB cũ
                 cmd_fallback = [self.adb_path, "-s", self.device_id, "shell", "screencap", "-p"]
-                process = subprocess.run(cmd_fallback, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
+                process = subprocess.run(cmd_fallback, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
                 image_bytes = process.stdout.replace(b"\r\n", b"\n")
 
-            if not image_bytes:
-                self.log("LỖI: Trống dữ liệu ảnh từ thiết bị.")
-                return None
-                
-            image_array = np.frombuffer(image_bytes, dtype=np.uint8)
-            img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-            if img is None:
-                self.log("LỖI: Không thể giải mã ảnh (imdecode fail).")
-            return img
+            if not image_bytes: return None
+            
+            img = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
+            if img is None: return None
+            
+            # TỐI ƯU SIÊU TỐC: Resize màn hình xuống 0.5x ngay để toàn bộ logic sau này chạy nhanh gấp 4 lần
+            # Game mobile thường có UI to, nên 0.5x vẫn cực kỳ chính xác
+            small_img = cv2.resize(img, (0,0), fx=0.5, fy=0.5, interpolation=cv2.INTER_LINEAR)
+            return small_img
         except Exception as e:
             self.log(f"LỖI Chụp màn hình: {str(e)}")
             return None
@@ -327,41 +327,42 @@ class AutoClickerInstance:
             screen = self.get_screenshot()
             if screen is not None:
                 last_screen = screen
-                h_screen, w_screen = screen.shape[:2]
-                scale = h_screen / BASE_HEIGHT
+                # Tỉ lệ chuẩn để ảnh mẫu (vốn dựa trên 540p) khớp với màn hình 0.5x hiện tại
+                # Nếu máy 1080p -> h_small=540 -> scale=1.0 (khớp hoàn hảo với template gốc)
+                # Nếu máy 540p  -> h_small=270 -> scale=0.5
+                base_scale = h_screen_small / BASE_HEIGHT
 
                 compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 
                 for t_path, t_img in target_data:
-                    # Kiểm tra và tạo ảnh đã resize trong cache của instance
-                    # Chỉ quét 2 mức scale quan trọng nhất để tăng tốc: Native và Scaled
-                    for curr_scale in [scale, 1.0]:
-                        cache_key = (t_path, curr_scale, use_color)
-                        if cache_key in self.template_cache:
-                            t_scaled = self.template_cache[cache_key]
+                    # Chỉ quét duy nhất 1 scale chuẩn nhất để tối ưu tốc độ
+                    cache_key = (t_path, base_scale, use_color)
+                    if cache_key in self.template_cache:
+                        t_scaled = self.template_cache[cache_key]
+                    else:
+                        if abs(base_scale - 1.0) < 0.001:
+                            t_scaled = t_img
                         else:
-                            if abs(curr_scale - 1.0) < 0.001:
-                                t_scaled = t_img
-                            else:
-                                tw, th = int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)
-                                t_scaled = cv2.resize(t_img, (tw, th), interpolation=cv2.INTER_LINEAR)
-                            self.template_cache[cache_key] = t_scaled
+                            tw, th = int(t_img.shape[1] * base_scale), int(t_img.shape[0] * base_scale)
+                            t_scaled = cv2.resize(t_img, (max(1, tw), max(1, th)), interpolation=cv2.INTER_LINEAR)
+                        self.template_cache[cache_key] = t_scaled
 
-                        if compare_screen.shape[0] < t_scaled.shape[0] or compare_screen.shape[1] < t_scaled.shape[1]:
-                            continue
-                            
-                        res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
-                        _, mv, _, ml = cv2.minMaxLoc(res)
+                    if compare_screen.shape[0] < t_scaled.shape[0] or compare_screen.shape[1] < t_scaled.shape[1]:
+                        continue
                         
-                        if mv > best_match["val"]:
-                            best_match = {"val": mv, "name": os.path.basename(t_path)}
-                            
-                        if mv >= confidence:
-                            th_s, tw_s = t_scaled.shape[:2]
-                            self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
-                            self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f} @ {curr_scale:.2f}x)")
-                            return True
-            time.sleep(0.2)
+                    res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
+                    _, mv, _, ml = cv2.minMaxLoc(res)
+                    
+                    if mv > best_match["val"]:
+                        best_match = {"val": mv, "name": os.path.basename(t_path)}
+                        
+                    if mv >= confidence:
+                        th_s, tw_s = t_scaled.shape[:2]
+                        # Click nhân 2 tọa độ vì đang làm việc trên màn hình 0.5x
+                        self.call_adb(["shell", "input", "tap", str((ml[0]+tw_s//2)*2), str((ml[1]+th_s//2)*2)])
+                        self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f})")
+                        return True
+            time.sleep(0.1) # Giảm sleep xuống để phản hồi nhanh hơn
         
         if last_screen is not None:
             cv2.imwrite("debug_fail.png", last_screen)
@@ -384,8 +385,8 @@ class AutoClickerInstance:
                 time.sleep(1)
                 continue
             
-            h_screen, w_screen = screen.shape[:2]
-            scale = h_screen / BASE_HEIGHT
+            h_screen_small, w_screen_small = screen.shape[:2]
+            base_scale = h_screen_small / BASE_HEIGHT
             
             for case in cases:
                 triggers = []
@@ -404,38 +405,50 @@ class AutoClickerInstance:
                     
                     scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                     
-                    for curr_scale in [scale, 1.0]:
-                        cache_key = (t_path, curr_scale, False)
-                        if cache_key in self.template_cache:
-                            t_scaled = self.template_cache[cache_key]
+                    cache_key = (t_path, base_scale, False)
+                    if cache_key in self.template_cache:
+                        t_scaled = self.template_cache[cache_key]
+                    else:
+                        if abs(base_scale - 1.0) < 0.001:
+                            t_scaled = t_img
                         else:
-                            if abs(curr_scale - 1.0) < 0.001:
-                                t_scaled = t_img
-                            else:
-                                t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_LINEAR)
-                            self.template_cache[cache_key] = t_scaled
+                            tw, th = int(t_img.shape[1] * base_scale), int(t_img.shape[0] * base_scale)
+                            t_scaled = cv2.resize(t_img, (max(1, tw), max(1, th)), interpolation=cv2.INTER_LINEAR)
+                        self.template_cache[cache_key] = t_scaled
+                    
+                    if scr_gray.shape[0] < t_scaled.shape[0] or scr_gray.shape[1] < t_scaled.shape[1]:
+                        continue
                         
-                        if scr_gray.shape[0] < t_scaled.shape[0] or scr_gray.shape[1] < t_scaled.shape[1]:
-                            continue
-                            
-                        res = cv2.matchTemplate(scr_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
-                        _, mv, _, _ = cv2.minMaxLoc(res)
-                        if mv >= case_conf:
-                            self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({mv:.2f})")
-                            for s_step in sub_script:
-                                if not self.running: break
-                                self.execute_step(s_step)
-                            return True 
-            time.sleep(0.2)
+                    res = cv2.matchTemplate(scr_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
+                    _, mv, _, _ = cv2.minMaxLoc(res)
+                    if mv >= case_conf:
+                        self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({mv:.2f})")
+                        for s_step in sub_script:
+                            if not self.running: break
+                            self.execute_step(s_step)
+                        return True 
+            time.sleep(0.1)
         return False
 
     def click_coords_logic(self, step):
         x, y = step.get("x"), step.get("y")
         if x is not None and y is not None:
+            # Scale tọa độ dựa trên thiết bị thực tế
+            # Chú ý: BASE_WIDTH/HEIGHT là 960x540
+            # get_screenshot đã trả về 0.5x, nhưng ta cần scale theo độ phân giải thật của máy
+            # Cách an toàn nhất là lấy độ phân giải thực qua wm size hoặc tính từ screenshot
+            screen = self.get_screenshot() # screen ở đây là 0.5x
+            if screen is not None:
+                h_small, w_small = screen.shape[:2]
+                real_x = int(x * (w_small * 2 / BASE_WIDTH))
+                real_y = int(y * (h_small * 2 / BASE_HEIGHT))
+            else:
+                real_x, real_y = int(x), int(y)
+
             delay = step.get("timeout", 0)
             if delay > 0: time.sleep(delay)
-            self.call_adb(["shell", "input", "tap", str(x), str(y)])
-            self.log(f"CLICK TỌA ĐỘ: ({x}, {y})")
+            self.call_adb(["shell", "input", "tap", str(real_x), str(real_y)])
+            self.log(f"CLICK TỌA ĐỘ: ({real_x}, {real_y})")
             return True
         return False
 
@@ -451,29 +464,26 @@ class AutoClickerInstance:
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
-                h_screen, w_screen = screen.shape[:2]
-                scale = h_screen / BASE_HEIGHT
+                h_screen_small, w_screen_small = screen.shape[:2]
+                base_scale = h_screen_small / BASE_HEIGHT
 
                 compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
 
-                for curr_scale in [scale, 1.0]:
-                    cache_key = (target, curr_scale, use_color)
-                    if cache_key in self.template_cache:
-                        t_scaled = self.template_cache[cache_key]
-                    else:
-                        if abs(curr_scale - 1.0) < 0.001:
-                            t_scaled = t_img
-                        else:
-                            t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_LINEAR)
-                        self.template_cache[cache_key] = t_scaled
+                cache_key = (target, base_scale, use_color)
+                if cache_key in self.template_cache:
+                    t_scaled = self.template_cache[cache_key]
+                else:
+                    tw, th = int(t_img.shape[1] * base_scale), int(t_img.shape[0] * base_scale)
+                    t_scaled = cv2.resize(t_img, (max(1, tw), max(1, th)), interpolation=cv2.INTER_LINEAR)
+                    self.template_cache[cache_key] = t_scaled
 
-                    if compare_screen.shape[0] < t_scaled.shape[0] or compare_screen.shape[1] < t_scaled.shape[1]:
-                        continue
-                        
-                    res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
-                    _, mv, _, _ = cv2.minMaxLoc(res)
-                    if mv >= conf: return True
-            time.sleep(0.2)
+                if compare_screen.shape[0] < t_scaled.shape[0] or compare_screen.shape[1] < t_scaled.shape[1]:
+                    continue
+                    
+                res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
+                _, mv, _, _ = cv2.minMaxLoc(res)
+                if mv >= conf: return True
+            time.sleep(0.1)
         return False
 
     def click_any_logic(self, step):
@@ -589,27 +599,32 @@ class AutoClickerInstance:
             
             found = False
             for _ in range(3):
-                scr = self.get_screenshot()
+                scr = self.get_screenshot() # scr là 0.5x
                 if scr is None: continue
                 scr_gray = cv2.cvtColor(scr, cv2.COLOR_BGR2GRAY)
+                h_small, w_small = scr_gray.shape[:2]
+                base_scale = h_small / BASE_HEIGHT
                 
-                # Thử cả scale và native
-                for curr_scale in [scale, 1.0]:
-                    if abs(curr_scale - 1.0) < 0.001: t_s = t_img
-                    else: t_s = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_AREA)
+                cache_key = (f"digit_{digit}", base_scale, False)
+                if cache_key in self.template_cache:
+                    t_scaled = self.template_cache[cache_key]
+                else:
+                    tw, th = int(t_img.shape[1] * base_scale), int(t_img.shape[0] * base_scale)
+                    t_scaled = cv2.resize(t_img, (max(1, tw), max(1, th)), interpolation=cv2.INTER_LINEAR)
+                    self.template_cache[cache_key] = t_scaled
+                
+                if scr_gray.shape[0] < t_scaled.shape[0] or scr_gray.shape[1] < t_scaled.shape[1]:
+                    continue
                     
-                    if scr_gray.shape[0] < t_s.shape[0] or scr_gray.shape[1] < t_s.shape[1]:
-                        continue
-                        
-                    res = cv2.matchTemplate(scr_gray, t_s, cv2.TM_CCOEFF_NORMED)
-                    _, mv, _, ml = cv2.minMaxLoc(res)
-                    if mv >= 0.85:
-                        self.call_adb(["shell", "input", "tap", str(ml[0]+t_s.shape[1]//2), str(ml[1]+t_s.shape[0]//2)])
-                        found = True; break
+                res = cv2.matchTemplate(scr_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
+                _, mv, _, ml = cv2.minMaxLoc(res)
+                if mv >= 0.85:
+                    self.call_adb(["shell", "input", "tap", str((ml[0]+t_scaled.shape[1]//2)*2), str((ml[1]+t_scaled.shape[0]//2)*2)])
+                    found = True; break
                 if found:
-                    time.sleep(0.3)
+                    time.sleep(0.2)
                     break
-                time.sleep(0.5)
+                time.sleep(0.3)
         return True
 
     def notify_joined_logic(self):
