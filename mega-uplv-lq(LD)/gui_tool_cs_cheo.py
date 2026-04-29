@@ -23,58 +23,11 @@ from PIL import Image
 import sys
 import gc
 
-# --- Fix WinError 1114 & SSL for torch/easyocr ---
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-import ssl
-try:
-    ssl._create_default_https_context = ssl._create_unverified_context
-except: pass
-
-if getattr(sys, 'frozen', False):
-    _meipass = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
-    _internal = os.path.join(_meipass, '_internal')
-    for dp in [_meipass, _internal, os.path.join(_internal, 'torch', 'lib')]:
-        if os.path.exists(dp):
-            if hasattr(os, 'add_dll_directory'):
-                try: os.add_dll_directory(dp)
-                except: pass
-            os.environ['PATH'] = dp + os.pathsep + os.environ.get('PATH', '')
-    # Force load OpenMP to avoid 1114 conflict
-    try:
-        import ctypes
-        ctypes.CDLL(os.path.join(_internal, 'torch', 'lib', 'libiomp5md.dll'))
-    except: pass
 
 # Ensure console output uses UTF-8
 try:
     if hasattr(sys.stdout, 'reconfigure'): sys.stdout.reconfigure(encoding='utf-8')
 except: pass
-
-# --- Biến toàn cục để nạp OCR ---
-easyocr = None
-_ocr_reader = None
-OCR_LOCK = threading.Lock()
-
-def init_ocr_reader(log_func=None):
-    global easyocr, _ocr_reader
-    if _ocr_reader is not None:
-        return _ocr_reader
-    try:
-        if log_func: log_func("Đang nạp bộ xử lý OCR...")
-        import easyocr as ocr_lib
-        try:
-            import torch
-            torch.set_num_threads(1)
-        except: pass
-        easyocr = ocr_lib
-        # Nạp reader cho tiếng Anh/Số
-        _reader = easyocr.Reader(['en'], gpu=False, verbose=False)
-        _ocr_reader = _reader
-        if log_func: log_func("Nạp OCR thành công.")
-        return _ocr_reader
-    except Exception as e:
-        if log_func: log_func(f"LỖI OCR: {str(e)}")
-        return None
 
 import tkinter.filedialog as fd
 
@@ -185,99 +138,59 @@ class AutoClickerInstance:
             self.log(f"LỖI Chụp màn hình: {str(e)}")
             return None
             
-    def get_clipboard(self, debug=False):
-        # Giữ lại để tương thích, nhưng khuyến khích dùng action 'get_code'
-        return self.get_code_via_ocr(debug=debug)
-
-    def get_code_via_ocr(self, roi=None, timeout=15, debug=False):
-        """Đọc mã mời bằng OCR (EasyOCR)."""
-        global _ocr_reader
-        reader = init_ocr_reader(self.log)
-        if reader is None: return ""
-
-        def extract_game_code(text):
-            if not text: return ""
-            # 1. Ưu tiên tìm dạng --ABCDE--
-            m = re.search(r'--([a-zA-Z0-9]{5,15})--', text)
-            if m: return m.group(1)
-            
-            # 2. Làm sạch text khỏi các ký tự rác UI ở đầu/cuối
-            text = re.sub(r'^[icl:.\s]+', '', text)
-            text = re.sub(r'[icl:.\s]+$', '', text)
-            
-            # 3. Tách text thành các từ để tìm mã riêng lẻ
-            blacklist = ["ma", "moi", "cua", "toi", "sao", "chep"]
-            words = text.replace(':', ' ').split()
-            for word in words:
-                # Xử lý dính chữ (nếu OCR đọc dính "toi:ABCDEF")
-                clean = ''.join(c for c in word if c.isalnum())
-                if any(clean.lower().endswith(b) for b in blacklist): continue
-                if any(clean.lower().startswith(b) for b in blacklist): continue
-                
-                has_letter = any(c.isalpha() for c in clean)
-                has_digit  = any(c.isdigit() for c in clean)
-                # Mã game lq thường từ 8-12 ký tự, chứa cả chữ và số
-                if 8 <= len(clean) <= 12 and has_letter and has_digit:
-                    return clean
+    def get_clipboard(self):
+        """Đọc clipboard bằng cách ép buộc App Clipper lên Foreground để sync (Fix Android 10+)."""
+        pkg = "com.example.clipper"
+        path_in_android = f"/sdcard/Android/data/{pkg}/files/clip.txt"
+        
+        # 1. Ép buộc mở App Clipper lên (Dùng monkey cho chắc chắn 100%)
+        self.log("[CLIPBOARD] Đang đồng bộ...")
+        self.call_adb(["shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
+        time.sleep(1.5) # Đợi app hiện lên, sync và tự ẩn mình
+        
+        # 2. Đọc file kết quả
+        cmd = [self.adb_path, "-s", self.device_id, "shell", f"cat {path_in_android} 2>/dev/null"]
+        res = subprocess.run(cmd, capture_output=True, text=False, creationflags=subprocess.CREATE_NO_WINDOW)
+        
+        if not res.stdout: 
+            self.log("!! [CLIPBOARD] File trống hoặc chưa có mã.")
+            return ""
+        
+        try:
+            raw_output = res.stdout.decode('utf-8', errors='ignore').strip()
+        except:
             return ""
 
-        # Vùng ROI mặc định nếu không truyền vào
-        if roi is None:
-            roi = [0.25, 0.35, 0.50, 0.30] 
+        if not raw_output: return ""
         
-        start = time.time()
-        last_code = ""
-        consistent_count = 0
+        lines = raw_output.split('\n')
+        clean_lines = [l.strip() for l in lines if l.strip() and "adb" not in l.lower() and "*" not in l]
         
-        while time.time() - start < timeout and self.running:
-            screen = self.get_screenshot()
-            if screen is None: continue
+        if clean_lines:
+            content = clean_lines[-1]
             
-            h_f, w_f = screen.shape[:2]
-            rx, ry, rw, rh = roi
-            x1, y1, x2, y2 = int(rx*w_f), int(ry*h_f), int((rx+rw)*w_f), int((ry+rh)*h_f)
-            
-            crop = screen[max(0,y1):min(h_f,y2), max(0,x1):min(w_f,x2)]
-            if crop.size == 0: continue
-            
-            # --- Tối ưu ảnh PRO MAX (Z-7, B-3, h-6) ---
-            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-            # Tăng độ tương phản
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            contrast = clahe.apply(gray)
-            # Phóng to 5 lần Lanczos (cần thiết để tách nét 7/T)
-            upscaled = cv2.resize(contrast, (gray.shape[1]*5, gray.shape[0]*5), interpolation=cv2.INTER_LANCZOS4)
-            # Lọc Bilateral giữ cạnh sắc, khử nhiễu nền
-            denoised = cv2.bilateralFilter(upscaled, 9, 75, 75)
-            # Nhị phân hóa Otsu
-            _, processed = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            
-            # OCR với Allowlist
-            allow_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-            with OCR_LOCK:
-                res = reader.readtext(processed, detail=0, allowlist=allow_chars, contrast_ths=0.1, adjust_contrast=0.8)
-            full_text = " ".join(res)
-            
-            code = extract_game_code(full_text)
-            if code:
-                if debug: self.log(f"[OCR] Đọc được: {code}")
-                # Cơ chế Vòng lặp bỏ phiếu: Cần 2 lần liên tiếp giống nhau để đảm bảo đúng
-                if code == last_code:
-                    consistent_count += 1
-                else:
-                    last_code = code
-                    consistent_count = 1
-                
-                if consistent_count >= 2:
-                    self.log(f"==> OCR Xác nhận mã (2 lần khớp): {code}")
-                    return code
+            # --- LỌC LẤY MÃ MỜI GIỮA HAI DẤU GẠCH NGANG -- ---
+            import re
+            match = re.search(r'--([A-Za-z0-9]+)--', content)
+            if match:
+                content = match.group(1)
+                self.log(f"==> [CLIPBOARD] Đã lọc mã mời: {content}")
             else:
-                last_code = ""
-                consistent_count = 0
-                
-            time.sleep(0.5)
+                self.log(f"==> [CLIPBOARD] Lấy mã thành công (Raw): {content}")
             
+            return content
+        
         return ""
+        # service call clipboard 2 i32 1 (lấy dữ liệu clipboard)
+        try:
+            cmd_service = [self.adb_path, "-s", self.device_id, "shell", "service call clipboard 2 i32 1"]
+            res_service = subprocess.run(cmd_service, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            # Kết quả service call cần parse rất phức tạp (HEX), nên đây chỉ là phương án dự phòng
+        except: pass
+
+        # 3. Thất bại
+        return ""
+
 
 
     def execute_step(self, step):
@@ -321,8 +234,22 @@ class AutoClickerInstance:
             res = self.press_esc_logic(step)
         elif action == "verify_or_restart":
             res = self.verify_or_restart_logic(step)
+        elif action == "prepare_clipper":
+            pkg = "com.example.clipper"
+            # Khởi động Service của APK
+            self.log("Đang khởi động Clipper Service...")
+            self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
+            # Xóa file cũ để tránh nhận nhầm mã cũ
+            self.call_adb(["shell", "rm", "-f", f"/sdcard/Android/data/{pkg}/files/clip.txt"])
+            res = True
         elif action == "get_code":
-            self.last_captured_code = self.get_code_via_ocr(roi=step.get("roi"), timeout=step.get("timeout", 15), debug=step.get("debug", False))
+            # Lấy mã hoàn toàn từ Clipboard Helper
+            self.last_captured_code = self.get_clipboard()
+            
+            if self.last_captured_code:
+                self.log(f"==> KẾT QUẢ LẤY MÃ: {self.last_captured_code}")
+            else:
+                self.log("!! KẾT QUẢ LẤY MÃ: Thất bại (Vui lòng kiểm tra APK Helper)")
             res = (self.last_captured_code != "")
         elif action == "input_partner_code":
             self.call_adb(["shell", "input", "keyevent"] + ["67"] * 25) # Xóa cũ
@@ -490,7 +417,8 @@ class AutoClickerInstance:
         screen = self.get_screenshot()
         if screen is not None:
             h, w = screen.shape[:2]
-            self.call_adb(["shell", "input", "tap", str(w//2), str(h//2)])
+            # Click thấp xuống một chút (60% màn hình) thay vì giữa (50%)
+            self.call_adb(["shell", "input", "tap", str(w//2), str(int(h * 0.6))])
             return True
         return False
 
@@ -575,9 +503,10 @@ class AutoClickerInstance:
             {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 5},
             {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap.jpg", "timeout": 4, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 5, "confidence": 0.7},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
             {
                 "action": "cases",
                 "timeout" : 120,
@@ -588,9 +517,10 @@ class AutoClickerInstance:
                         "script": [
                             {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
                             {"action": "wait", "timeout": 2},
-                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
                             {"action": "wait", "timeout": 2},
-                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
                             {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7}
@@ -610,10 +540,10 @@ class AutoClickerInstance:
                     }
                 ]
             },
-            {"action": "press_esc", "wait": 3},
-            {"action": "click_any"},
-            {"action": "press_esc", "wait": 3},
-            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 3},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
         
@@ -631,13 +561,15 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "verify_or_restart", "target": "images/invite_friend.jpg", "timeout": 15, "script": restart_script},
             {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
-            # ROI rộng hơn một chút [x, y, w, h] - Dời x về 0.41 để không bị mất chữ đầu
-            {"action": "get_code", "roi": [0.41, 0.73, 0.15, 0.06], "timeout": 15, "debug": True},
+            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 5, "confidence": 0.7},
+            {"action": "wait", "timeout": 2},
+            {"action": "get_code", "timeout": 10}, # Hàm get_code bây giờ sẽ ưu tiên Clipboard
             {"action": "click_image", "target": "images/x_cs1.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/nhap_ma_moi1.jpg", "timeout": 2, "confidence": 0.7},
             {"action": "click_image", "target": "images/input_gift_code.jpg", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/input_gift_code.jpg", "timeout": 2, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "timeout": 2, "confidence": 0.7},
         ]
         
         input_code_script = [
@@ -648,11 +580,17 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/ok_cs.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "click_image", "target": "images/xac_nhan_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/xac_nhan_chung_suc1.jpg", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image", "target": "images/tiep_tuc_cs.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "click_image", "target": "images/x_cs2.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "press_esc", "wait": 3},
-            {"action": "press_esc", "wait": 3},
-            {"action": "click_image", "target": "images/setting.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image", "target": "images/back_sk.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/back_sk.jpg", "timeout": 3, "confidence": 0.7},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/logout.jpg", "timeout": 30, "confidence": 0.7},
+            {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 15},
         ]
@@ -666,6 +604,15 @@ class AutoClickerInstance:
                         self.update_ui_func(); break
             if not self.current_account: break
             self.log(f">> START {self.role_name}: {self.current_account['tk']}")
+            
+            # --- DỌN DẸP VÀ KHỞI ĐỘNG CLIPPER SERVICE CHO VÒNG MỚI ---
+            self.last_captured_code = None
+            pkg = "com.example.clipper"
+            # Bật Service để hiện Nút nổi (Pill)
+            self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
+            # Xóa mã cũ
+            path_in_android = f"/sdcard/Android/data/{pkg}/files/clip.txt"
+            self.call_adb(["shell", "rm", "-f", path_in_android])
 
             # --- THỰC HIỆN ĐĂNG NHẬP TRƯỚC ---
             self.update_status("Đang Login...")
@@ -693,9 +640,6 @@ class AutoClickerInstance:
             # 1. Tìm và click nút LẤY MÃ
             self.update_status("Đang lấy mã...")
             
-            # Đọc mã cũ đang có trong clipboard để tránh trùng với mã mới
-            old_code = self.get_clipboard()
-            
             for retry in range(2):
                 copy_ok = True
                 for step in copy_script:
@@ -710,7 +654,7 @@ class AutoClickerInstance:
             # 2. Đọc mã mới đã được lưu trong self.last_captured_code
             my_code = self.last_captured_code
             if not my_code:
-                self.log("!! KHÔNG LẤY ĐƯỢC MÃ QUA OCR. Bỏ qua.")
+                self.log("!! KHÔNG LẤY ĐƯỢC MÃ QUA CLIPBOARD. Bỏ qua.")
                 success = False
             else:
                 self.log(f"==> Đã lấy được mã: {my_code}")
@@ -807,9 +751,6 @@ class MultiPremiumApp(ctk.CTk):
         # Redirect stdout và stderr về log UI
         sys.stdout = StdoutRedirector(self.add_log)
         sys.stderr = StdoutRedirector(self.add_log)
-        
-        # Nạp OCR ở chế độ background
-        threading.Thread(target=init_ocr_reader, args=(self.add_log,), daemon=True).start()
 
     def setup_layout(self):
         self.sidebar = ctk.CTkFrame(self, width=220, fg_color=NAV_COLOR); self.sidebar.pack(side="left", fill="y")
