@@ -1,1 +1,1 @@
-adb
+C:\Program Files (x86)\BoxPhone86\tools\adb.exe
