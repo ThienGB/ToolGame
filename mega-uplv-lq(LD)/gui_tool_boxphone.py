@@ -674,111 +674,111 @@ class AutoClickerInstance:
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
              ]
         tutorial_script = [
-        #     {
-        #         "action": "cases",
-        #         "timeout" : 120,
-        #         "cases": [
-        #             {
-        #                 "trigger": "images/vao_tran_button_1.png",
-        #                 "confidence": 0.7,
-        #                 "script": [
-        #                     {"action": "click_image_if", "target": "images/batdau.png", "timeout": 3, "confidence": 0.7},
-        #                     {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.7},
-        #                     {"action": "wait", "timeout": 5},
-        #                     {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "target3": "images/vao_tran_button_2.jpg","target4": "images/vao_tran_box.png", "timeout": 30, "confidence": 0.7},
-        #                     {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "target3": "images/vao_tran_button_2.jpg","target4": "images/vao_tran_box.png", "timeout": 4, "confidence": 0.7}
-        #                 ]
-        #             },
-        #             {
-        #                 "trigger": "images/vao_button.png", 
-        #                 "confidence": 0.7,
-        #                 "script": [
-        #                     {"action": "click_image_if", "target": "images/vao_button.png", "timeout": 5, "confidence": 0.7},
-        #                     {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
-        #                     {"action": "click_image_if", "target1": "images/on_auto_win.jpg", "target2":"images/on_auto_win_1.jpg", "timeout": 20, "confidence": 0.75, "use_color": True},
-        #                     {"action": "click_image", "target1": "images/minimize.png", "target2":"images/minimize1.jpg", "target3":"images/minimize2.jpg", "target4":"images/minimize3.jpg", "timeout": 20, "confidence": 0.7},
-        #                     {"action": "click_any", "wait": 30},
-        #                     {"action": "click_any", "wait": 10},
-        #                     {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
-        #                     {"action": "click_image_if", "target1": "images/autowin1.jpg", "target2": "images/off_auto_win.jpg", "timeout": 20, "confidence": 0.75, "use_color": True},
-        #                     {"action": "click_image", "target1": "images/minimize.png", "target2":"images/minimize1.jpg", "target3":"images/minimize2.jpg", "target4":"images/minimize3.jpg", "timeout": 20, "confidence": 0.7},
-        #                     {"action": "click_any", "wait": 10},
-        #                 ]
-        #             },
-        #             {
-        #                 "trigger": "images/an_de_tro_lai.jpg",
-        #                 "confidence": 0.7,
-        #                 "script": [
-        #                     {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
-        #                     {"action": "wait", "timeout": 2},
-        #                     {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
-        #                     {"action": "wait", "timeout": 2},
-        #                     {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
-        #                     {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
-        #                     {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
-        #                     {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7}
-        #                 ]
-        #             },
-        #             {
-        #                 "trigger": "images/x_start.jpg",
-        #                 "confidence": 0.7,
-        #                 "script": [
-        #                     {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
-        #                     {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
-        #                     {"action": "click_image_if", "target1": "images/x_start1.jpg", "confidence": 0.7},
-        #                 ]
-        #             },
-        #             {
-        #                 "trigger": "images/pvp.png",
-        #                 "confidence": 0.7,
-        #                 "script": []
-        #             }
-        #         ]
-        #     },
-        #     {"action": "press_esc", "wait": 3},
-        #     {"action": "click_any"},
-        #     {"action": "press_esc", "wait": 3},
-        #     {"action": "press_esc", "wait": 3} ,
+            {
+                "action": "cases",
+                "timeout" : 120,
+                "cases": [
+                    {
+                        "trigger": "images/vao_tran_button_1.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 3, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.7},
+                            {"action": "wait", "timeout": 5},
+                            {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "target3": "images/vao_tran_button_2.jpg","target4": "images/vao_tran_box.png", "timeout": 30, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "target3": "images/vao_tran_button_2.jpg","target4": "images/vao_tran_box.png", "timeout": 4, "confidence": 0.7}
+                        ]
+                    },
+                    {
+                        "trigger": "images/vao_button.png", 
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/vao_button.png", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/on_auto_win.jpg", "target2":"images/on_auto_win_1.jpg", "timeout": 20, "confidence": 0.75, "use_color": True},
+                            {"action": "click_image", "target1": "images/minimize.png", "target2":"images/minimize1.jpg", "target3":"images/minimize2.jpg", "target4":"images/minimize3.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_any", "wait": 30},
+                            {"action": "click_any", "wait": 10},
+                            {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/autowin1.jpg", "target2": "images/off_auto_win.jpg", "timeout": 20, "confidence": 0.75, "use_color": True},
+                            {"action": "click_image", "target1": "images/minimize.png", "target2":"images/minimize1.jpg", "target3":"images/minimize2.jpg", "target4":"images/minimize3.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_any", "wait": 10},
+                        ]
+                    },
+                    {
+                        "trigger": "images/an_de_tro_lai.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7}
+                        ]
+                    },
+                    {
+                        "trigger": "images/x_start.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/x_start1.jpg", "confidence": 0.7},
+                        ]
+                    },
+                    {
+                        "trigger": "images/pvp.png",
+                        "confidence": 0.7,
+                        "script": []
+                    }
+                ]
+            },
+            {"action": "press_esc", "wait": 3},
+            {"action": "click_any"},
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3} ,
             
         
         
-        # # 2. GIAI ĐOẠN VƯỢT TÂN THỦ (Full chi tiết từ LD)
+        # 2. GIAI ĐOẠN VƯỢT TÂN THỦ (Full chi tiết từ LD)
         
-        #     {"action": "click_image", "target": "images/pvp.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image", "target": "images/1v1.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.7},
-        #     {"action": "click_image", "target": "images/pve.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "target3": "images/on_auto_win.jpg", "timeout": 20, "confidence": 0.75, "use_color": True},
-        #     {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "target3": "images/minimize2.jpg", "target4": "images/minimize3.jpg", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
-        #     {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.7},
-        #     {"action": "click_image", "target1": "images/tuong5.png",  "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.7},
-        #     {"action": "wait", "timeout": 20},
-        #     {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image_if", "target": "images/close.png", "timeout": 10, "confidence": 0.7},
-        #     {"action": "wait", "timeout": 5},
-        #     {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
-        #     {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.7},
-        #     {"action": "click_image", "target1": "images/tuong5.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.7},
-        #     {"action": "wait", "timeout": 20},
-        #     {"action": "click_image_if", "target": "images/victory.png", "timeout": 10, "confidence": 0.7},
-        #     {"action": "wait", "timeout": 5},
-        #     {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.7},
-        #     {"action": "wait", "timeout": 3},
-        #     {"action": "press_esc", "wait": 2},
-        #     {"action": "click_image", "target": "images/nhan_sktt.png", "timeout": 60, "confidence": 0.7},
-        #     {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.7},
-        #     {"action": "click_image", "target1": "images/krixi.png", "target2": "images/krixi_no_download.jpg", "timeout": 10, "confidence": 0.7},
-        #     {"action": "click_any", "wait": 2},
-        #     {"action": "click_any", "wait": 2},
+            {"action": "click_image", "target": "images/pvp.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/1v1.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image", "target": "images/pve.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/autowin.png", "target2": "images/autowin1.jpg", "target3": "images/on_auto_win.jpg", "timeout": 20, "confidence": 0.75, "use_color": True},
+            {"action": "click_image", "target1": "images/minimize.png", "target2": "images/minimize1.jpg", "target3": "images/minimize2.jpg", "target4": "images/minimize3.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/tuong5.png",  "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.7},
+            {"action": "wait", "timeout": 20},
+            {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 10, "confidence": 0.7},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/tuong5.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.7},
+            {"action": "wait", "timeout": 20},
+            {"action": "click_image_if", "target": "images/victory.png", "timeout": 10, "confidence": 0.7},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.7},
+            {"action": "wait", "timeout": 3},
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_image", "target": "images/nhan_sktt.png", "timeout": 60, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/krixi.png", "target2": "images/krixi_no_download.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "click_any", "wait": 2},
+            {"action": "click_any", "wait": 2},
             
             {"action": "click_image_if", "target1": "images/lam_event.png", "target2": "images/lam_box.png", "timeout": 10, "confidence": 0.7},
             {"action": "press_esc", "wait": 2} ,
