@@ -668,9 +668,12 @@ class AutoClickerInstance:
             {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg","target3": "images/xong.png","target4": "images/okdangnhapp.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 5},
             {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap.jpg", "timeout": 4, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 5, "confidence": 0.7},{"action": "click_image_if", "target": "images/login_garena.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "target3": "images/dang_ky_sau1.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "clear_android_data", "package": "com.garena.gaslite"},
+             ]
+        tutorial_script = [
             {
                 "action": "cases",
                 "timeout" : 120,
@@ -679,11 +682,11 @@ class AutoClickerInstance:
                         "trigger": "images/vao_tran_button_1.png",
                         "confidence": 0.7,
                         "script": [
-                            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 3, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.7},
                             {"action": "wait", "timeout": 5},
-                            {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "target3": "images/vao_tran_button_2.jpg", "timeout": 30, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "target3": "images/vao_tran_button_2.jpg", "timeout": 4, "confidence": 0.7}
+                            {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "target3": "images/vao_tran_button_2.jpg","target4": "images/vao_tran_box.png", "timeout": 30, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button_3.jpg", "target3": "images/vao_tran_button_2.jpg","target4": "images/vao_tran_box.png", "timeout": 4, "confidence": 0.7}
                         ]
                     },
                     {
@@ -736,11 +739,11 @@ class AutoClickerInstance:
             {"action": "click_any"},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3} ,
-            {"action": "clear_android_data", "package": "com.garena.gaslite"},
-        ]
+            
+        
         
         # 2. GIAI ĐOẠN VƯỢT TÂN THỦ (Full chi tiết từ LD)
-        tutorial_script = [
+        
             {"action": "click_image", "target": "images/pvp.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/1v1.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.7},
@@ -751,7 +754,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target1": "images/tuong3.png", "target2": "images/tuong4.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/tuong5.png",  "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.7},
             {"action": "wait", "timeout": 20},
@@ -762,7 +765,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target1": "images/tuong2.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/tuong5.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.7},
             {"action": "wait", "timeout": 20},
@@ -788,7 +791,9 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "wait", "timeout": 7},
-            {"action": "click_image", "target": "images/dau_hang_button.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.7},
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "click_image_if", "target": "images/dau_hang_button.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/event.png", "timeout": 20, "confidence": 0.7},
@@ -832,18 +837,32 @@ class AutoClickerInstance:
         # 3. GIAI ĐOẠN DÍNH GAME
         dinh_game_script = [
             {"action": "click_image", "target": "images/dauthuong.png", "timeout": 60, "confidence": 0.7},
-            {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images/sansang5v5.png", "timeout": 20, "confidence": 0.7},
-            {"action": "wait", "timeout": 7},
+            {"action": "click_image", "target1": "images/logo_box.png","target2": "images/logo4.png","target3": "images/logo1.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/autooff_box.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/minimize_box.png","target2": "images/minimize_box1.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/ready.png","target2": "images/sansang_box.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/sansang5v5.png", "target2": "images/sansang.png","target3": "images/sansang_box.png","timeout": 20, "confidence": 0.7},
+            
             {"action": "click_image_if", "target": "images/ok3.png", "timeout": 15, "confidence": 0.7},
-            {"action": "wait", "timeout": 5},
+            {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target1": "images/tuong1.png", "target2": "images/tuong2.png", "target3": "images/tuong3.png", "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 10, "confidence": 0.7},
+             {"action": "loop",
+                "count": 4,
+                "steps": [
+                    {"action": {"action": "click_coords", "x": 903, "y": 945, "timeout": 2},"timeout": 200, "confidence": 0.9},
+                    {"action": "wait", "timeout": 15}
+                ]
+                },
             {"action": "click_image", "target": "images/victory.png", "timeout": 600, "confidence": 0.7},
-            {"action": "wait", "timeout": 10},
+            {"action": "wait", "timeout": 3},
+            {"action": "press_esc", "wait": 2} ,
+            {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
             {"action": "press_esc", "wait": 2},
+            {"action": "wait", "timeout": 5},
+            {"action": "press_esc", "wait": 2} ,
         ]
 
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)        
@@ -899,7 +918,7 @@ class AutoClickerInstance:
                 "action": "loop",
                 "count": 11,
                 "steps": [
-                    {"action": "click_image", "target": "images/bienve.png", "timeout": 200, "confidence": 0.7},
+                    {"action": {"action": {"action": "click_coords", "x": 903, "y": 945, "timeout": 2},"timeout": 200, "confidence": 0.9}, "timeout": 200, "confidence": 0.7},
                     {"action": "wait", "timeout": 15}
                 ]
             },
