@@ -682,10 +682,10 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN (Đã được tối ưu cho BoxPhone)
         login_script = [
-            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg","target5": "images/input_name.png","target6": "images/input_name.png","timeout": 60, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg","target5": "images/input_name.png","target6": "images/input_name.png","timeout": 60, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/dangnhap_box.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/dangnhap_box.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/input_name.png","timeout": 60, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/input_name.png", "target2": "images/input_name1.png", "timeout": 60, "confidence": 0.7},
             {"action": "input_account"},
             {"action": "click_image", "target1": "images/tiep_theo.jpg", "target2": "images/tiep_theo1.jpg", "target3": "images/tiep_theo.png", "timeout": 60, "confidence": 0.7},
             {"action": "input_password"},
