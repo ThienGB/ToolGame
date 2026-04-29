@@ -262,6 +262,8 @@ class AutoClickerInstance:
             res = self.search_logic(step)
         elif action == "get_room_id":
             res = self.get_room_id_logic(step)
+        elif action == "click_coords":
+            res = self.click_coords_logic(step)
         elif action == "wait_for_players":
             res = self.wait_for_players_logic(step)
         elif action == "notify_joined":
@@ -427,8 +429,15 @@ class AutoClickerInstance:
             time.sleep(0.2)
         return False
 
-
-
+    def click_coords_logic(self, step):
+        x, y = step.get("x"), step.get("y")
+        if x is not None and y is not None:
+            delay = step.get("timeout", 0)
+            if delay > 0: time.sleep(delay)
+            self.call_adb(["shell", "input", "tap", str(x), str(y)])
+            self.log(f"CLICK TỌA ĐỘ: ({x}, {y})")
+            return True
+        return False
 
     def search_logic(self, step):
         target = step.get("target")
