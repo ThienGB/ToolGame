@@ -965,6 +965,16 @@ class AutoClickerInstance:
 
         # 2.5 GIAI ĐOẠN MUA EXP
         mua_exp_script = [
+            {"action": "click_image", "target": "images/andetieptuc.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image", "target": "images/andetieptuc.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image", "target": "images/andetieptuc.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            
+            {"action": "click_image", "target": "images/x3.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+
             {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_coords", "x": 782, "y": 20, "timeout": 2},
@@ -1006,8 +1016,9 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/sansang5v5.png", "timeout": 20, "confidence": 0.9},
-            
+            {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target": "images/open.png", "timeout": 15, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
             
             
             {"action": "click_image_if", "target": "images/tuong4.png", "timeout": 6, "confidence": 0.9},
@@ -1069,7 +1080,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/pve.png", "timeout": 30},
             {"action": "click_image", "target": "images/ready.png", "timeout": 30},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/ready.png", "timeout": 5, "confidence": 0.9},
+            
         ]
         
         teamup_guest_script = [
@@ -1090,8 +1101,8 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/logo1.png", "timeout": 50, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
-            
-            
+            {"action": "click_image_if", "target": "images/ready.png", "timeout": 5, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/guest.png", "timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/sansang5v5.png", "timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/open.png", "timeout": 50, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
@@ -1105,8 +1116,9 @@ class AutoClickerInstance:
                     {"action": "click_image_if", "target": tuong_target, "timeout": 5, "confidence": 0.7},
                 ]
             },
-            
+            {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
+            
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 60, "confidence": 0.9},
             {"action": "wait", "timeout": 10},
