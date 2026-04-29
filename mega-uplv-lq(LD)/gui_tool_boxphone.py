@@ -306,6 +306,7 @@ class AutoClickerInstance:
             i += 1
         timeout = step.get("timeout", 10)
         confidence = step.get("confidence", 0.8)
+        use_color = step.get("use_color", False)
 
         # Chuẩn bị ảnh mẫu (Sử dụng Cache)
         target_data = []
@@ -433,6 +434,7 @@ class AutoClickerInstance:
         target = step.get("target")
         timeout = step.get("timeout", 10)
         conf = step.get("confidence", 0.8)
+        use_color = step.get("use_color", False)
         t_img = get_cached_template(target, use_color)
         if t_img is None: return False
         
