@@ -819,6 +819,8 @@ class AutoClickerInstance:
             {"action": "click_any", "wait": 2},
             
             {"action": "click_image_if", "target1": "images/lam_event.png", "target2": "images/lam_box.png", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/lam_event.png", "target2": "images/lam_box.png", "timeout": 3, "confidence": 0.7},
+            {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 2} ,
             
             
