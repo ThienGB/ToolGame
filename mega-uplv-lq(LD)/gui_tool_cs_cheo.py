@@ -206,7 +206,8 @@ class AutoClickerInstance:
         elif action == "click_image_if":
             if self.click_image_logic(step):
                 for sub_step in step.get("then", []):
-                    if not self.execute_step(sub_step): break
+                    if not self.execute_step(sub_step): 
+                        return False
             res = True
         elif action == "wait":
             wait_time = step.get("duration") or step.get("timeout") or 1
@@ -257,6 +258,15 @@ class AutoClickerInstance:
             res = True
         elif action == "cases":
             res = self.cases_logic(step)
+        elif action == "restart_app":
+            app = step.get("app", "com.garena.game.kgvn")
+            self.log(f"!! PHÁT HIỆN LỖI: Đóng game và khởi động lại {app}...")
+            self.call_adb(["shell", "am", "force-stop", app])
+            time.sleep(2)
+            self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+            self.log("Đợi game khởi động lại (20s)...")
+            time.sleep(20)
+            return False
         elif action == "loop":
             count = step.get("count", 1)
             sub_steps = step.get("steps", [])
@@ -505,6 +515,8 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap.jpg", "timeout": 4, "confidence": 0.7},
             {"action": "wait", "timeout": 5},
             {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/loi_mang.jpg", "timeout": 5, "confidence": 0.8, "then": [{"action": "restart_app"}]},
+            
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
             {
@@ -584,8 +596,6 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "click_image", "target": "images/x_cs2.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/back_sk.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/back_sk.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
@@ -616,11 +626,15 @@ class AutoClickerInstance:
 
             # --- THỰC HIỆN ĐĂNG NHẬP TRƯỚC ---
             self.update_status("Đang Login...")
-            success_login = True
-            for step in login_script:
-                if not self.running: break
-                if not self.execute_step(step):
-                    success_login = False; break
+            success_login = False
+            for retry_login in range(3):
+                success_login = True
+                for step in login_script:
+                    if not self.running: break
+                    if not self.execute_step(step):
+                        success_login = False; break
+                if success_login or not self.running: break
+                self.log(f"!! Login thất bại (vòng {retry_login+1}/3). Đang bắt đầu lại từ đầu cho account này...")
                     
             if not success_login or not self.running:
                 self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']}")

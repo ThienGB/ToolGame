@@ -109,6 +109,20 @@ FILE_LOCK = threading.Lock()
 BASE_WIDTH = 960.0
 BASE_HEIGHT = 540.0
 
+# --- Global Cache for Template Images ---
+IMAGE_CACHE = {}
+
+def get_cached_template(t_path, use_color=False):
+    key = (t_path, use_color)
+    if key not in IMAGE_CACHE:
+        real_path = resource_path(t_path)
+        if not os.path.exists(real_path):
+            return None
+        mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
+        img = cv2.imread(real_path, mode)
+        IMAGE_CACHE[key] = img
+    return IMAGE_CACHE[key]
+
 def extract_device_number(serial):
     """Trích xuất số từ serial (ví dụ: 192.168.1.61 -> 61, box61 -> 61)"""
     nums = re.findall(r'\d+', serial)
@@ -135,6 +149,7 @@ class AutoClickerInstance:
         self.modes = {}
         self.accounts_processed = 0
         self.restart_threshold = 10 
+        self.template_cache = {} # Cache cho các ảnh mẫu đã được resize theo scale của máy này
 
     def log(self, msg):
         self.log_func(f"[Máy {self.device_index + 1}] {msg}")
@@ -292,20 +307,19 @@ class AutoClickerInstance:
         timeout = step.get("timeout", 10)
         confidence = step.get("confidence", 0.8)
 
-        target_imgs = []
-        use_color = step.get("use_color", False)
-
+        # Chuẩn bị ảnh mẫu (Sử dụng Cache)
+        target_data = []
         for t_path in targets:
-            real_path = resource_path(t_path)
-            if os.path.exists(real_path):
-                read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
-                img = cv2.imread(real_path, read_mode)
-                if img is not None: target_imgs.append((t_path, img))
-            else: self.log(f"Thiếu ảnh mẫu: {t_path}")
+            t_img = get_cached_template(t_path, use_color)
+            if t_img is not None:
+                target_data.append((t_path, t_img))
+            else:
+                self.log(f"Thiếu ảnh mẫu: {t_path}")
 
         start = time.time()
         best_match = {"val": 0, "name": ""}
         last_screen = None
+        
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
@@ -313,20 +327,22 @@ class AutoClickerInstance:
                 h_screen, w_screen = screen.shape[:2]
                 scale = h_screen / BASE_HEIGHT
 
-                # Nếu không dùng color, chuyển màn hình sang gray
-                if not use_color:
-                    compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-                else:
-                    compare_screen = screen
+                compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 
-                for t_path, t_img in target_imgs:
-                    for curr_scale in [scale, 1.0, scale*0.98, scale*1.02]:
-                        if abs(curr_scale - 1.0) < 0.001:
-                            t_scaled = t_img
+                for t_path, t_img in target_data:
+                    # Kiểm tra và tạo ảnh đã resize trong cache của instance
+                    # Chỉ quét 2 mức scale quan trọng nhất để tăng tốc: Native và Scaled
+                    for curr_scale in [scale, 1.0]:
+                        cache_key = (t_path, curr_scale, use_color)
+                        if cache_key in self.template_cache:
+                            t_scaled = self.template_cache[cache_key]
                         else:
-                            interp = cv2.INTER_CUBIC if curr_scale > 1.0 else cv2.INTER_AREA
-                            tw, th = int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)
-                            t_scaled = cv2.resize(t_img, (tw, th), interpolation=interp)
+                            if abs(curr_scale - 1.0) < 0.001:
+                                t_scaled = t_img
+                            else:
+                                tw, th = int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)
+                                t_scaled = cv2.resize(t_img, (tw, th), interpolation=cv2.INTER_LINEAR)
+                            self.template_cache[cache_key] = t_scaled
 
                         if compare_screen.shape[0] < t_scaled.shape[0] or compare_screen.shape[1] < t_scaled.shape[1]:
                             continue
@@ -340,10 +356,9 @@ class AutoClickerInstance:
                         if mv >= confidence:
                             th_s, tw_s = t_scaled.shape[:2]
                             self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
-                            self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f} @ {curr_scale:.2f}x) {'[COLOR]' if use_color else ''}")
+                            self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f} @ {curr_scale:.2f}x)")
                             return True
-
-            time.sleep(1)
+            time.sleep(0.2)
         
         if last_screen is not None:
             cv2.imwrite("debug_fail.png", last_screen)
@@ -381,20 +396,21 @@ class AutoClickerInstance:
                 sub_script = case.get("script", [])
                 
                 for t_path in triggers:
-                    real_path = resource_path(t_path)
-                    if not os.path.exists(real_path): continue
-                    
-                    t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
+                    t_img = get_cached_template(t_path, False)
                     if t_img is None: continue
                     
                     scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                     
-                    # Thử cả scale và native
                     for curr_scale in [scale, 1.0]:
-                        if abs(curr_scale - 1.0) < 0.001:
-                            t_scaled = t_img
+                        cache_key = (t_path, curr_scale, False)
+                        if cache_key in self.template_cache:
+                            t_scaled = self.template_cache[cache_key]
                         else:
-                            t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_AREA)
+                            if abs(curr_scale - 1.0) < 0.001:
+                                t_scaled = t_img
+                            else:
+                                t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_LINEAR)
+                            self.template_cache[cache_key] = t_scaled
                         
                         if scr_gray.shape[0] < t_scaled.shape[0] or scr_gray.shape[1] < t_scaled.shape[1]:
                             continue
@@ -407,7 +423,7 @@ class AutoClickerInstance:
                                 if not self.running: break
                                 self.execute_step(s_step)
                             return True 
-            time.sleep(1)
+            time.sleep(0.2)
         return False
 
 
@@ -417,12 +433,8 @@ class AutoClickerInstance:
         target = step.get("target")
         timeout = step.get("timeout", 10)
         conf = step.get("confidence", 0.8)
-        use_color = step.get("use_color", False)
-        real_path = resource_path(target)
-        if not os.path.exists(real_path): return False
-        
-        read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
-        t_img = cv2.imread(real_path, read_mode)
+        t_img = get_cached_template(target, use_color)
+        if t_img is None: return False
         
         start = time.time()
         while time.time() - start < timeout and self.running:
@@ -431,16 +443,18 @@ class AutoClickerInstance:
                 h_screen, w_screen = screen.shape[:2]
                 scale = h_screen / BASE_HEIGHT
 
-                if not use_color:
-                    compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-                else:
-                    compare_screen = screen
+                compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
 
                 for curr_scale in [scale, 1.0]:
-                    if abs(curr_scale - 1.0) < 0.001:
-                        t_scaled = t_img
+                    cache_key = (target, curr_scale, use_color)
+                    if cache_key in self.template_cache:
+                        t_scaled = self.template_cache[cache_key]
                     else:
-                        t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_AREA)
+                        if abs(curr_scale - 1.0) < 0.001:
+                            t_scaled = t_img
+                        else:
+                            t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_LINEAR)
+                        self.template_cache[cache_key] = t_scaled
 
                     if compare_screen.shape[0] < t_scaled.shape[0] or compare_screen.shape[1] < t_scaled.shape[1]:
                         continue
@@ -448,7 +462,7 @@ class AutoClickerInstance:
                     res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
                     _, mv, _, _ = cv2.minMaxLoc(res)
                     if mv >= conf: return True
-            time.sleep(1)
+            time.sleep(0.2)
         return False
 
     def click_any_logic(self, step):
@@ -672,7 +686,8 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "target3": "images/dang_ky_sau1.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
-             ]
+        ]
+        
         tutorial_script = [
             {
                 "action": "cases",
@@ -1177,15 +1192,10 @@ class MultiPremiumApp(ctk.CTk):
         for w in self.device_list_frame.winfo_children(): w.destroy()
         self.device_cards = {}
         
-        # Nhóm các serial theo Team ID thực tế
+        # Nhóm các serial theo thứ tự hiển thị (mỗi nhóm 5 máy thành 1 team)
         teams_dict = {}
         for idx, s in enumerate(serials):
-            num = extract_device_number(s)
-            if num is not None:
-                team_id = ((num - 1) // 5) + 1
-            else:
-                team_id = (idx // 5) + 1
-            
+            team_id = (idx // 5) + 1
             if team_id not in teams_dict:
                 teams_dict[team_id] = []
             teams_dict[team_id].append(s)
@@ -1218,11 +1228,12 @@ class MultiPremiumApp(ctk.CTk):
             
             for idx_in_team, s in enumerate(team_serials):
                 dev_num = extract_device_number(s)
-                global_idx = (dev_num - 1) if dev_num is not None else serials.index(s)
+                # global_idx là chỉ số trong danh sách serials đã sắp xếp để đồng bộ group_id = idx // 5
+                global_idx = serials.index(s)
                 display_num = dev_num if dev_num is not None else (global_idx + 1)
                 
                 is_host = (idx_in_team == 0)
-                self.device_map[s] = {"idx": global_idx, "is_host": is_host}
+                self.device_map[s] = {"idx": global_idx, "is_host": is_host, "display_num": display_num, "team_num": team_num}
                 
                 # Ô thiết bị nhỏ gọn
                 dev_box = ctk.CTkFrame(device_grid, fg_color="#252525", corner_radius=4, width=150, height=50)
@@ -1300,7 +1311,7 @@ class MultiPremiumApp(ctk.CTk):
         worker = AutoClickerInstance(serial, dev_info["idx"], dev_info["is_host"], self.adb_path, self.add_log, update_single_status, self.report_stats)
         self.active_workers.append(worker)
         threading.Thread(target=worker.run, args=(self.accounts_data, modes, self.shared_data), daemon=True).start()
-        self.add_log(f"Đã bắt chạy thiết bị: {serial} (Máy {dev_info['idx']+1}, {'HOST' if dev_info['is_host'] else 'GUEST'})")
+        self.add_log(f"Bắt đầu: {serial} (Máy {dev_info['display_num']}, Team {dev_info['team_num']}, {'HOST' if dev_info['is_host'] else 'GUEST'})")
 
     def stop_single_device(self, serial):
         for w in self.active_workers[:]:
