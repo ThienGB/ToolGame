@@ -1006,13 +1006,12 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/sansang5v5.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 7},
-            {"action": "click_image_if", "target": "images/ok3.png", "timeout": 15, "confidence": 0.9},
-            {"action": "wait", "timeout": 5},
             
-            {"action": "click_image_if", "target": "images/tuong3.png", "timeout": 3, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/tuong4.png", "timeout": 3, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/tuong5.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/open.png", "timeout": 15, "confidence": 0.9},
+            
+            
+            
+            {"action": "click_image_if", "target": "images/tuong5.png", "timeout": 6, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 50, "confidence": 0.9},
             {
@@ -1094,8 +1093,8 @@ class AutoClickerInstance:
             
             
             {"action": "click_image_if", "target": "images/sansang5v5.png", "timeout": 60, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/ok3.png", "timeout": 50, "confidence": 0.9},
-            
+            {"action": "click_image_if", "target": "images/open.png", "timeout": 50, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
             
 
             # Ví dụ các hành động sau khi vào phòng thành công:
