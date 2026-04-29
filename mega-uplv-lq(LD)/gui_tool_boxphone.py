@@ -328,8 +328,7 @@ class AutoClickerInstance:
             if screen is not None:
                 last_screen = screen
                 # Tỉ lệ chuẩn để ảnh mẫu (vốn dựa trên 540p) khớp với màn hình 0.5x hiện tại
-                # Nếu máy 1080p -> h_small=540 -> scale=1.0 (khớp hoàn hảo với template gốc)
-                # Nếu máy 540p  -> h_small=270 -> scale=0.5
+                h_screen_small, w_screen_small = screen.shape[:2]
                 base_scale = h_screen_small / BASE_HEIGHT
 
                 compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
@@ -362,7 +361,7 @@ class AutoClickerInstance:
                         self.call_adb(["shell", "input", "tap", str((ml[0]+tw_s//2)*2), str((ml[1]+th_s//2)*2)])
                         self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f})")
                         return True
-            time.sleep(0.1) # Giảm sleep xuống để phản hồi nhanh hơn
+            time.sleep(0.5) # Tăng lên 0.5s để tránh lag ADB
         
         if last_screen is not None:
             cv2.imwrite("debug_fail.png", last_screen)
@@ -427,7 +426,7 @@ class AutoClickerInstance:
                             if not self.running: break
                             self.execute_step(s_step)
                         return True 
-            time.sleep(0.1)
+            time.sleep(0.5)
         return False
 
     def click_coords_logic(self, step):
@@ -483,7 +482,7 @@ class AutoClickerInstance:
                 res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
                 _, mv, _, _ = cv2.minMaxLoc(res)
                 if mv >= conf: return True
-            time.sleep(0.1)
+            time.sleep(0.5)
         return False
 
     def click_any_logic(self, step):
@@ -624,7 +623,7 @@ class AutoClickerInstance:
                 if found:
                     time.sleep(0.2)
                     break
-                time.sleep(0.3)
+                time.sleep(0.5)
         return True
 
     def notify_joined_logic(self):
