@@ -873,7 +873,7 @@ class AutoClickerInstance:
              {"action": "loop",
                 "count": 4,
                 "steps": [
-                    {"action": {"action": "click_coords", "x": 903, "y": 945, "timeout": 2},"timeout": 200, "confidence": 0.9},
+                    {"action": "click_coords", "x": 903, "y": 945, "timeout": 2},
                     {"action": "wait", "timeout": 15}
                 ]
                 },
@@ -941,7 +941,7 @@ class AutoClickerInstance:
                 "action": "loop",
                 "count": 11,
                 "steps": [
-                    {"action": {"action": {"action": "click_coords", "x": 903, "y": 945, "timeout": 2},"timeout": 200, "confidence": 0.9}, "timeout": 200, "confidence": 0.7},
+                    {"action": "click_coords", "x": 903, "y": 945, "timeout": 2},
                     {"action": "wait", "timeout": 15}
                 ]
             },
