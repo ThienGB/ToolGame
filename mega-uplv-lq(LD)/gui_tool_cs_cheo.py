@@ -79,6 +79,7 @@ class AutoClickerInstance:
         self.last_captured_code = ""
         self.partner_code = ""
         self.skip_login_for_this_acc = False
+        self.skip_all_retries = False
 
     def log(self, msg):
         self.log_func(f"[{self.device_id}] {msg}")
@@ -203,12 +204,19 @@ class AutoClickerInstance:
         res = True
         
         if action == "click_image":
-            res = self.click_image_logic(step)
+            res = bool(self.click_image_logic(step))
         elif action == "click_image_if":
-            if self.click_image_logic(step):
+            matched_path = self.click_image_logic(step)
+            if matched_path:
                 for sub_step in step.get("then", []):
                     if not self.execute_step(sub_step): 
                         return False
+                
+                # Nếu sai mật khẩu, báo lỗi để skip tài khoản (không retry)
+                if matched_path and "sai_pass.jpg" in matched_path:
+                    self.log("!! PHÁT HIỆN SAI MẬT KHẨU: Bỏ qua tài khoản này.")
+                    self.skip_all_retries = True
+                    return False
             res = True
         elif action == "wait":
             wait_time = step.get("duration") or step.get("timeout") or 1
@@ -350,11 +358,11 @@ class AutoClickerInstance:
                             th_s, tw_s = t_scaled.shape[:2]
                             self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
                             self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f} @ {curr_scale:.2f}x)")
-                            return True
+                            return t_path
             time.sleep(1)
         
         self.log(f"!! Timeout: Không thấy ảnh. Cao nhất: {best_match['name']} ({best_match['val']:.2f})")
-        return False
+        return None
 
     def cases_logic(self, step):
         cases = step.get("cases", [])
@@ -530,56 +538,57 @@ class AutoClickerInstance:
             {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "timeout": 30, "confidence": 0.7, "login_step": True},
             {"action": "wait", "timeout": 5, "login_step": True},
             {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap.jpg", "timeout": 4, "confidence": 0.7, "login_step": True},
+            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap.jpg", "timeout": 2, "confidence": 0.7, "login_step": True},
             {"action": "wait", "timeout": 5, "login_step": True},
             {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.7, "login_step": True},
-            {"action": "click_image_if", "target": "images/loi_mang.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
+            {"action": "click_image_if", "target1": "images/loi_mang.jpg", "target2": "images/sai_pass.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
                 {"action": "clear_android_data", "package": "com.garena.gaslite"},
                 {"action": "restart_app"}]
             },
             
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
-            {
-                "action": "cases",
-                "timeout" : 120,
-                "timeout_then": [{"action": "handle_maintenance"}],
-                "cases": [
-                    {
-                        "trigger": "images/an_de_tro_lai.jpg",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
-                            {"action": "wait", "timeout": 2},
-                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
-                            {"action": "wait", "timeout": 2},
-                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
-                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
-                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7}
-                        ]
-                    },
-                    {
-                        "trigger": "images/x_start.jpg",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 5},
-                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 2},
-                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7, "timeout": 2},
+            # {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
+            # {
+            #     "action": "cases",
+            #     "timeout" : 120,
+            #     "timeout_then": [{"action": "handle_maintenance"}],
+            #     "cases": [
+            #         {
+            #             "trigger": "images/an_de_tro_lai.jpg",
+            #             "confidence": 0.7,
+            #             "script": [
+            #                 {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+            #                 {"action": "wait", "timeout": 2},
+            #                 {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
+            #                 {"action": "wait", "timeout": 2},
+            #                 {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
+            #                 {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
+            #                 {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
+            #                 {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
+            #                 {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7}
+            #             ]
+            #         },
+            #         {
+            #             "trigger": "images/x_start.jpg",
+            #             "confidence": 0.7,
+            #             "script": [
+            #                 {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 5},
+            #                 {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 2},
+            #                 {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7, "timeout": 2},
 
-                        ]
-                    },
-                    {
-                        "trigger": "images/pvp.png",
-                        "confidence": 0.7,
-                        "script": []
-                    }
-                ]
-            },
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 3},
-            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7, "timeout": 2},
-            {"action": "click_image_if", "target": "images/x_start2.jpg", "confidence": 0.7, "timeout": 2},
+            #             ]
+            #         },
+            #         {
+            #             "trigger": "images/pvp.png",
+            #             "confidence": 0.7,
+            #             "script": []
+            #         }
+            #     ]
+            # },
+            # {"action": "press_esc", "wait": 2},
+            # {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 3},
+            # {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7, "timeout": 2},
+            # {"action": "click_image_if", "target": "images/x_start2.jpg", "confidence": 0.7, "timeout": 2},
             {"action": "press_esc", "wait": 2},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
@@ -594,15 +603,31 @@ class AutoClickerInstance:
         ]
         
         copy_script = [
+            {
+                "action": "cases",
+                "timeout" : 60,
+                "timeout_then": [{"action": "handle_maintenance"}],
+                "cases": [
+                    {
+                        "trigger": "images/su_kien.jpg",
+                        "confidence": 0.7,
+                        "script": []
+                    }
+                ]
+            },
             {"action": "click_image", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 5, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
             {"action": "get_code", "timeout": 10}, # Hàm get_code bây giờ sẽ ưu tiên Clipboard
-            {"action": "click_image", "target": "images/x_cs1.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/nhap_ma_moi1.jpg", "timeout": 2, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
@@ -647,6 +672,7 @@ class AutoClickerInstance:
             # --- DỌN DẸP VÀ KHỞI ĐỘNG CLIPPER SERVICE CHO VÒNG MỚI ---
             self.last_captured_code = None
             self.skip_login_for_this_acc = False
+            self.skip_all_retries = False
             pkg = "com.example.clipper"
             # Bật Service để hiện Nút nổi (Pill)
             self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
@@ -668,7 +694,7 @@ class AutoClickerInstance:
                         
                     if not self.execute_step(step):
                         success_login = False; break
-                if success_login or not self.running: break
+                if success_login or not self.running or self.skip_all_retries: break
                 self.log(f"!! Login thất bại (vòng {retry_login+1}/3). Đang bắt đầu lại từ đầu cho account này...")
                     
             if not success_login or not self.running:
