@@ -691,7 +691,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target1": "images_boxphone/xong.png", "target2": "images_boxphone/xong1.png","timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
-            {"action": "click_image_if", "target": "images_boxphone/dangnhap2.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/dangnhap2.png", "target2": "images_boxphone/login.png","timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/okdangnhap.png", "timeout": 10, "confidence": 0.7},
             # {"action": "click_image_if", "target": "images_boxphone/okdangnhap.png",  "timeout": 4, "confidence": 0.7},
             # {"action": "click_coords", "x": 1407, "y": 1005, "timeout": 2},
