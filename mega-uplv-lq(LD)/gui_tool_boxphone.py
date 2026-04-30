@@ -682,20 +682,21 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN (Đã được tối ưu cho BoxPhone)
         login_script = [
-            {"action": "click_image_if", "target": "images_boxphone/dangnhap_box.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/dangnhap_box.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target1": "images_boxphone/input_name.png","timeout": 60, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/input_name.png", "target2": "images_boxphone/dangnhap.png", "timeout": 60, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "timeout": 30, "confidence": 0.7},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "timeout": 3, "confidence": 0.7},
             {"action": "input_account"},
-            {"action": "click_image", "target1": "images_boxphone/tiep_theo.jpg", "target2": "images_boxphone/tiep_theo1.jpg", "target3": "images_boxphone/tiep_theo.png", "timeout": 60, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/matkhau.png",  "timeout": 10, "confidence": 0.7},
             {"action": "input_password"},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target1": "images_boxphone/xong.jpg", "target2": "images_boxphone/xong1.jpg","target3": "images_boxphone/xong.png","target4": "images_boxphone/okdangnhapp.png", "timeout": 30, "confidence": 0.7},
-            {"action": "wait", "timeout": 5},
-            {"action": "click_image_if", "target1": "images_boxphone/okdangnhapp.png", "target2": "images_boxphone/ok_dang_nhap.jpg", "timeout": 4, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/login.png", "target2": "images_boxphone/login_now.png", "target3": "images_boxphone/dang_nhap1.jpg", "timeout": 5, "confidence": 0.7},{"action": "click_image_if", "target": "images_boxphone/login_garena.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image", "target1": "images_boxphone/xong.png", "timeout": 30, "confidence": 0.7},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image", "target1": "images_boxphone/dangnhap2.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png",  "timeout": 4, "confidence": 0.7},
+            
             {"action": "click_image_if", "target": "images_boxphone/batdau.png", "timeout": 6, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/skip.png", "target2": "images_boxphone/dang_ky_sau.jpg", "target3": "images_boxphone/dang_ky_sau1.jpg", "target4": "images_boxphone/dkysau.png","timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if",  "target": "images_boxphone/dkysau.png","timeout": 10, "confidence": 0.7},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
         
@@ -722,14 +723,12 @@ class AutoClickerInstance:
                         "script": [
                             {"action": "click_image_if", "target": "images_boxphone/vao_button.png", "timeout": 5, "confidence": 0.7},
                             {"action": "click_image", "target": "images_boxphone/logo1.png", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images_boxphone/on_auto_win.jpg", "target2":"images_boxphone/on_auto_win_1.jpg", "timeout": 20, "confidence": 0.75, "use_color": True},
+                            {"action": "click_image_if", "target1": "images_boxphone/autowin.png", "target2":"images_boxphone/on_auto_win_1.jpg", "timeout": 20, "confidence": 0.75, "use_color": True},
                             {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2":"images_boxphone/minimize1.jpg", "target3":"images_boxphone/minimize2.jpg", "target4":"images_boxphone/minimize3.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_any", "wait": 30},
-                            {"action": "click_any", "wait": 10},
-                            {"action": "click_image", "target": "images_boxphone/logo1.png", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images_boxphone/autowin1.jpg", "target2": "images_boxphone/off_auto_win.jpg", "timeout": 20, "confidence": 0.75, "use_color": True},
-                            {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2":"images_boxphone/minimize1.jpg", "target3":"images_boxphone/minimize2.jpg", "target4":"images_boxphone/minimize3.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_any", "wait": 10},
+                            {"action": "click_image", "target1": "images_boxphone/victory.png", "timeout": 120, "confidence": 0.7},
+                            {"action": "click_any", "wait": 12},
+                            {"action": "click_any", "wait": 5},
+                            
                         ]
                     },
                     {
@@ -769,7 +768,7 @@ class AutoClickerInstance:
         
         # 2. GIAI ĐOẠN VƯỢT TÂN THỦ (Full chi tiết từ LD)
         
-            {"action": "click_image", "target": "images_boxphone/pvp.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images_boxphone/tuychon.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/1v1.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/x.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/pve.png", "timeout": 20, "confidence": 0.7},
