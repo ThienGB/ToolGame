@@ -1008,12 +1008,12 @@ class AutoClickerInstance:
         # 6. GIAI ĐOẠN ĐĂNG XUẤT
         uplevel_script = [
             {"action": "click_image", "target": "images_boxphone/logo.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/autowin.png", "target2": "images_boxphone/autowin1.png", "target3": "images_boxphone/off_auto_win.png", "timeout": 20, "confidence": 0.75, "use_color": True},
+            {"action": "click_image_if", "target1": "images_boxphone/off.png", "timeout": 5, "confidence": 0.75, "use_color": True},
             {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2": "images_boxphone/minimize1.png", "target3": "images_boxphone/minimize2.png", "target4": "images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/home.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/cai_dat_button.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/logout.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/ok.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images_boxphone/ok1.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 15},
         ]
         
