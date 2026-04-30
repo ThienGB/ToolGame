@@ -1413,7 +1413,7 @@ class MultiPremiumApp(ctk.CTk):
         self.mode_tutorial = ctk.CTkCheckBox(self.mode_frame, text="TÂN THỦ", font=ctk.CTkFont(size=11))
         self.mode_tutorial.grid(row=0, column=1); self.mode_tutorial.select()
 
-        self.mode_buy_exp = ctk.CTkCheckBox(self.mode_frame, text="MUA EXP", font=ctk.CTkFont(size=11), text_color="#EAB308")
+        self.mode_buy_exp = ctk.CTkCheckBox(self.mode_frame, text="OFF LÂU", font=ctk.CTkFont(size=11), text_color="#EAB308")
         self.mode_buy_exp.grid(row=0, column=2); self.mode_buy_exp.select()
 
         self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME", font=ctk.CTkFont(size=11), text_color="#F59E0B")
