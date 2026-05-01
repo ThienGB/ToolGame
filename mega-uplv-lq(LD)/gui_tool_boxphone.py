@@ -826,7 +826,7 @@ class AutoClickerInstance:
             
            
            
-            {"action": "click_image_if", "target": "images_boxphone/dau_hang_button.png", "timeout": 7, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images_boxphone/dauhang.png", "timeout": 7, "confidence": 0.7},
             
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_coords", "x": 1702, "y": 210, "timeout": 4},
@@ -977,6 +977,7 @@ class AutoClickerInstance:
            {"action": "click_image", "target1": "images_boxphone/minimize.png","target2": "images_boxphone/minimize1.png","target3": "images_boxphone/minimize2.png","target4": "images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.9},
             
             {"action": "click_image", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 10, "confidence": 0.7},
             
             {"action": "click_image_if", "target": "images_boxphone/ok.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image_if", "target1": t1, "target2": t2, "timeout": 10, "confidence": 0.7},
