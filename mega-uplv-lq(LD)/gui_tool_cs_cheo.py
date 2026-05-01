@@ -542,12 +542,15 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.7, "login_step": True},
             {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 2, "confidence": 0.7, "login_step": True},
             {"action": "wait", "timeout": 5, "login_step": True},
-            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.7, "login_step": True},
-            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/loi_mang.jpg", "target2": "images/sai_pass.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
+            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.7, "login_step": True, "then": [
+                {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.7},
+                {"action": "click_image_if", "target1": "images/loi_mang.jpg", "target2": "images/sai_pass.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
                 {"action": "clear_android_data", "package": "com.garena.gaslite"},
                 {"action": "restart_app"}]
             },
+            ]},
+            
+            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
             # {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
             # {
             #     "action": "cases",
@@ -614,6 +617,7 @@ class AutoClickerInstance:
                         "confidence": 0.7,
                         "script": [
                             {"action": "click_image", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/su_kien_cs.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
                             {"action": "press_esc", "wait": 2},
@@ -628,31 +632,16 @@ class AutoClickerInstance:
                             {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
-                            {"action": "click_image", "target": "images/input_gift_code.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "timeout": 2, "confidence": 0.7},
+                            {"action": "click_image", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "target3": "images/input_gift_code2.jpg", "target4": "images/input_gift_code3.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/input_gift_code1.jpg", "target2": "images/input_gift_code2.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg", "timeout": 2, "confidence": 0.7},
                         ]
                     },
                     {
                         "trigger": "images/input_gift_code2.jpg",
                         "confidence": 0.7,
                         "script": [
-                            {"action": "click_image", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
-                            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 5, "confidence": 0.7},
-                            {"action": "get_code", "timeout": 10},
-                            {"action": "wait", "timeout": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
-                            {"action": "click_image", "target": "images/input_gift_code.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "timeout": 2, "confidence": 0.7},
+                            {"action": "click_image", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "target3": "images/input_gift_code2.jpg", "target4": "images/input_gift_code3.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/input_gift_code1.jpg", "target2": "images/input_gift_code2.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg", "timeout": 2, "confidence": 0.7},
                         ]
                     }
                 ]
@@ -693,11 +682,14 @@ class AutoClickerInstance:
                 "timeout_then": [{"action": "handle_maintenance"}],
                 "cases": [
                     {
-                        "trigger": "images/input_gift_code2.jpg",
+                        "trigger1": "images/input_gift_code2.jpg",
+                        "trigger2": "images/input_gift_code1.jpg",
+                        "trigger3": "images/input_gift_code3.jpg",
+                        "trigger4": "images/input_gift_code.jpg",
                         "confidence": 0.7,
                         "script": [
-                            {"action": "click_image", "target": "images/input_gift_code2.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/input_gift_code2.jpg", "timeout": 2, "confidence": 0.7},
+                            {"action": "click_image", "target1": "images/input_gift_code2.jpg", "target2": "images/input_gift_code1.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg",  "timeout": 20,  "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/input_gift_code1.jpg", "target2": "images/input_gift_code2.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg", "timeout": 2, "confidence": 0.7},
                         ]
                     },
                     {
@@ -705,19 +697,22 @@ class AutoClickerInstance:
                         "confidence": 0.7,
                         "script": [
                             {"action": "click_image_if", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image", "target": "images/su_kien_cs.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
                             {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
                             {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
-                            {"action": "click_image", "target": "images/input_gift_code2.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code2.jpg", "timeout": 2, "confidence": 0.7},
+                            {"action": "click_image", "target1": "images/input_gift_code2.jpg", "target2": "images/input_gift_code1.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/input_gift_code1.jpg", "target2": "images/input_gift_code2.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg", "timeout": 2, "confidence": 0.7},
                         ]
                     }
                 ]
-            }
+            },
+            {"action": "wait", "timeout": 5},
+
         ]
 
         while self.running:
@@ -734,6 +729,9 @@ class AutoClickerInstance:
             self.last_captured_code = None
             self.skip_login_for_this_acc = False
             self.skip_all_retries = False
+            self.use_external_codes = False
+            target_code = None
+            success = False
             pkg = "com.example.clipper"
             # Bật Service để hiện Nút nổi (Pill)
             self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
@@ -782,7 +780,7 @@ class AutoClickerInstance:
                         item["count"] -= 1
                         if item["count"] <= 0:
                             codes.pop(0)
-                        self.log(f"==> Lấy mã từ file: {target_code} (Còn lại {item['count']} lượt cho mã này)")
+                        self.log(f"==> Đã lấy mã: {target_code} (Đang xử lý, còn lại {item['count']} lượt)")
                 
                 if not target_code:
                     self.log("!! HẾT MÃ TRONG FILE. Dừng luồng.")
@@ -806,6 +804,19 @@ class AutoClickerInstance:
                                 if not self.running: break
                                 if not self.execute_step(step):
                                     success = False; break
+                    
+                    # --- HOÀN TRẢ MÃ NẾU THẤT BẠI ---
+                    if not success and target_code:
+                        self.log(f"!! THẤT BẠI. Hoàn trả lại mã {target_code} vào danh sách.")
+                        with self.shared_data["ext_lock"]:
+                            codes = self.shared_data.get("external_codes", [])
+                            found = False
+                            for item in codes:
+                                if item["code"] == target_code:
+                                    item["count"] += 1
+                                    found = True; break
+                            if not found:
+                                codes.insert(0, {"code": target_code, "count": 1})
             else:
                 self.log(">>> CHẾ ĐỘ: CHÉO CẶP TỰ ĐỘNG (Auto Pairing)")
                 # --- KHỞI TẠO ĐỒNG BỘ CẶP ---
@@ -886,23 +897,24 @@ class AutoClickerInstance:
             
             # --- KẾT THÚC VÀ BÁO CÁO ---
             if self.running:
-                # Ghi nhận kết quả
                 if success:
-                    # Đợi một chút để cả 2 máy hoàn thành trước khi ghi file
-                    time.sleep(5)
-                    # Chỉ máy A ghi file để tránh ghi trùng (nếu cần file chung)
-                    if self.is_role_a:
+                    if self.use_external_codes:
+                        # Báo cáo cho chế độ dùng file mã
+                        self.report_stats_func(True, f"ACC: {self.current_account['tk']} | Dùng mã: {target_code} (THÀNH CÔNG)")
+                    elif self.is_role_a:
+                        # Báo cáo cho chế độ Chéo cặp (Chỉ máy A báo cáo để tránh trùng)
                         with self.shared_data["lock"]:
-                            a_acc = self.shared_data["codes"][self.pair_id]["acc_A"]
-                            b_acc = self.shared_data["codes"][self.pair_id]["acc_B"]
-                            code_a = self.shared_data["codes"][self.pair_id]["A"]
-                            code_b = self.shared_data["codes"][self.pair_id]["B"]
+                            pair_data = self.shared_data["codes"].get(self.pair_id, {})
+                            a_acc = pair_data.get("acc_A")
+                            b_acc = pair_data.get("acc_B")
+                            code_a = pair_data.get("A")
+                            code_b = pair_data.get("B")
                         
-                        a_info = f"{a_acc['tk']}|{a_acc['mk']}" if a_acc else "N/A|N/A"
-                        b_info = f"{b_acc['tk']}|{b_acc['mk']}" if b_acc else "N/A|N/A"
-                        self.report_stats_func(True, f"AccA: {a_info} | AccB: {b_info} | Ma_A: {code_a} | Ma_B: {code_b}")
+                        a_info = f"{a_acc['tk']}" if a_acc else "N/A"
+                        b_info = f"{b_acc['tk']}" if b_acc else "N/A"
+                        self.report_stats_func(True, f"Cặp {self.pair_id+1}: {a_info} <-> {b_info} | Mã: {code_a} & {code_b}")
                 else:
-                    self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']}")
+                    self.report_stats_func(False, f"{self.current_account['tk']} (THẤT BẠI)")
                     
             gc.collect()
 
