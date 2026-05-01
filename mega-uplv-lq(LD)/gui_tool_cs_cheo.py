@@ -80,6 +80,7 @@ class AutoClickerInstance:
         self.partner_code = ""
         self.skip_login_for_this_acc = False
         self.skip_all_retries = False
+        self.use_external_codes = False
 
     def log(self, msg):
         self.log_func(f"[{self.device_id}] {msg}")
@@ -220,7 +221,9 @@ class AutoClickerInstance:
             res = True
         elif action == "wait":
             wait_time = step.get("duration") or step.get("timeout") or 1
-            time.sleep(wait_time)
+            start_wait = time.time()
+            while time.time() - start_wait < wait_time and self.running:
+                time.sleep(0.5)
             res = True
         elif action == "clear_android_data":
             pkg = step.get("package")
@@ -268,6 +271,7 @@ class AutoClickerInstance:
         elif action == "cases":
             res = self.cases_logic(step)
             if not res and "timeout_then" in step:
+                self.log(f"!! [DEBUG] Bước 'cases' bị Timeout sau {step.get('timeout', 10)}s. Đang gọi logic xử lý Timeout (handle_maintenance)...")
                 for sub_step in step.get("timeout_then", []):
                     if not self.execute_step(sub_step):
                         return False
@@ -280,7 +284,9 @@ class AutoClickerInstance:
             time.sleep(2)
             self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
             self.log("Đợi game khởi động lại (20s)...")
-            time.sleep(20)
+            start_wait = time.time()
+            while time.time() - start_wait < 20 and self.running:
+                time.sleep(0.5)
             return False
         elif action == "handle_maintenance":
             app = step.get("app", "com.garena.game.kgvn")
@@ -363,40 +369,50 @@ class AutoClickerInstance:
         timeout = step.get("timeout", 10)
         confidence = step.get("confidence", 0.8)
         
+        # Cache templates để tăng tốc độ xử lý
+        case_templates = []
+        for case in cases:
+            triggers = []
+            if case.get("trigger"): triggers.append(case.get("trigger"))
+            idx = 1
+            while f"trigger{idx}" in case:
+                triggers.append(case.get(f"trigger{idx}")); idx += 1
+            
+            loaded_triggers = []
+            for t_path in triggers:
+                real_path = resource_path(t_path)
+                if os.path.exists(real_path):
+                    t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
+                    if t_img is not None:
+                        loaded_triggers.append((t_path, t_img))
+            
+            if loaded_triggers:
+                case_templates.append({
+                    "triggers": loaded_triggers,
+                    "confidence": case.get("confidence", confidence),
+                    "script": case.get("script", [])
+                })
+
         start_time = time.time()
         while time.time() - start_time < timeout and self.running:
             screen = self.get_screenshot()
             if screen is None:
                 time.sleep(1); continue
             
-            for case in cases:
-                triggers = []
-                if case.get("trigger"): triggers.append(case.get("trigger"))
-                idx = 1
-                while f"trigger{idx}" in case:
-                    triggers.append(case.get(f"trigger{idx}")); idx += 1
-                
-                case_conf = case.get("confidence", confidence)
-                sub_script = case.get("script", [])
-                
-                for t_path in triggers:
-                    real_path = resource_path(t_path)
-                    if not os.path.exists(real_path): continue
-                    
-                    t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
-                    if t_img is None: continue
-                    
-                    scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+            scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+            
+            for item in case_templates:
+                for t_path, t_img in item["triggers"]:
                     # Tỉ lệ 1:1
-                    t_scaled = t_img
-                    
-                    if t_scaled.shape[0] > scr_gray.shape[0] or t_scaled.shape[1] > scr_gray.shape[1]:
+                    if t_img.shape[0] > scr_gray.shape[0] or t_img.shape[1] > scr_gray.shape[1]:
                         continue
-                    res = cv2.matchTemplate(scr_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
+                        
+                    res = cv2.matchTemplate(scr_gray, t_img, cv2.TM_CCOEFF_NORMED)
                     _, mv, _, _ = cv2.minMaxLoc(res)
-                    if mv >= case_conf:
-                        self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)}")
-                        for s_step in sub_script:
+                    
+                    if mv >= item["confidence"]:
+                        self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({mv:.2f})")
+                        for s_step in item["script"]:
                             if not self.running: break
                             self.execute_step(s_step)
                         return True 
@@ -514,25 +530,24 @@ class AutoClickerInstance:
         self.running = True
 
         login_script = [
-            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 3, "confidence": 0.7, "login_step": True},
-            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.7, "login_step": True},
+            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 3, "confidence": 0.7, "login_step": True},
+            {"action": "click_image", "target1": "images/account_input1.jpg","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.7, "login_step": True},
             {"action": "input_account", "login_step": True},
             {"action": "click_image", "target1": "images/tiep_theo.jpg", "target2": "images/tiep_theo1.jpg", "timeout": 60, "confidence": 0.7, "login_step": True},
             {"action": "input_password", "login_step": True},
             {"action": "wait", "timeout": 2, "login_step": True},
             {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "timeout": 30, "confidence": 0.7, "login_step": True},
             {"action": "wait", "timeout": 5, "login_step": True},
-            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap.jpg", "timeout": 4, "confidence": 0.7, "login_step": True},
-            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap.jpg", "timeout": 2, "confidence": 0.7, "login_step": True},
+            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.7, "login_step": True},
+            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 2, "confidence": 0.7, "login_step": True},
             {"action": "wait", "timeout": 5, "login_step": True},
             {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.7, "login_step": True},
+            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images/loi_mang.jpg", "target2": "images/sai_pass.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
                 {"action": "clear_android_data", "package": "com.garena.gaslite"},
                 {"action": "restart_app"}]
             },
-            
-            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
             # {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
             # {
             #     "action": "cases",
@@ -591,33 +606,34 @@ class AutoClickerInstance:
         copy_script = [
             {
                 "action": "cases",
-                "timeout" : 120,
+                "timeout" : 60,
                 "timeout_then": [{"action": "handle_maintenance"}],
                 "cases": [
                     {
                         "trigger": "images/su_kien.jpg",
                         "confidence": 0.7,
-                        "script": []
+                        "script": [
+                            {"action": "click_image", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "get_code", "timeout": 10},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/input_gift_code.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "timeout": 2, "confidence": 0.7},
+                        ]
                     }
                 ]
             },
-            {"action": "click_image", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
-            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 5, "confidence": 0.7},
-            {"action": "get_code", "timeout": 10}, # Hàm get_code bây giờ sẽ ưu tiên Clipboard
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target": "images/input_gift_code.jpg", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "timeout": 2, "confidence": 0.7},
         ]
         
         input_code_script = [
@@ -636,6 +652,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.7},
             {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/logout.jpg", "timeout": 30, "confidence": 0.7},
@@ -643,8 +660,135 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 15},
         ]
+
+        # Script bổ sung để tách nhỏ navigation
+        nav_to_event_only = [
+            {
+                "action": "cases",
+                "timeout" : 60,
+                "timeout_then": [{"action": "handle_maintenance"}],
+                "cases": [
+                    {"action": "click_image_if", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
+                    {"action": "press_esc", "wait": 2},
+                    {"action": "press_esc", "wait": 2},
+                    {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
+                    {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},                ]
+            }
+        ]
+
+        goto_input_code_only = [
+            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image", "target": "images/input_gift_code2.jpg", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code2.jpg", "timeout": 2, "confidence": 0.7},
+        ]
         
-        while self.running:
+       
+class MultiPremiumApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("MegaLQTool(BoxPhone) - Code Pairing")
+        self.geometry("1000x650")
+        self.configure(fg_color=BG_COLOR)
+        self.accounts_data = []
+        self.account_file_path = None
+        self.instances = []
+        self.active_workers = []
+        self.success_count = 0
+        self.failure_count = 0
+        self.shared_data = {
+            "codes": {}, 
+            "lock": threading.Lock(),
+            "external_codes": [],
+            "ext_lock": threading.Lock()
+        }
+        self.adb_path = self.find_adb()
+        self.device_map = {}
+        self.device_cards = {}
+        
+        try:
+            self.logo_img = ctk.CTkImage(Image.open(resource_path("logo_cs_cheo.png")), size=(64, 64))
+            self.start_icon = ctk.CTkImage(Image.open(resource_path("start.png")), size=(20, 20))
+            self.stop_icon = ctk.CTkImage(Image.open(resource_path("stop.png")), size=(20, 20))
+        except:
+            self.logo_img = self.start_icon = self.stop_icon = None
+        
+        self.setup_layout()
+        self.scan_devices()
+        
+        # Redirect stdout và stderr về log UI
+        sys.stdout = StdoutRedirector(self.add_log)
+        sys.stderr = StdoutRedirector(self.add_log)
+
+    def setup_layout(self):
+        self.sidebar = ctk.CTkFrame(self, width=220, fg_color=NAV_COLOR); self.sidebar.pack(side="left", fill="y")
+        if self.logo_img: ctk.CTkLabel(self.sidebar, image=self.logo_img, text="").pack(pady=20)
+        ctk.CTkLabel(self.sidebar, text="PAIRING EDITION", font=("Arial", 16, "bold"), text_color=ACCENT_GREEN).pack()
+        
+        self.account_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR); self.account_card.pack(padx=20, pady=10, fill="x")
+        ctk.CTkButton(self.account_card, text="NẠP FILE ACC", command=self.load_accounts, fg_color="#EAB308", text_color="#000").pack(pady=5, padx=10, fill="x")
+        ctk.CTkButton(self.account_card, text="NẠP FILE MÃ MỜI", command=self.load_external_codes, fg_color="#00D2FF", text_color="#000").pack(pady=5, padx=10, fill="x")
+
+        self.adb_config_frame = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR); self.adb_config_frame.pack(padx=20, pady=5, fill="x")
+        ctk.CTkLabel(self.adb_config_frame, text="ADB PATH", font=("Arial", 10, "bold")).pack(pady=(5,0))
+        self.adb_path_entry = ctk.CTkEntry(self.adb_config_frame, height=28, placeholder_text="adb")
+        self.adb_path_entry.pack(padx=10, pady=5, fill="x")
+        self.adb_path_entry.insert(0, self.adb_path)
+        ctk.CTkButton(self.adb_config_frame, text="Lưu & Refresh", command=self.save_adb_and_refresh, height=24).pack(padx=10, pady=(0,5), fill="x")
+
+        self.btn_start = ctk.CTkButton(self.sidebar, text=" CHẠY TẤT CẢ", image=self.start_icon, compound="left", command=self.start_all, height=45, font=("Arial", 14, "bold"), fg_color="#10b981", hover_color="#059669")
+        self.btn_start.pack(side="bottom", padx=20, pady=(10, 20), fill="x")
+        self.btn_stop = ctk.CTkButton(self.sidebar, text=" DỪNG TẤT CẢ", image=self.stop_icon, compound="left", command=self.stop_all, fg_color="#4b5563", hover_color="#374151", height=40)
+        self.btn_stop.pack(side="bottom", padx=20, pady=0, fill="x")
+
+        self.main_content = ctk.CTkFrame(self, fg_color="transparent"); self.main_content.pack(side="right", fill="both", expand=True, padx=20, pady=20)
+        
+        inst_header = ctk.CTkFrame(self.main_content, fg_color="transparent"); inst_header.pack(fill="x")
+        ctk.CTkLabel(inst_header, text="DANH SÁCH BOXPHONE", font=("Arial", 14, "bold"), text_color=ACCENT_GREEN).pack(side="left")
+        self.btn_refresh = ctk.CTkButton(inst_header, text="Làm Mới", command=self.scan_devices, width=80)
+        self.btn_refresh.pack(side="right")
+        
+        self.device_list_frame = ctk.CTkScrollableFrame(self.main_content, height=250, fg_color=CARD_COLOR); self.device_list_frame.pack(fill="x", pady=10)
+        
+        self.stats_inner = ctk.CTkFrame(self.main_content, fg_color="transparent"); self.stats_inner.pack(fill="x", pady=10)
+        self.success_val = ctk.CTkLabel(self.stats_inner, text="0", font=("Arial", 40, "bold"), text_color="#4ADE80"); self.success_val.pack()
+        ctk.CTkLabel(self.stats_inner, text="CẶP THÀNH CÔNG", font=("Arial", 12)).pack()
+        
+        self.code_count_val = ctk.CTkLabel(self.stats_inner, text="0", font=("Arial", 40, "bold"), text_color="#00D2FF"); self.code_count_val.pack(pady=(10, 0))
+        ctk.CTkLabel(self.stats_inner, text="MÃ MỜI CÒN LẠI", font=("Arial", 12)).pack()
+        
+        ctk.CTkLabel(self.main_content, text="LOG HỆ THỐNG", font=("Arial", 12, "bold"), text_color="#888").pack(pady=(10,0))
+        self.log_txt = ctk.CTkTextbox(self.main_content, height=150, fg_color="#18181b", text_color="#d1d5db", font=("Consolas", 11))
+        self.log_txt.pack(fill="both", expand=True, pady=10)
+        self.load_adb_config()
+
+    def find_adb(self):
+        local_adb = resource_path("adb.exe")
+        paths = [local_adb, "adb", r"C:\LDPlayer\LDPlayer9\adb.exe"]
+        for p in paths:
+            try:
+                if p == "adb" or os.path.exists(p):
+                    subprocess.run([p, "version"], capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
+                    return p
+            except: continue
+        return "adb"
+
+    def save_adb_and_refresh(self):
+        path = self.adb_path_entry.get().strip()
+        if not path: self.adb_path = "adb"
+        else:
+            if os.path.isdir(path): path = os.path.join(path, "adb.exe")
+            if os.path.exists(path) or path == "adb": self.adb_path = path
+            else:
+                self.add_log(f"LỖI: Không tìm thấy file adb tại {path}")
+                return
+        try:
+            with open("adb_config.txt", "w") as f: f.write(self.adb_path)
+            self.adb_path_entry.delete(0, 'end'); self.adb_path_entry.insert(0, self.adb_path)
+        except: pass
+        self.add_log(f"Đã cập nhật ADB: {self.adb_path}")
+        self.scan_devices() while self.running:
             self.current_account = None
             with FILE_LOCK:
                 for acc in self.accounts_list:
@@ -686,76 +830,135 @@ class AutoClickerInstance:
                 self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']}")
                 continue
             
-            # --- KHỞI TẠO ĐỒNG BỘ CẶP ---
-            with self.shared_data["lock"]:
-                if self.pair_id not in self.shared_data["codes"]:
-                    self.shared_data["codes"][self.pair_id] = {"A": None, "B": None, "acc_A": None, "acc_B": None}
-                # Lưu acc đang chạy vào nhóm
-                if self.is_role_a: self.shared_data["codes"][self.pair_id]["acc_A"] = self.current_account
-                else: self.shared_data["codes"][self.pair_id]["acc_B"] = self.current_account
-            
-            success = True
-            
-            # KỊCH BẢN COPY MÃ VÀ ĐỔI MÃ:
-            # 1. Tìm và click nút LẤY MÃ
-            self.update_status("Đang lấy mã...")
-            
-            for retry in range(2):
-                copy_ok = True
-                for step in copy_script:
-                    if not self.running: break
-                    res_step = self.execute_step(step)
-                    if step.get("action") == "verify_or_restart" and not res_step:
-                        copy_ok = False
-                        break
-                if copy_ok: 
-                    break
-            
-            # 2. Đọc mã mới đã được lưu trong self.last_captured_code
-            my_code = self.last_captured_code
-            if not my_code:
-                self.log("!! KHÔNG LẤY ĐƯỢC MÃ QUA CLIPBOARD. Bỏ qua.")
-                success = False
-            else:
-                self.log(f"==> Đã lấy được mã: {my_code}")
-                # Chia sẻ mã lên bộ nhớ dùng chung
-                with self.shared_data["lock"]:
-                    if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = my_code
-                    else: self.shared_data["codes"][self.pair_id]["B"] = my_code
+            # --- QUYẾT ĐỊNH LOGIC: CHÉO CẶP HAY DÙNG FILE MÃ ---
+            with self.shared_data["ext_lock"]:
+                self.use_external_codes = len(self.shared_data.get("external_codes", [])) > 0
 
-            if success and self.running:
-                # 3. Chủ động chuẩn bị sẵn ở màn hình nhập mã (trong lúc đợi đối phương)
-                self.update_status("Đang chuẩn bị nhập mã...")
-                # Chạy các bước navigation (tất cả trừ bước cuối cùng là nhập mã)
-                for step in input_code_script[:-1]:
+            if self.use_external_codes:
+                self.log(">> CHẾ ĐỘ: SỬ DỤNG MÃ TỪ FILE")
+                # 1. Đi tới màn hình sự kiện
+                self.update_status("Đi tới sự kiện...")
+                success = True
+                for step in nav_to_event_only:
                     if not self.running: break
-                    self.execute_step(step)
-
-                # 4. Đợi mã của đối phương
-                self.update_status("Đợi mã đối phương...")
-                partner_code = None
-                wait_start = time.time()
-                while time.time() - wait_start < 120 and self.running:
-                    with self.shared_data["lock"]:
-                        partner_code = self.shared_data["codes"][self.pair_id]["B"] if self.is_role_a else self.shared_data["codes"][self.pair_id]["A"]
-                    if partner_code: break
-                    time.sleep(2)
+                    if not self.execute_step(step):
+                        success = False; break
                 
-                if not partner_code:
-                    self.log("!! TIME OUT: Không nhận được mã từ đối phương.")
+                if not success or not self.running:
+                    self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']}")
+                    continue
+                
+                # 2. Lấy mã từ danh sách dùng chung
+                target_code = None
+                with self.shared_data["ext_lock"]:
+                    codes = self.shared_data.get("external_codes", [])
+                    if codes:
+                        item = codes[0]
+                        target_code = item["code"]
+                        item["count"] -= 1
+                        if item["count"] <= 0:
+                            codes.pop(0)
+                        self.log(f"==> Lấy mã từ file: {target_code} (Còn lại {item['count']} lượt cho mã này)")
+                
+                if not target_code:
+                    self.log("!! HẾT MÃ TRONG FILE. Dừng luồng.")
                     success = False
                 else:
-                    self.log(f"==> Nhận được mã đối phương: {partner_code}")
-                    # 5. Điền mã và xác nhận
-                    self.partner_code = partner_code
-                    self.update_status("Đang nhập mã...")
-                    # Chạy bước cuối cùng của input_code_script (input_partner_code)
-                    self.execute_step(input_code_script[-1])
-                    
-                    # Click các bước xác nhận
-                    for step in confirm_script:
+                    # 3. Đi tới ô nhập mã
+                    self.update_status("Mở ô nhập mã...")
+                    for step in goto_input_code_only:
                         if not self.running: break
-                        self.execute_step(step)
+                        if not self.execute_step(step):
+                            success = False; break
+                    
+                    if success and self.running:
+                        # 4. Nhập mã và xác nhận
+                        self.partner_code = target_code
+                        if not self.execute_step(input_code_script[-1]):
+                            success = False
+                        
+                        if success:
+                            for step in confirm_script:
+                                if not self.running: break
+                                if not self.execute_step(step):
+                                    success = False; break
+            else:
+                self.log(">> CHẾ ĐỘ: CHÉO CẶP TỰ ĐỘNG")
+                # --- KHỞI TẠO ĐỒNG BỘ CẶP ---
+                with self.shared_data["lock"]:
+                    if self.pair_id not in self.shared_data["codes"]:
+                        self.shared_data["codes"][self.pair_id] = {"A": None, "B": None, "acc_A": None, "acc_B": None}
+                    # Lưu acc đang chạy vào nhóm
+                    if self.is_role_a: self.shared_data["codes"][self.pair_id]["acc_A"] = self.current_account
+                    else: self.shared_data["codes"][self.pair_id]["acc_B"] = self.current_account
+                
+                success = True
+                
+                # KỊCH BẢN COPY MÃ VÀ ĐỔI MÃ:
+                # 1. Tìm và click nút LẤY MÃ
+                self.update_status("Đang lấy mã...")
+                
+                for retry in range(2):
+                    copy_ok = True
+                    for step in copy_script:
+                        if not self.running: break
+                        if not self.execute_step(step):
+                            copy_ok = False; break
+                    if copy_ok: 
+                        break
+                
+                if not copy_ok:
+                    success = False
+                
+                # 2. Đọc mã mới đã được lưu trong self.last_captured_code
+                my_code = self.last_captured_code
+                if not my_code:
+                    self.log("!! KHÔNG LẤY ĐƯỢC MÃ QUA CLIPBOARD. Bỏ qua.")
+                    success = False
+                else:
+                    self.log(f"==> Đã lấy được mã: {my_code}")
+                    # Chia sẻ mã lên bộ nhớ dùng chung
+                    with self.shared_data["lock"]:
+                        if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = my_code
+                        else: self.shared_data["codes"][self.pair_id]["B"] = my_code
+
+                if success and self.running:
+                    # 3. Chủ động chuẩn bị sẵn ở màn hình nhập mã (trong lúc đợi đối phương)
+                    self.update_status("Đang chuẩn bị nhập mã...")
+                    # Chạy các bước navigation (tất cả trừ bước cuối cùng là nhập mã)
+                    for step in input_code_script[:-1]:
+                        if not self.running: break
+                        if not self.execute_step(step):
+                            success = False; break
+
+                    # 4. Đợi mã của đối phương
+                    self.update_status("Đợi mã đối phương...")
+                    partner_code = None
+                    wait_start = time.time()
+                    while time.time() - wait_start < 120 and self.running:
+                        with self.shared_data["lock"]:
+                            partner_code = self.shared_data["codes"][self.pair_id]["B"] if self.is_role_a else self.shared_data["codes"][self.pair_id]["A"]
+                        if partner_code: break
+                        time.sleep(2)
+                    
+                    if not partner_code:
+                        self.log("!! TIME OUT: Không nhận được mã từ đối phương.")
+                        success = False
+                    else:
+                        self.log(f"==> Nhận được mã đối phương: {partner_code}")
+                        # 5. Điền mã và xác nhận
+                        self.partner_code = partner_code
+                        self.update_status("Đang nhập mã...")
+                        # Chạy bước cuối cùng của input_code_script (input_partner_code)
+                        if not self.execute_step(input_code_script[-1]):
+                            success = False
+                        
+                        if success:
+                            # Click các bước xác nhận
+                            for step in confirm_script:
+                                if not self.running: break
+                                if not self.execute_step(step):
+                                    success = False; break
             
             # --- KẾT THÚC VÀ BÁO CÁO ---
             if self.running:
@@ -779,103 +982,10 @@ class AutoClickerInstance:
                     
             gc.collect()
 
-        self.update_status("Xong"); self.running = False
+        self.log(">> LUỒNG ĐÃ DỪNG HOÀN TOÀN.")
+        self.update_status("Đã dừng")
+        self.running = False
 
-class MultiPremiumApp(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("MegaLQTool(BoxPhone) - Code Pairing")
-        self.geometry("1000x650")
-        self.configure(fg_color=BG_COLOR)
-        self.accounts_data = []
-        self.account_file_path = None
-        self.instances = []
-        self.active_workers = []
-        self.success_count = 0
-        self.failure_count = 0
-        self.shared_data = {"codes": {}, "lock": threading.Lock()}
-        self.adb_path = self.find_adb()
-        self.device_map = {}
-        self.device_cards = {}
-        
-        try:
-            self.logo_img = ctk.CTkImage(Image.open(resource_path("logo_cs_cheo.png")), size=(64, 64))
-            self.start_icon = ctk.CTkImage(Image.open(resource_path("start.png")), size=(20, 20))
-            self.stop_icon = ctk.CTkImage(Image.open(resource_path("stop.png")), size=(20, 20))
-        except:
-            self.logo_img = self.start_icon = self.stop_icon = None
-        
-        self.setup_layout()
-        self.scan_devices()
-        
-        # Redirect stdout và stderr về log UI
-        sys.stdout = StdoutRedirector(self.add_log)
-        sys.stderr = StdoutRedirector(self.add_log)
-
-    def setup_layout(self):
-        self.sidebar = ctk.CTkFrame(self, width=220, fg_color=NAV_COLOR); self.sidebar.pack(side="left", fill="y")
-        if self.logo_img: ctk.CTkLabel(self.sidebar, image=self.logo_img, text="").pack(pady=20)
-        ctk.CTkLabel(self.sidebar, text="PAIRING EDITION", font=("Arial", 16, "bold"), text_color=ACCENT_GREEN).pack()
-        
-        self.account_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR); self.account_card.pack(padx=20, pady=20, fill="x")
-        ctk.CTkButton(self.account_card, text="NẠP FILE ACC", command=self.load_accounts, fg_color="#EAB308", text_color="#000").pack(pady=10, padx=10, fill="x")
-
-        self.adb_config_frame = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR); self.adb_config_frame.pack(padx=20, pady=5, fill="x")
-        ctk.CTkLabel(self.adb_config_frame, text="ADB PATH", font=("Arial", 10, "bold")).pack(pady=(5,0))
-        self.adb_path_entry = ctk.CTkEntry(self.adb_config_frame, height=28, placeholder_text="adb")
-        self.adb_path_entry.pack(padx=10, pady=5, fill="x")
-        self.adb_path_entry.insert(0, self.adb_path)
-        ctk.CTkButton(self.adb_config_frame, text="Lưu & Refresh", command=self.save_adb_and_refresh, height=24).pack(padx=10, pady=(0,5), fill="x")
-
-        self.btn_start = ctk.CTkButton(self.sidebar, text=" CHẠY TẤT CẢ", image=self.start_icon, compound="left", command=self.start_all, height=45, font=("Arial", 14, "bold"), fg_color="#10b981", hover_color="#059669")
-        self.btn_start.pack(side="bottom", padx=20, pady=(10, 20), fill="x")
-        self.btn_stop = ctk.CTkButton(self.sidebar, text=" DỪNG TẤT CẢ", image=self.stop_icon, compound="left", command=self.stop_all, fg_color="#4b5563", hover_color="#374151", height=40)
-        self.btn_stop.pack(side="bottom", padx=20, pady=0, fill="x")
-
-        self.main_content = ctk.CTkFrame(self, fg_color="transparent"); self.main_content.pack(side="right", fill="both", expand=True, padx=20, pady=20)
-        
-        inst_header = ctk.CTkFrame(self.main_content, fg_color="transparent"); inst_header.pack(fill="x")
-        ctk.CTkLabel(inst_header, text="DANH SÁCH BOXPHONE", font=("Arial", 14, "bold"), text_color=ACCENT_GREEN).pack(side="left")
-        self.btn_refresh = ctk.CTkButton(inst_header, text="Làm Mới", command=self.scan_devices, width=80)
-        self.btn_refresh.pack(side="right")
-        
-        self.device_list_frame = ctk.CTkScrollableFrame(self.main_content, height=250, fg_color=CARD_COLOR); self.device_list_frame.pack(fill="x", pady=10)
-        
-        self.stats_inner = ctk.CTkFrame(self.main_content, fg_color="transparent"); self.stats_inner.pack(fill="x", pady=10)
-        self.success_val = ctk.CTkLabel(self.stats_inner, text="0", font=("Arial", 50, "bold"), text_color="#4ADE80"); self.success_val.pack()
-        ctk.CTkLabel(self.stats_inner, text="CẶP THÀNH CÔNG", font=("Arial", 14)).pack()
-        
-        ctk.CTkLabel(self.main_content, text="LOG HỆ THỐNG", font=("Arial", 12, "bold"), text_color="#888").pack(pady=(10,0))
-        self.log_txt = ctk.CTkTextbox(self.main_content, height=150, fg_color="#18181b", text_color="#d1d5db", font=("Consolas", 11))
-        self.log_txt.pack(fill="both", expand=True, pady=10)
-        self.load_adb_config()
-
-    def find_adb(self):
-        local_adb = resource_path("adb.exe")
-        paths = [local_adb, "adb", r"C:\LDPlayer\LDPlayer9\adb.exe"]
-        for p in paths:
-            try:
-                if p == "adb" or os.path.exists(p):
-                    subprocess.run([p, "version"], capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
-                    return p
-            except: continue
-        return "adb"
-
-    def save_adb_and_refresh(self):
-        path = self.adb_path_entry.get().strip()
-        if not path: self.adb_path = "adb"
-        else:
-            if os.path.isdir(path): path = os.path.join(path, "adb.exe")
-            if os.path.exists(path) or path == "adb": self.adb_path = path
-            else:
-                self.add_log(f"LỖI: Không tìm thấy file adb tại {path}")
-                return
-        try:
-            with open("adb_config.txt", "w") as f: f.write(self.adb_path)
-            self.adb_path_entry.delete(0, 'end'); self.adb_path_entry.insert(0, self.adb_path)
-        except: pass
-        self.add_log(f"Đã cập nhật ADB: {self.adb_path}")
-        self.scan_devices()
 
     def load_adb_config(self):
         if os.path.exists("adb_config.txt"):
@@ -910,43 +1020,49 @@ class MultiPremiumApp(ctk.CTk):
             team_serials = serials[i:i+2]
             team_num = (i // 2) + 1
             
-            team_card = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=10, border_width=1, border_color="#333")
-            team_card.pack(fill="x", pady=8, padx=10)
+            team_card = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=8, border_width=1, border_color="#333")
+            team_card.pack(fill="x", pady=4, padx=10)
             
-            header = ctk.CTkFrame(team_card, fg_color="transparent", height=40)
-            header.pack(fill="x", padx=10, pady=5)
-            ctk.CTkLabel(header, text=f"PAIR {team_num}", font=("Arial", 14, "bold"), text_color=ACCENT_GREEN).pack(side="left")
+            header = ctk.CTkFrame(team_card, fg_color="transparent", height=30)
+            header.pack(fill="x", padx=10, pady=2)
+            ctk.CTkLabel(header, text=f"PAIR {team_num}", font=("Arial", 12, "bold"), text_color=ACCENT_GREEN).pack(side="left")
             
-            btn_play_all = ctk.CTkButton(header, text="START PAIR", image=self.start_icon, width=110, height=30, fg_color="#10b981", font=("Arial", 11, "bold"), command=lambda ts=team_serials: self.start_team(ts))
-            btn_play_all.pack(side="right", padx=5)
-            btn_stop_all = ctk.CTkButton(header, text="STOP PAIR", image=self.stop_icon, width=110, height=30, fg_color="#4b5563", font=("Arial", 11, "bold"), command=lambda ts=team_serials: self.stop_team(ts))
-            btn_stop_all.pack(side="right", padx=5)
+            btn_play_all = ctk.CTkButton(header, text="START PAIR", image=self.start_icon, width=90, height=24, fg_color="#10b981", font=("Arial", 10, "bold"), command=lambda ts=team_serials: self.start_team(ts))
+            btn_play_all.pack(side="right", padx=2)
+            btn_stop_all = ctk.CTkButton(header, text="STOP PAIR", image=self.stop_icon, width=90, height=24, fg_color="#4b5563", font=("Arial", 10, "bold"), command=lambda ts=team_serials: self.stop_team(ts))
+            btn_stop_all.pack(side="right", padx=2)
 
             device_grid = ctk.CTkFrame(team_card, fg_color="transparent")
-            device_grid.pack(fill="x", padx=10, pady=(0, 10))
+            device_grid.pack(fill="x", padx=10, pady=(0, 5))
             
             for idx_in_team, s in enumerate(team_serials):
                 global_idx = i + idx_in_team
                 self.device_map[s] = global_idx
                 is_role_a = (idx_in_team == 0)
                 
-                dev_box = ctk.CTkFrame(device_grid, fg_color="#252525", corner_radius=6, width=170)
-                dev_box.pack(side="left", padx=4, fill="y", expand=True)
+                dev_box = ctk.CTkFrame(device_grid, fg_color="#252525", corner_radius=6)
+                dev_box.pack(side="left", padx=2, fill="x", expand=True)
                 
                 color = "#3b82f6" if is_role_a else "#f59e0b"
                 lbl_role = "MÁY A" if is_role_a else "MÁY B"
-                ctk.CTkLabel(dev_box, text=lbl_role, font=("Arial", 10, "bold"), text_color=color).pack(pady=(5,0))
                 
-                ctk.CTkLabel(dev_box, text=s, font=("Arial", 9), text_color="#555").pack()
-                status_lbl = ctk.CTkLabel(dev_box, text="Ready", font=("Arial", 11, "bold"), text_color="#888")
-                status_lbl.pack(pady=2)
+                # Header máy (Role + Serial)
+                top_row = ctk.CTkFrame(dev_box, fg_color="transparent")
+                top_row.pack(fill="x", padx=5, pady=2)
+                ctk.CTkLabel(top_row, text=lbl_role, font=("Arial", 9, "bold"), text_color=color).pack(side="left")
+                ctk.CTkLabel(top_row, text=f"({s})", font=("Arial", 8), text_color="#555").pack(side="left", padx=5)
                 
-                btn_frame = ctk.CTkFrame(dev_box, fg_color="transparent")
-                btn_frame.pack(pady=4)
-                b_start = ctk.CTkButton(btn_frame, text="", image=self.start_icon, width=28, height=28, fg_color="#1f2937", command=lambda sn=s: self.start_single_device(sn))
-                b_start.pack(side="left", padx=2)
-                b_stop = ctk.CTkButton(btn_frame, text="", image=self.stop_icon, width=28, height=28, fg_color="#1f2937", command=lambda sn=s: self.stop_single_device(sn))
-                b_stop.pack(side="left", padx=2)
+                # Bottom row (Status + Buttons)
+                bot_row = ctk.CTkFrame(dev_box, fg_color="transparent")
+                bot_row.pack(fill="x", padx=5, pady=(0, 2))
+                
+                status_lbl = ctk.CTkLabel(bot_row, text="Ready", font=("Arial", 10, "bold"), text_color="#888")
+                status_lbl.pack(side="left")
+                
+                b_stop = ctk.CTkButton(bot_row, text="", image=self.stop_icon, width=20, height=20, fg_color="#1f2937", command=lambda sn=s: self.stop_single_device(sn))
+                b_stop.pack(side="right", padx=1)
+                b_start = ctk.CTkButton(bot_row, text="", image=self.start_icon, width=20, height=20, fg_color="#1f2937", command=lambda sn=s: self.start_single_device(sn))
+                b_start.pack(side="right", padx=1)
                 
                 self.device_cards[s] = {"status": status_lbl, "start_btn": b_start, "stop_btn": b_stop}
 
@@ -970,6 +1086,29 @@ class MultiPremiumApp(ctk.CTk):
                 if len(parts)>=2: self.accounts_data.append({"tk":parts[0], "mk":parts[1], "used":False})
         self.add_log(f"Đã nạp {len(self.accounts_data)} acc.")
 
+    def load_external_codes(self):
+        p = fd.askopenfilename(filetypes=[("Text Files", "*.txt")])
+        if not p: return
+        self.ext_codes_file_path = p
+        codes = []
+        with open(p, 'r', encoding='utf-8') as f:
+            for l in f:
+                l = l.strip()
+                if not l: continue
+                parts = l.split('|')
+                code = parts[0]
+                count = 1
+                if len(parts) >= 2:
+                    try: count = int(parts[1])
+                    except: count = 1
+                codes.append({"code": code, "count": count})
+        
+        with self.shared_data["ext_lock"]:
+            self.shared_data["external_codes"] = codes
+        
+        self.add_log(f"Đã nạp {len(codes)} loại mã mời từ file.")
+        self.update_all_ui()
+
     def start_all(self):
         if not self.accounts_data: 
             self.add_log("Vui lòng nạp file tài khoản trước.")
@@ -978,22 +1117,29 @@ class MultiPremiumApp(ctk.CTk):
             self.start_single_device(s)
 
     def stop_all(self):
-        for w in self.active_workers[:]:
+        for w in self.active_workers:
             w.running = False
-            self.active_workers.remove(w)
         for s in self.device_cards:
-            self.device_cards[s]["status"].configure(text="Stopping...", text_color="#888")
+            self.device_cards[s]["status"].configure(text="Stopping...", text_color="#F87171")
+        self.add_log("Đã gửi lệnh dừng tới tất cả thiết bị.")
 
     def start_single_device(self, serial):
+        # Dọn dẹp các worker cũ đã chết
+        self.active_workers = [w for w in self.active_workers if w.running]
+        
         for w in self.active_workers:
             if w.device_id == serial and w.running: return
 
         def update_single_status():
              if serial in self.device_cards:
+                 found = False
                  for w in self.active_workers:
                      if w.device_id == serial:
                          self.device_cards[serial]["status"].configure(text=w.status, text_color="#4ADE80" if not w.is_lagging else "#FB7185")
+                         found = True
                          break
+                 if not found:
+                     self.device_cards[serial]["status"].configure(text="Ready", text_color="#888")
              self.update_all_ui()
 
         worker = AutoClickerInstance(serial, self.adb_path, self.add_log, update_single_status, self.report_stats)
@@ -1002,12 +1148,11 @@ class MultiPremiumApp(ctk.CTk):
         self.add_log(f"Đã bắt chạy thiết bị: {serial}")
 
     def stop_single_device(self, serial):
-        for w in self.active_workers[:]:
+        for w in self.active_workers:
             if w.device_id == serial:
                 w.running = False
-                self.active_workers.remove(w)
         if serial in self.device_cards:
-            self.device_cards[serial]["status"].configure(text="Stopped", text_color="#888")
+            self.device_cards[serial]["status"].configure(text="Stopping...", text_color="#F87171")
 
     def report_stats(self, success, info):
         if success: self.success_count += 1
@@ -1019,6 +1164,9 @@ class MultiPremiumApp(ctk.CTk):
 
     def update_all_ui(self):
         self.success_val.configure(text=str(self.success_count))
+        with self.shared_data["ext_lock"]:
+            total_remaining = sum(item["count"] for item in self.shared_data.get("external_codes", []))
+        self.code_count_val.configure(text=str(total_remaining))
 
     def add_log(self, text):
         now = datetime.now().strftime("%H:%M:%S")
