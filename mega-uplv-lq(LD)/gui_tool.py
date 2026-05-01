@@ -972,7 +972,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/andetieptuc.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             
-            {"action": "click_image", "target": "images/x3.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/x3.png", "target2": "images/x_nvtl.png","timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
 
             {"action": "press_esc", "wait": 2} ,
@@ -984,7 +984,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/nhan_nhanh.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_coords", "x": 229, "y": 490, "timeout": 2},
             {"action": "click_coords", "x": 229, "y": 490, "timeout": 2},
-            {"action": "click_image", "target": "images/ok_ruby.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/ok_ruby.jpg", "target2": "images/ok_nvtl.png", "timeout": 20, "confidence": 0.9},
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/shop.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
@@ -1140,8 +1140,7 @@ class AutoClickerInstance:
             },
             {"action": "click_coords", "x": 899, "y": 482, "timeout": 4},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_image_if", "target": "images/ok.png", "timeout": 7, "confidence": 0.9},
+            
             
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 60, "confidence": 0.9},
@@ -1162,13 +1161,13 @@ class AutoClickerInstance:
             
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
-            {"action": "wait", "timeout": 20},
+            {"action": "wait", "timeout": 30},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 6},
+            {"action": "wait", "timeout": 4},
             {"action": "click_image", "target": "images/tiep_tuc1.png", "timeout": 120, "confidence": 0.9},
-            {"action": "wait", "timeout": 6},
+            {"action": "wait", "timeout": 4},
             {"action": "click_image", "target": "images/tiep_tuc2.png", "timeout": 120, "confidence": 0.9},
-            {"action": "click_any", "wait": 6},
+            {"action": "click_any", "wait": 4},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
