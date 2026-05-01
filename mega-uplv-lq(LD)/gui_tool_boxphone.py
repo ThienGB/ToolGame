@@ -607,7 +607,7 @@ class AutoClickerInstance:
                         self.call_adb(["shell", "input", "tap", str(ml[0]+t_s.shape[1]//2), str(ml[1]+t_s.shape[0]//2)])
                         found = True; break
                 if found:
-                    time.sleep(0.3)
+                    time.sleep(0.5) # Tăng thời gian nghỉ giữa các phím lên 1 giây
                     break
                 time.sleep(0.5)
         return True
@@ -807,26 +807,40 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images_boxphone/sanh.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 60, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/sukien.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target1": "images_boxphone/krixi.png", "target2": "images_boxphone/krixi_loi.png", "timeout": 10, "confidence": 0.7},
-            {"action": "click_any", "wait": 2},
-            {"action": "click_any", "wait": 2},
+            {
+                "action": "cases",
+                "timeout" : 120,
+                "cases": [
+                    {
+                        "trigger": "images_boxphone/sukien.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 60, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images_boxphone/sukien.png", "timeout": 3, "confidence": 0.7},
+                            {"action": "click_image", "target1": "images_boxphone/krixi.png", "target2": "images_boxphone/krixi_loi.png", "timeout": 10, "confidence": 0.7},
+                            {"action": "click_any", "wait": 2},
+                            {"action": "click_any", "wait": 2},
+                            {"action": "click_image_if", "target1": "images_boxphone/lam.png", "target2": "images_boxphone/lam1.png", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images_boxphone/lam.png", "target2": "images_boxphone/lam1.png", "timeout": 5, "confidence": 0.7},
+                            {"action": "press_esc", "wait": 2} ,     
+                            {"action": "press_esc", "wait": 2} ,
+                            {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 20, "confidence": 0.7},
+                            {"action": "press_esc", "wait": 2} ,
+                            {"action": "press_esc", "wait": 2} ,
+                        ]
+                    },
+                    {
+                        "trigger": "images_boxphone/dauhang.png", 
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images_boxphone/dauhang.png", "timeout": 7, "confidence": 0.7},
             
-            {"action": "click_image_if", "target1": "images_boxphone/lam.png", "target2": "images_boxphone/lam1.png", "timeout": 5, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/lam.png", "target2": "images_boxphone/lam1.png", "timeout": 5, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2} ,
-            
-            
-            
-            {"action": "press_esc", "wait": 2} ,
-            {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 20, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2} ,
-            {"action": "press_esc", "wait": 2} ,
-            
-           
-           
-            {"action": "click_image_if", "target": "images_boxphone/dauhang.png", "timeout": 7, "confidence": 0.7},
+                            
+                            
+                        ]
+                    },
+                ]
+            }          
             
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_coords", "x": 1702, "y": 210, "timeout": 4},
