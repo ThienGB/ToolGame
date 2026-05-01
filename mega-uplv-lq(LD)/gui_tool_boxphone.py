@@ -946,7 +946,7 @@ class AutoClickerInstance:
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)        
         teamup_host_script = [
             {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target": "images_boxphone/dau_thuong.png", "timeout": 60, "confidence": 0.7},
+            {"action": "click_image", "target": "images_boxphone/dau_thuong1.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 3, "confidence": 0.7},
