@@ -631,6 +631,29 @@ class AutoClickerInstance:
                             {"action": "click_image", "target": "images/input_gift_code.jpg", "timeout": 20, "confidence": 0.7},
                             {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "timeout": 2, "confidence": 0.7},
                         ]
+                    },
+                    {
+                        "trigger": "images/input_gift_code2.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "get_code", "timeout": 10},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/input_gift_code.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "timeout": 2, "confidence": 0.7},
+                        ]
                     }
                 ]
             },
@@ -644,7 +667,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/ok_cs.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "click_image", "target": "images/xac_nhan_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/xac_nhan_chung_suc1.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target": "images/tiep_tuc_cs.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "click_image", "target": "images/x_cs2.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
@@ -657,32 +680,235 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/logout.jpg", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 15},
         ]
 
         # Script bổ sung để tách nhỏ navigation
-        nav_to_event_only = [
+
+        goto_input_code_only = [
             {
                 "action": "cases",
                 "timeout" : 60,
                 "timeout_then": [{"action": "handle_maintenance"}],
                 "cases": [
-                    {"action": "click_image_if", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
-                    {"action": "press_esc", "wait": 2},
-                    {"action": "press_esc", "wait": 2},
-                    {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
-                    {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},                ]
+                    {
+                        "trigger": "images/input_gift_code2.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image", "target": "images/input_gift_code2.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/input_gift_code2.jpg", "timeout": 2, "confidence": 0.7},
+                        ]
+                    },
+                    {
+                        "trigger": "images/su_kien.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
+                            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/input_gift_code2.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code2.jpg", "timeout": 2, "confidence": 0.7},
+                        ]
+                    }
+                ]
             }
         ]
 
-        goto_input_code_only = [
-            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target": "images/input_gift_code2.jpg", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code2.jpg", "timeout": 2, "confidence": 0.7},
-        ]
+        while self.running:
+            self.current_account = None
+            with FILE_LOCK:
+                for acc in self.accounts_list:
+                    if not acc.get("used"):
+                        acc["used"] = True; self.current_account = acc
+                        self.update_ui_func(); break
+            if not self.current_account: break
+            self.log(f">> START {self.role_name}: {self.current_account['tk']}")
+            
+            # --- DỌN DẸP VÀ KHỞI ĐỘNG CLIPPER SERVICE CHO VÒNG MỚI ---
+            self.last_captured_code = None
+            self.skip_login_for_this_acc = False
+            self.skip_all_retries = False
+            pkg = "com.example.clipper"
+            # Bật Service để hiện Nút nổi (Pill)
+            self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
+            # Xóa mã cũ
+            path_in_android = f"/sdcard/Android/data/{pkg}/files/clip.txt"
+            self.call_adb(["shell", "rm", "-f", path_in_android])
+
+            # --- THỰC HIỆN ĐĂNG NHẬP TRƯỚC ---
+            self.update_status("Đang Login...")
+            success_login = False
+            for retry_login in range(3):
+                success_login = True
+                for step in login_script:
+                    if not self.running: break
+                    
+                    # Nếu đang trong chế độ skip login và bước này là login_step thì bỏ qua
+                    if self.skip_login_for_this_acc and step.get("login_step"):
+                        continue
+                        
+                    if not self.execute_step(step):
+                        success_login = False; break
+                if success_login or not self.running or self.skip_all_retries: break
+                self.log(f"!! Login thất bại (vòng {retry_login+1}/3). Đang bắt đầu lại từ đầu cho account này...")
+                    
+            if not success_login or not self.running:
+                self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']}")
+                continue
+            
+            self.log(">> LOGIN THÀNH CÔNG. Bắt đầu giai đoạn tiếp theo...")
+            
+            # --- QUYẾT ĐỊNH LOGIC: CHÉO CẶP HAY DÙNG FILE MÃ ---
+            with self.shared_data["ext_lock"]:
+                self.use_external_codes = len(self.shared_data.get("external_codes", [])) > 0
+
+            if self.use_external_codes:
+                self.log(">>> CHẾ ĐỘ: SỬ DỤNG MÃ TỪ FILE (External Codes)")
+                success = True
+                
+                # 1. Lấy mã từ danh sách dùng chung
+                target_code = None
+                with self.shared_data["ext_lock"]:
+                    codes = self.shared_data.get("external_codes", [])
+                    if codes:
+                        item = codes[0]
+                        target_code = item["code"]
+                        item["count"] -= 1
+                        if item["count"] <= 0:
+                            codes.pop(0)
+                        self.log(f"==> Lấy mã từ file: {target_code} (Còn lại {item['count']} lượt cho mã này)")
+                
+                if not target_code:
+                    self.log("!! HẾT MÃ TRONG FILE. Dừng luồng.")
+                    success = False
+                else:
+                    # 2. Đi tới sự kiện và mở ô nhập mã
+                    self.update_status("Mở ô nhập mã...")
+                    for step in goto_input_code_only:
+                        if not self.running: break
+                        if not self.execute_step(step):
+                            success = False; break
+                    
+                    if success and self.running:
+                        # 4. Nhập mã và xác nhận
+                        self.partner_code = target_code
+                        if not self.execute_step(input_code_script[-1]):
+                            success = False
+                        
+                        if success:
+                            for step in confirm_script:
+                                if not self.running: break
+                                if not self.execute_step(step):
+                                    success = False; break
+            else:
+                self.log(">>> CHẾ ĐỘ: CHÉO CẶP TỰ ĐỘNG (Auto Pairing)")
+                # --- KHỞI TẠO ĐỒNG BỘ CẶP ---
+                with self.shared_data["lock"]:
+                    if self.pair_id not in self.shared_data["codes"]:
+                        self.shared_data["codes"][self.pair_id] = {"A": None, "B": None, "acc_A": None, "acc_B": None}
+                    # Lưu acc đang chạy vào nhóm
+                    if self.is_role_a: self.shared_data["codes"][self.pair_id]["acc_A"] = self.current_account
+                    else: self.shared_data["codes"][self.pair_id]["acc_B"] = self.current_account
+                
+                success = True
+                
+                # KỊCH BẢN COPY MÃ VÀ ĐỔI MÃ:
+                # 1. Tìm và click nút LẤY MÃ
+                self.update_status("Đang lấy mã...")
+                
+                for retry in range(2):
+                    copy_ok = True
+                    for step in copy_script:
+                        if not self.running: break
+                        if not self.execute_step(step):
+                            copy_ok = False; break
+                    if copy_ok: 
+                        break
+                
+                if not copy_ok:
+                    success = False
+                
+                # 2. Đọc mã mới đã được lưu trong self.last_captured_code
+                my_code = self.last_captured_code
+                if not my_code:
+                    self.log("!! KHÔNG LẤY ĐƯỢC MÃ QUA CLIPBOARD. Bỏ qua.")
+                    success = False
+                else:
+                    self.log(f"==> Đã lấy được mã: {my_code}")
+                    # Chia sẻ mã lên bộ nhớ dùng chung
+                    with self.shared_data["lock"]:
+                        if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = my_code
+                        else: self.shared_data["codes"][self.pair_id]["B"] = my_code
+
+                if success and self.running:
+                    # 3. Chủ động chuẩn bị sẵn ở màn hình nhập mã (trong lúc đợi đối phương)
+                    self.update_status("Đang chuẩn bị nhập mã...")
+                    # Chạy các bước navigation (tất cả trừ bước cuối cùng là nhập mã)
+                    for step in input_code_script[:-1]:
+                        if not self.running: break
+                        if not self.execute_step(step):
+                            success = False; break
+
+                    # 4. Đợi mã của đối phương
+                    self.update_status("Đợi mã đối phương...")
+                    partner_code = None
+                    wait_start = time.time()
+                    while time.time() - wait_start < 120 and self.running:
+                        with self.shared_data["lock"]:
+                            partner_code = self.shared_data["codes"][self.pair_id]["B"] if self.is_role_a else self.shared_data["codes"][self.pair_id]["A"]
+                        if partner_code: break
+                        time.sleep(2)
+                    
+                    if not partner_code:
+                        self.log("!! TIME OUT: Không nhận được mã từ đối phương.")
+                        success = False
+                    else:
+                        self.log(f"==> Nhận được mã đối phương: {partner_code}")
+                        # 5. Điền mã và xác nhận
+                        self.partner_code = partner_code
+                        self.update_status("Đang nhập mã...")
+                        # Chạy bước cuối cùng của input_code_script (input_partner_code)
+                        if not self.execute_step(input_code_script[-1]):
+                            success = False
+                        
+                        if success:
+                            # Click các bước xác nhận
+                            for step in confirm_script:
+                                if not self.running: break
+                                if not self.execute_step(step):
+                                    success = False; break
+            
+            # --- KẾT THÚC VÀ BÁO CÁO ---
+            if self.running:
+                # Ghi nhận kết quả
+                if success:
+                    # Đợi một chút để cả 2 máy hoàn thành trước khi ghi file
+                    time.sleep(5)
+                    # Chỉ máy A ghi file để tránh ghi trùng (nếu cần file chung)
+                    if self.is_role_a:
+                        with self.shared_data["lock"]:
+                            a_acc = self.shared_data["codes"][self.pair_id]["acc_A"]
+                            b_acc = self.shared_data["codes"][self.pair_id]["acc_B"]
+                            code_a = self.shared_data["codes"][self.pair_id]["A"]
+                            code_b = self.shared_data["codes"][self.pair_id]["B"]
+                        
+                        a_info = f"{a_acc['tk']}|{a_acc['mk']}" if a_acc else "N/A|N/A"
+                        b_info = f"{b_acc['tk']}|{b_acc['mk']}" if b_acc else "N/A|N/A"
+                        self.report_stats_func(True, f"AccA: {a_info} | AccB: {b_info} | Ma_A: {code_a} | Ma_B: {code_b}")
+                else:
+                    self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']}")
+                    
+            gc.collect()
+
+        self.log(">> LUỒNG ĐÃ DỪNG HOÀN TOÀN.")
+        self.update_status("Đã dừng")
+        self.running = False
         
        
 class MultiPremiumApp(ctk.CTk):
@@ -788,203 +1014,7 @@ class MultiPremiumApp(ctk.CTk):
             self.adb_path_entry.delete(0, 'end'); self.adb_path_entry.insert(0, self.adb_path)
         except: pass
         self.add_log(f"Đã cập nhật ADB: {self.adb_path}")
-        self.scan_devices() while self.running:
-            self.current_account = None
-            with FILE_LOCK:
-                for acc in self.accounts_list:
-                    if not acc.get("used"):
-                        acc["used"] = True; self.current_account = acc
-                        self.update_ui_func(); break
-            if not self.current_account: break
-            self.log(f">> START {self.role_name}: {self.current_account['tk']}")
-            
-            # --- DỌN DẸP VÀ KHỞI ĐỘNG CLIPPER SERVICE CHO VÒNG MỚI ---
-            self.last_captured_code = None
-            self.skip_login_for_this_acc = False
-            self.skip_all_retries = False
-            pkg = "com.example.clipper"
-            # Bật Service để hiện Nút nổi (Pill)
-            self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
-            # Xóa mã cũ
-            path_in_android = f"/sdcard/Android/data/{pkg}/files/clip.txt"
-            self.call_adb(["shell", "rm", "-f", path_in_android])
-
-            # --- THỰC HIỆN ĐĂNG NHẬP TRƯỚC ---
-            self.update_status("Đang Login...")
-            success_login = False
-            for retry_login in range(3):
-                success_login = True
-                for step in login_script:
-                    if not self.running: break
-                    
-                    # Nếu đang trong chế độ skip login và bước này là login_step thì bỏ qua
-                    if self.skip_login_for_this_acc and step.get("login_step"):
-                        continue
-                        
-                    if not self.execute_step(step):
-                        success_login = False; break
-                if success_login or not self.running or self.skip_all_retries: break
-                self.log(f"!! Login thất bại (vòng {retry_login+1}/3). Đang bắt đầu lại từ đầu cho account này...")
-                    
-            if not success_login or not self.running:
-                self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']}")
-                continue
-            
-            # --- QUYẾT ĐỊNH LOGIC: CHÉO CẶP HAY DÙNG FILE MÃ ---
-            with self.shared_data["ext_lock"]:
-                self.use_external_codes = len(self.shared_data.get("external_codes", [])) > 0
-
-            if self.use_external_codes:
-                self.log(">> CHẾ ĐỘ: SỬ DỤNG MÃ TỪ FILE")
-                # 1. Đi tới màn hình sự kiện
-                self.update_status("Đi tới sự kiện...")
-                success = True
-                for step in nav_to_event_only:
-                    if not self.running: break
-                    if not self.execute_step(step):
-                        success = False; break
-                
-                if not success or not self.running:
-                    self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']}")
-                    continue
-                
-                # 2. Lấy mã từ danh sách dùng chung
-                target_code = None
-                with self.shared_data["ext_lock"]:
-                    codes = self.shared_data.get("external_codes", [])
-                    if codes:
-                        item = codes[0]
-                        target_code = item["code"]
-                        item["count"] -= 1
-                        if item["count"] <= 0:
-                            codes.pop(0)
-                        self.log(f"==> Lấy mã từ file: {target_code} (Còn lại {item['count']} lượt cho mã này)")
-                
-                if not target_code:
-                    self.log("!! HẾT MÃ TRONG FILE. Dừng luồng.")
-                    success = False
-                else:
-                    # 3. Đi tới ô nhập mã
-                    self.update_status("Mở ô nhập mã...")
-                    for step in goto_input_code_only:
-                        if not self.running: break
-                        if not self.execute_step(step):
-                            success = False; break
-                    
-                    if success and self.running:
-                        # 4. Nhập mã và xác nhận
-                        self.partner_code = target_code
-                        if not self.execute_step(input_code_script[-1]):
-                            success = False
-                        
-                        if success:
-                            for step in confirm_script:
-                                if not self.running: break
-                                if not self.execute_step(step):
-                                    success = False; break
-            else:
-                self.log(">> CHẾ ĐỘ: CHÉO CẶP TỰ ĐỘNG")
-                # --- KHỞI TẠO ĐỒNG BỘ CẶP ---
-                with self.shared_data["lock"]:
-                    if self.pair_id not in self.shared_data["codes"]:
-                        self.shared_data["codes"][self.pair_id] = {"A": None, "B": None, "acc_A": None, "acc_B": None}
-                    # Lưu acc đang chạy vào nhóm
-                    if self.is_role_a: self.shared_data["codes"][self.pair_id]["acc_A"] = self.current_account
-                    else: self.shared_data["codes"][self.pair_id]["acc_B"] = self.current_account
-                
-                success = True
-                
-                # KỊCH BẢN COPY MÃ VÀ ĐỔI MÃ:
-                # 1. Tìm và click nút LẤY MÃ
-                self.update_status("Đang lấy mã...")
-                
-                for retry in range(2):
-                    copy_ok = True
-                    for step in copy_script:
-                        if not self.running: break
-                        if not self.execute_step(step):
-                            copy_ok = False; break
-                    if copy_ok: 
-                        break
-                
-                if not copy_ok:
-                    success = False
-                
-                # 2. Đọc mã mới đã được lưu trong self.last_captured_code
-                my_code = self.last_captured_code
-                if not my_code:
-                    self.log("!! KHÔNG LẤY ĐƯỢC MÃ QUA CLIPBOARD. Bỏ qua.")
-                    success = False
-                else:
-                    self.log(f"==> Đã lấy được mã: {my_code}")
-                    # Chia sẻ mã lên bộ nhớ dùng chung
-                    with self.shared_data["lock"]:
-                        if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = my_code
-                        else: self.shared_data["codes"][self.pair_id]["B"] = my_code
-
-                if success and self.running:
-                    # 3. Chủ động chuẩn bị sẵn ở màn hình nhập mã (trong lúc đợi đối phương)
-                    self.update_status("Đang chuẩn bị nhập mã...")
-                    # Chạy các bước navigation (tất cả trừ bước cuối cùng là nhập mã)
-                    for step in input_code_script[:-1]:
-                        if not self.running: break
-                        if not self.execute_step(step):
-                            success = False; break
-
-                    # 4. Đợi mã của đối phương
-                    self.update_status("Đợi mã đối phương...")
-                    partner_code = None
-                    wait_start = time.time()
-                    while time.time() - wait_start < 120 and self.running:
-                        with self.shared_data["lock"]:
-                            partner_code = self.shared_data["codes"][self.pair_id]["B"] if self.is_role_a else self.shared_data["codes"][self.pair_id]["A"]
-                        if partner_code: break
-                        time.sleep(2)
-                    
-                    if not partner_code:
-                        self.log("!! TIME OUT: Không nhận được mã từ đối phương.")
-                        success = False
-                    else:
-                        self.log(f"==> Nhận được mã đối phương: {partner_code}")
-                        # 5. Điền mã và xác nhận
-                        self.partner_code = partner_code
-                        self.update_status("Đang nhập mã...")
-                        # Chạy bước cuối cùng của input_code_script (input_partner_code)
-                        if not self.execute_step(input_code_script[-1]):
-                            success = False
-                        
-                        if success:
-                            # Click các bước xác nhận
-                            for step in confirm_script:
-                                if not self.running: break
-                                if not self.execute_step(step):
-                                    success = False; break
-            
-            # --- KẾT THÚC VÀ BÁO CÁO ---
-            if self.running:
-                # Ghi nhận kết quả
-                if success:
-                    # Đợi một chút để cả 2 máy hoàn thành trước khi ghi file
-                    time.sleep(5)
-                    # Chỉ máy A ghi file để tránh ghi trùng (nếu cần file chung)
-                    if self.is_role_a:
-                        with self.shared_data["lock"]:
-                            a_acc = self.shared_data["codes"][self.pair_id]["acc_A"]
-                            b_acc = self.shared_data["codes"][self.pair_id]["acc_B"]
-                            code_a = self.shared_data["codes"][self.pair_id]["A"]
-                            code_b = self.shared_data["codes"][self.pair_id]["B"]
-                        
-                        a_info = f"{a_acc['tk']}|{a_acc['mk']}" if a_acc else "N/A|N/A"
-                        b_info = f"{b_acc['tk']}|{b_acc['mk']}" if b_acc else "N/A|N/A"
-                        self.report_stats_func(True, f"AccA: {a_info} | AccB: {b_info} | Ma_A: {code_a} | Ma_B: {code_b}")
-                else:
-                    self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']}")
-                    
-            gc.collect()
-
-        self.log(">> LUỒNG ĐÃ DỪNG HOÀN TOÀN.")
-        self.update_status("Đã dừng")
-        self.running = False
+        self.scan_devices()
 
 
     def load_adb_config(self):
