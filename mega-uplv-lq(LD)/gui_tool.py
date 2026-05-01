@@ -1065,7 +1065,7 @@ class AutoClickerInstance:
                     },
                 ]
               } ,     
-            {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
+            
             {"action": "press_esc", "wait": 2},
             {"action": "wait", "timeout": 5},
             {"action": "press_esc", "wait": 2} ,
@@ -1138,8 +1138,9 @@ class AutoClickerInstance:
                     {"action": "click_image_if", "target": tuong_target, "timeout": 5, "confidence": 0.7},
                 ]
             },
-            {"action": "wait", "timeout": 3},
+            {"action": "click_coords", "x": 899, "y": 482, "timeout": 4},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 7, "confidence": 0.9},
             
             {"action": "wait", "timeout": 7},
