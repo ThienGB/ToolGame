@@ -1171,6 +1171,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_coords", "x": 476, "y": 498, "timeout": 3},
             {"action": "click_coords", "x": 459, "y": 36, "timeout": 3},
             {"action": "click_image_if", "target": "images/x4.png", "timeout": 4, "confidence": 0.9},
 
