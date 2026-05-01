@@ -306,31 +306,37 @@ class AutoClickerInstance:
         while f"target{i}" in step:
             targets.append(step.get(f"target{i}"))
             i += 1
+            
         timeout = step.get("timeout", 10)
         confidence = step.get("confidence", 0.8)
         use_color = step.get("use_color", False)
-
-        # Chuẩn bị ảnh mẫu (Sử dụng Cache)
-        target_data = []
+        
+        # Load templates once at start
+        target_imgs = []
         for t_path in targets:
-            t_img = get_cached_template(t_path, use_color)
-            if t_img is not None:
-                target_data.append((t_path, t_img))
-            else:
-                self.log(f"Thiếu ảnh mẫu: {t_path}")
+            real_path = resource_path(t_path)
+            if os.path.exists(real_path):
+                read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
+                img = cv2.imread(real_path, read_mode)
+                if img is not None:
+                    target_imgs.append((t_path, img))
+        
+        if not target_imgs:
+            return False
 
         start = time.time()
         best_match = {"val": 0, "name": ""}
-        last_screen = None
-        
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
-                last_screen = screen
-                compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                if not use_color:
+                    compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                else:
+                    compare_screen = screen
                 
-                for t_path, t_img in target_data:
-                    if compare_screen.shape[0] < t_img.shape[0] or compare_screen.shape[1] < t_img.shape[1]:
+                for t_path, t_img in target_imgs:
+                    # Tỉ lệ 1:1
+                    if t_img.shape[0] > compare_screen.shape[0] or t_img.shape[1] > compare_screen.shape[1]:
                         continue
                         
                     res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
@@ -343,59 +349,64 @@ class AutoClickerInstance:
                         th_s, tw_s = t_img.shape[:2]
                         self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
                         self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f})")
-                        return True
-            time.sleep(0.2)
+                        return t_path
+            time.sleep(0.5)
         
-        if last_screen is not None:
-            cv2.imwrite("debug_fail.png", last_screen)
-            self.log("!! Đã lưu ảnh chụp màn hình lỗi vào: debug_fail.png")
-            
         self.log(f"!! Timeout: Không thấy ảnh. Cao nhất: {best_match['name']} ({best_match['val']:.2f})")
         return False
 
     def cases_logic(self, step):
         cases = step.get("cases", [])
         if not cases: return True
-        
         timeout = step.get("timeout", 10)
         confidence = step.get("confidence", 0.8)
         
+        # Cache templates for this call
+        case_templates = []
+        for case in cases:
+            triggers = []
+            if case.get("trigger"): triggers.append(case.get("trigger"))
+            idx = 1
+            while f"trigger{idx}" in case:
+                triggers.append(case.get(f"trigger{idx}")); idx += 1
+            
+            loaded_triggers = []
+            for t_path in triggers:
+                real_path = resource_path(t_path)
+                if os.path.exists(real_path):
+                    t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
+                    if t_img is not None:
+                        loaded_triggers.append((t_path, t_img))
+            
+            if loaded_triggers:
+                case_templates.append({
+                    "triggers": loaded_triggers,
+                    "confidence": case.get("confidence", confidence),
+                    "script": case.get("script", [])
+                })
+
         start_time = time.time()
         while time.time() - start_time < timeout and self.running:
             screen = self.get_screenshot()
             if screen is None:
-                time.sleep(1)
-                continue
+                time.sleep(1); continue
             
             scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
             
-            for case in cases:
-                triggers = []
-                if case.get("trigger"): triggers.append(case.get("trigger"))
-                idx = 1
-                while f"trigger{idx}" in case:
-                    triggers.append(case.get(f"trigger{idx}"))
-                    idx += 1
-                
-                case_conf = case.get("confidence", confidence)
-                sub_script = case.get("script", [])
-                
-                for t_path in triggers:
-                    t_img = get_cached_template(t_path, False)
-                    if t_img is None: continue
-                    
-                    if scr_gray.shape[0] < t_img.shape[0] or scr_gray.shape[1] < t_img.shape[1]:
+            for item in case_templates:
+                for t_path, t_img in item["triggers"]:
+                    if t_img.shape[0] > scr_gray.shape[0] or t_img.shape[1] > scr_gray.shape[1]:
                         continue
                         
                     res = cv2.matchTemplate(scr_gray, t_img, cv2.TM_CCOEFF_NORMED)
                     _, mv, _, _ = cv2.minMaxLoc(res)
-                    if mv >= case_conf:
+                    if mv >= item["confidence"]:
                         self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({mv:.2f})")
-                        for s_step in sub_script:
+                        for s_step in item["script"]:
                             if not self.running: break
                             self.execute_step(s_step)
                         return True 
-            time.sleep(0.2)
+            time.sleep(0.5)
         return False
 
     def click_coords_logic(self, step):
@@ -413,22 +424,30 @@ class AutoClickerInstance:
         timeout = step.get("timeout", 10)
         conf = step.get("confidence", 0.8)
         use_color = step.get("use_color", False)
-        t_img = get_cached_template(target, use_color)
+        
+        real_path = resource_path(target)
+        if not os.path.exists(real_path): return False
+        
+        read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
+        t_img = cv2.imread(real_path, read_mode)
         if t_img is None: return False
         
         start = time.time()
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
-                compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                if not use_color:
+                    compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                else:
+                    compare_screen = screen
 
-                if compare_screen.shape[0] < t_img.shape[0] or compare_screen.shape[1] < t_img.shape[1]:
+                if t_img.shape[0] > compare_screen.shape[0] or t_img.shape[1] > compare_screen.shape[1]:
                     continue
                     
                 res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
                 _, mv, _, _ = cv2.minMaxLoc(res)
                 if mv >= conf: return True
-            time.sleep(0.2)
+            time.sleep(0.5)
         return False
 
     def click_any_logic(self, step):
