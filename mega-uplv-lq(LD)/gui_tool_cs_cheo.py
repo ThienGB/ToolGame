@@ -331,34 +331,27 @@ class AutoClickerInstance:
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
-                h_screen, w_screen = screen.shape[:2]
-                scale = h_screen / BASE_HEIGHT
-
                 if not use_color: compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 else: compare_screen = screen
                 
                 for t_path, t_img in target_imgs:
-                    for curr_scale in [scale, 1.0, scale*0.98, scale*1.02]:
-                        if abs(curr_scale - 1.0) < 0.001: t_scaled = t_img
-                        else:
-                            interp = cv2.INTER_CUBIC if curr_scale > 1.0 else cv2.INTER_AREA
-                            tw, th = int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)
-                            t_scaled = cv2.resize(t_img, (tw, th), interpolation=interp)
+                    # Tỉ lệ 1:1, không scale
+                    t_scaled = t_img
 
-                        # Bỏ qua nếu template lớn hơn màn hình
-                        if t_scaled.shape[0] > compare_screen.shape[0] or t_scaled.shape[1] > compare_screen.shape[1]:
-                            continue
-                        res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
-                        _, mv, _, ml = cv2.minMaxLoc(res)
+                    # Bỏ qua nếu template lớn hơn màn hình
+                    if t_scaled.shape[0] > compare_screen.shape[0] or t_scaled.shape[1] > compare_screen.shape[1]:
+                        continue
+                    res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
+                    _, mv, _, ml = cv2.minMaxLoc(res)
+                    
+                    if mv > best_match["val"]:
+                        best_match = {"val": mv, "name": os.path.basename(t_path)}
                         
-                        if mv > best_match["val"]:
-                            best_match = {"val": mv, "name": os.path.basename(t_path)}
-                            
-                        if mv >= confidence:
-                            th_s, tw_s = t_scaled.shape[:2]
-                            self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
-                            self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f} @ {curr_scale:.2f}x)")
-                            return t_path
+                    if mv >= confidence:
+                        th_s, tw_s = t_scaled.shape[:2]
+                        self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
+                        self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f})")
+                        return t_path
             time.sleep(1)
         
         self.log(f"!! Timeout: Không thấy ảnh. Cao nhất: {best_match['name']} ({best_match['val']:.2f})")
@@ -375,9 +368,6 @@ class AutoClickerInstance:
             screen = self.get_screenshot()
             if screen is None:
                 time.sleep(1); continue
-            
-            h_screen, w_screen = screen.shape[:2]
-            scale = h_screen / BASE_HEIGHT
             
             for case in cases:
                 triggers = []
@@ -397,20 +387,19 @@ class AutoClickerInstance:
                     if t_img is None: continue
                     
                     scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-                    for curr_scale in [scale, 1.0]:
-                        if abs(curr_scale - 1.0) < 0.001: t_scaled = t_img
-                        else: t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_AREA)
-                        
-                        if t_scaled.shape[0] > scr_gray.shape[0] or t_scaled.shape[1] > scr_gray.shape[1]:
-                            continue
-                        res = cv2.matchTemplate(scr_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
-                        _, mv, _, _ = cv2.minMaxLoc(res)
-                        if mv >= case_conf:
-                            self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)}")
-                            for s_step in sub_script:
-                                if not self.running: break
-                                self.execute_step(s_step)
-                            return True 
+                    # Tỉ lệ 1:1
+                    t_scaled = t_img
+                    
+                    if t_scaled.shape[0] > scr_gray.shape[0] or t_scaled.shape[1] > scr_gray.shape[1]:
+                        continue
+                    res = cv2.matchTemplate(scr_gray, t_scaled, cv2.TM_CCOEFF_NORMED)
+                    _, mv, _, _ = cv2.minMaxLoc(res)
+                    if mv >= case_conf:
+                        self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)}")
+                        for s_step in sub_script:
+                            if not self.running: break
+                            self.execute_step(s_step)
+                        return True 
             time.sleep(1)
         return False
 
@@ -429,20 +418,17 @@ class AutoClickerInstance:
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
-                h_screen, w_screen = screen.shape[:2]
-                scale = h_screen / BASE_HEIGHT
                 if not use_color: compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 else: compare_screen = screen
 
-                for curr_scale in [scale, 1.0]:
-                    if abs(curr_scale - 1.0) < 0.001: t_scaled = t_img
-                    else: t_scaled = cv2.resize(t_img, (int(t_img.shape[1]*curr_scale), int(t_img.shape[0]*curr_scale)), interpolation=cv2.INTER_AREA)
+                # Tỉ lệ 1:1
+                t_scaled = t_img
 
-                    if t_scaled.shape[0] > compare_screen.shape[0] or t_scaled.shape[1] > compare_screen.shape[1]:
-                        continue
-                    res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
-                    _, mv, _, _ = cv2.minMaxLoc(res)
-                    if mv >= conf: return True
+                if t_scaled.shape[0] > compare_screen.shape[0] or t_scaled.shape[1] > compare_screen.shape[1]:
+                    continue
+                res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
+                _, mv, _, _ = cv2.minMaxLoc(res)
+                if mv >= conf: return True
             time.sleep(1)
         return False
 
@@ -605,7 +591,7 @@ class AutoClickerInstance:
         copy_script = [
             {
                 "action": "cases",
-                "timeout" : 60,
+                "timeout" : 120,
                 "timeout_then": [{"action": "handle_maintenance"}],
                 "cases": [
                     {
@@ -624,12 +610,11 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 5, "confidence": 0.7},
-            {"action": "wait", "timeout": 2},
             {"action": "get_code", "timeout": 10}, # Hàm get_code bây giờ sẽ ưu tiên Clipboard
             {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/nhap_ma_moi1.jpg", "timeout": 2, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "click_image", "target": "images/input_gift_code.jpg", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "timeout": 2, "confidence": 0.7},
