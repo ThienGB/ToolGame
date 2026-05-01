@@ -900,6 +900,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 10, "confidence": 0.9},
             {"action": "wait", "timeout": 5},
             {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.9},
+            
             {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","timeout": 7, "confidence": 0.9},
             {"action": "click_any", "wait": 2},
             {"action": "press_esc", "wait": 2} ,
