@@ -841,7 +841,7 @@ class AutoClickerInstance:
                 return False
 
         # Nhấn auto win đồng thời khi cả 5 tab đều cùng tới hàng chờ
-        self.click_image_logic({"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9})
+        self.click_image_logic({"action": "click_image_if", "target": "images/on.png", "timeout": 20, "confidence": 0.9})
 
         with self.shared_data["lock"]:
             self.shared_data["autowin_barrier"][self.group_id] = 0
@@ -861,22 +861,22 @@ class AutoClickerInstance:
             
 
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
-            # {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
-            # {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
 
-            # {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg","timeout": 60, "confidence": 0.9},
-            # {"action": "input_account"},
-            # {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "target3": "images/matkhau.jpg", "timeout": 60, "confidence": 0.9},
-            # {"action": "input_password"},
-            # {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dangnhap.jpg", "timeout": 30, "confidence": 0.9},
-            # {"action": "wait", "timeout": 5},
-            # {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 5, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/ok2.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "wait", "timeout": 7},
-            # {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
-            # {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
-            # {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.9},
-            # {"action": "clear_android_data", "package": "com.garena.gaslite"},
+            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg","timeout": 60, "confidence": 0.9},
+            {"action": "input_account"},
+            {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "target3": "images/matkhau.jpg", "timeout": 60, "confidence": 0.9},
+            {"action": "input_password"},
+            {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dangnhap.jpg", "timeout": 30, "confidence": 0.9},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 5, "confidence": 0.9},
+            {"action": "click_image", "target": "images/ok2.png", "timeout": 30, "confidence": 0.9},
+            {"action": "wait", "timeout": 7},
+            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.9},
+            {"action": "clear_android_data", "package": "com.garena.gaslite"},
 
         ]
 
@@ -905,12 +905,12 @@ class AutoClickerInstance:
                 "confidence": 0.9,
                 "then": [
                    {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.9},
-                   {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
+                   {"action": "click_image_if", "target": "images/on.png", "timeout": 20, "confidence": 0.9, use color=True},
                    {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
                    {"action": "click_any", "wait": 30},
                    {"action": "click_any", "wait": 10},
                    {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.9},
-                   {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
+                   {"action": "click_image_if", "target": "images/off.png", "timeout": 20, "confidence": 0.9, use color=True},
                    {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
                    {"action": "click_any", "wait": 10},
                    
@@ -927,7 +927,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/pve.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/on.png", "timeout": 20, "confidence": 0.9, use color=True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
@@ -1060,7 +1060,7 @@ class AutoClickerInstance:
         dinh_game_script = [
             {"action": "click_image", "target": "images/dauthuong.png", "timeout": 60, "confidence": 0.9},
             {"action": "click_image", "target1": "images/logo.png","target2": "images/logo4.png","target3": "images/logo1.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/off.png", "timeout": 20, "confidence": 0.9, use color=True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
@@ -1085,7 +1085,7 @@ class AutoClickerInstance:
                 ]
             },
             {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "timeout": 5, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/on.png", "timeout": 20, "confidence": 0.9, use color=True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 20},
@@ -1171,7 +1171,7 @@ class AutoClickerInstance:
         tuong_target = f"images/tuong{(self.worker_index % 5) + 2 }.png"
         shared_battle_script = [
             {"action": "click_image", "target": "images/logo1.png", "timeout": 50, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/autowin.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/off.png", "timeout": 20, "confidence": 0.9, use color=True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/guest.png", "timeout": 60, "confidence": 0.9},
@@ -1242,7 +1242,7 @@ class AutoClickerInstance:
         # GIAI ĐĂNG XUẤT - XUẤT FILE
         uplevel_script = [
             {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/autowin.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/off.png", "timeout": 30, "confidence": 0.9, use color=True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
