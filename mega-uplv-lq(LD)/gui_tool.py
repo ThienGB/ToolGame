@@ -724,13 +724,13 @@ class AutoClickerInstance:
                     gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                     res = cv2.matchTemplate(gray, t_img, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, max_loc = cv2.minMaxLoc(res)
-                    if max_val >= 0.9:
+                    if max_val >= 0.85:
                         th, tw = t_img.shape[:2]
                         cx, cy = max_loc[0] + tw // 2, max_loc[1] + th // 2
                         self.call_adb(["shell", "input", "tap", str(cx), str(cy)])
                         self.log(f"  Click số '{digit}' tại ({cx}, {cy})")
                         found = True
-                        time.sleep(0.3)  # Đợi nhỏ giữa 2 lần click
+                        time.sleep(0.5)  # Đợi 0.5s giữa 2 lần click để game nhận phím
                         break
                 time.sleep(0.5)
             
@@ -1198,7 +1198,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
-            {"action": "wait", "timeout": 25},    
+            {"action": "wait", "timeout": 15},    
         ]
 
         while self.running:
@@ -1271,22 +1271,25 @@ class AutoClickerInstance:
                 self.update_ui_func()
                 self.accounts_processed += 1
                 self.report_stats_func(True, self.current_account) # Report Success
-                
-                # NẾU CHỈ CHỌN LOGIN: Dừng luôn, không đổi tài khoản tiếp theo
-                if self.modes.get("login") and not self.modes.get("tutorial") and not self.modes.get("uplevel"):
-                    self.log("CHẾ ĐỘ CHỈ LOGIN: Hoàn tất 1 tài khoản và dừng lại.")
-                    self.running = False
-                    break
             elif not success and self.running:
                 self.accounts_processed += 1
                 self.report_stats_func(False, self.current_account) # Report Failure
             
             # Tự động Restart sau N lượt chạy
-            if self.running and self.accounts_processed >= self.restart_threshold:
+            if self.accounts_processed >= self.restart_threshold:
                 self.log(f"Đã chạy {self.accounts_processed} lượt. Tiến hành Restart để sạch RAM.")
                 self.restart_emulator()
                 self.accounts_processed = 0
 
+            if success and self.running:
+                # NẾU CHỈ CHỌN LOGIN: Dừng luôn, không đổi tài khoản tiếp theo
+                # Kiểm tra tất cả các mode khác, nếu không có cái nào active ngoài login thì mới dừng
+                other_modes_active = any([self.modes.get("tutorial"), self.modes.get("buy_exp"), self.modes.get("dinh_game"), self.modes.get("teamup")])
+                if self.modes.get("login") and not other_modes_active:
+                    self.log("CHẾ ĐỘ CHỈ LOGIN: Hoàn tất 1 tài khoản và dừng lại.")
+                    self.running = False
+                    break
+            
             time.sleep(1)
             # Dọn dẹp bộ nhớ Python triệt để
             gc.collect()
