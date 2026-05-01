@@ -378,6 +378,8 @@ class AutoClickerInstance:
             res = self.swipe_logic(step)
         elif action == "press_esc":
             res = self.press_esc_logic(step)
+        elif action == "cases":
+            res = self.cases_logic(step)
         elif action == "sync_autowin":
             res = self.sync_autowin_logic(step)
         elif action == "loop":
@@ -411,6 +413,7 @@ class AutoClickerInstance:
         
         timeout = step.get("timeout", 10)
         confidence = step.get("confidence", 0.8)
+        use_color = step.get("use_color", step.get("useColor", False))
 
         # Ưu tiên chọn hình của mỗi worker để giảm chọn trùng cùng lúc
         ordered_targets = list(targets)
@@ -423,8 +426,9 @@ class AutoClickerInstance:
         for t_path in ordered_targets:
             real_path = resource_path(t_path)
             if os.path.exists(real_path):
-                # Đọc ảnh ở dạng xám (grayscale) để giảm ảnh hưởng của màu nền
-                img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
+                # Đọc ảnh ở dạng màu hoặc xám tùy cài đặt
+                read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
+                img = cv2.imread(real_path, read_mode)
                 if img is not None: target_imgs.append((t_path, img))
             else:
                 self.log(f"LỖI: Không tìm thấy ảnh mẫu: {t_path}")
@@ -439,11 +443,11 @@ class AutoClickerInstance:
 
             screen = self.get_screenshot()
             if screen is not None:
-                # Chuyển ảnh màn hình sang dạng xám
-                screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                # Chuyển ảnh màn hình sang dạng xám nếu không dùng màu
+                compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 
                 for t_path, t_img in target_imgs:
-                    res = cv2.matchTemplate(screen_gray, t_img, cv2.TM_CCOEFF_NORMED)
+                    res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, max_loc = cv2.minMaxLoc(res)
                     
                     if max_val >= confidence:
@@ -461,10 +465,13 @@ class AutoClickerInstance:
         target = step.get("target")
         timeout = step.get("timeout", 10)
         conf = step.get("confidence", 0.8)
+        use_color = step.get("use_color", step.get("useColor", False))
         
         real_path = resource_path(target)
         if not os.path.exists(real_path): return False
-        t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE) # Dùng ảnh xám
+        
+        read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
+        t_img = cv2.imread(real_path, read_mode)
         if t_img is None: return False
         
         start = time.time()
@@ -476,14 +483,57 @@ class AutoClickerInstance:
                 
             screen = self.get_screenshot()
             if screen is not None:
-                screen_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY) # Chuyển xám
-                res = cv2.matchTemplate(screen_gray, t_img, cv2.TM_CCOEFF_NORMED)
+                compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
                 _, max_val, _, _ = cv2.minMaxLoc(res)
                 if max_val >= conf:
                     self.log(f"==> TÌM THẤY: {os.path.basename(target)} (Khớp: {max_val:.2f})")
                     return True
             time.sleep(1)
         self.log(f"!! KHÔNG TÌM THẤY: {os.path.basename(target)} sau {timeout}s")
+        return False
+
+    def cases_logic(self, step):
+        cases = step.get("cases", [])
+        if not cases: return True
+        
+        timeout = step.get("timeout", 10)
+        confidence = step.get("confidence", 0.8)
+        
+        start_time = time.time()
+        while time.time() - start_time < timeout and self.running:
+            screen = self.get_screenshot()
+            if screen is None:
+                time.sleep(1)
+                continue
+            
+            for case in cases:
+                triggers = []
+                if case.get("trigger"): triggers.append(case.get("trigger"))
+                idx = 1
+                while f"trigger{idx}" in case:
+                    triggers.append(case.get(f"trigger{idx}"))
+                    idx += 1
+                
+                case_conf = case.get("confidence", confidence)
+                sub_script = case.get("script", [])
+                
+                for t_path in triggers:
+                    real_path = resource_path(t_path)
+                    if not os.path.exists(real_path): continue
+                    t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
+                    if t_img is None: continue
+                    
+                    scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                    res = cv2.matchTemplate(scr_gray, t_img, cv2.TM_CCOEFF_NORMED)
+                    _, mv, _, _ = cv2.minMaxLoc(res)
+                    if mv >= case_conf:
+                        self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({mv:.2f})")
+                        for s_step in sub_script:
+                            if not self.running: break
+                            self.execute_step(s_step)
+                        return True
+            time.sleep(1)
         return False
 
     def click_any_logic(self, step):
@@ -1440,7 +1490,7 @@ class MultiPremiumApp(ctk.CTk):
         self.mode_tutorial = ctk.CTkCheckBox(self.mode_frame, text="TÂN THỦ", font=ctk.CTkFont(size=11))
         self.mode_tutorial.grid(row=0, column=1); self.mode_tutorial.select()
 
-        self.mode_buy_exp = ctk.CTkCheckBox(self.mode_frame, text="OFF LÂU", font=ctk.CTkFont(size=11), text_color="#EAB308")
+        self.mode_buy_exp = ctk.CTkCheckBox(self.mode_frame, text="OFF LÂU (LV8)", font=ctk.CTkFont(size=11), text_color="#EAB308")
         self.mode_buy_exp.grid(row=0, column=2); self.mode_buy_exp.select()
 
         self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME", font=ctk.CTkFont(size=11), text_color="#F59E0B")
