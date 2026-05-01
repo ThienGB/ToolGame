@@ -926,11 +926,13 @@ class AutoClickerInstance:
             {"action": "click_any", "wait": 2},
             {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 2} ,
+
             
             {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 20, "confidence": 0.9},
             {"action": "press_esc", "wait": 2},
             {"action": "wait", "timeout": 5},
             {"action": "press_esc", "wait": 2} ,
+            
         ]
         
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)        
@@ -977,7 +979,7 @@ class AutoClickerInstance:
            {"action": "click_image", "target1": "images_boxphone/minimize.png","target2": "images_boxphone/minimize1.png","target3": "images_boxphone/minimize2.png","target4": "images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.9},
             
             {"action": "click_image", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 10, "confidence": 0.7},
+            
             
             {"action": "click_image_if", "target": "images_boxphone/ok.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image_if", "target1": t1, "target2": t2, "timeout": 10, "confidence": 0.7},
