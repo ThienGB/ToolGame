@@ -862,9 +862,8 @@ class AutoClickerInstance:
             },          
             {"action": "click_image_if", "target": "images_boxphone/dauhang.png", "timeout": 7, "confidence": 0.7},
             {"action": "press_esc", "wait": 2} ,
-            {"action": "click_coords", "x": 1702, "y": 210, "timeout": 4},
-            {"action": "click_coords", "x": 1702, "y": 210, "timeout": 4},
-            {"action": "click_coords", "x": 1702, "y": 210, "timeout": 4},
+            
+            {"action": "click_coords", "x": 1702, "y": 210, "timeout": 2},
             {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
             {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
             # {"action": "click_image", "target": "images_boxphone/event.png", "timeout": 20, "confidence": 0.7},

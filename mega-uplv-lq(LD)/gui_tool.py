@@ -811,22 +811,22 @@ class AutoClickerInstance:
             
 
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
+            # {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
 
-            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg","timeout": 60, "confidence": 0.9},
-            {"action": "input_account"},
-            {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "target3": "images/matkhau.jpg", "timeout": 60, "confidence": 0.9},
-            {"action": "input_password"},
-            {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dangnhap.jpg", "timeout": 30, "confidence": 0.9},
-            {"action": "wait", "timeout": 5},
-            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 5, "confidence": 0.9},
-            {"action": "click_image", "target": "images/ok2.png", "timeout": 30, "confidence": 0.9},
-            {"action": "wait", "timeout": 7},
-            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.9},
-            {"action": "clear_android_data", "package": "com.garena.gaslite"},
+            # {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg","timeout": 60, "confidence": 0.9},
+            # {"action": "input_account"},
+            # {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "target3": "images/matkhau.jpg", "timeout": 60, "confidence": 0.9},
+            # {"action": "input_password"},
+            # {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dangnhap.jpg", "timeout": 30, "confidence": 0.9},
+            # {"action": "wait", "timeout": 5},
+            # {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 5, "confidence": 0.9},
+            # {"action": "click_image", "target": "images/ok2.png", "timeout": 30, "confidence": 0.9},
+            # {"action": "wait", "timeout": 7},
+            # {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
+            # {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
+            # {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.9},
+            # {"action": "clear_android_data", "package": "com.garena.gaslite"},
 
         ]
 
@@ -902,7 +902,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.9},
             
             {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","timeout": 7, "confidence": 0.9},
-            {"action": "click_any", "wait": 2},
+            
             {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
@@ -925,8 +925,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png", "timeout": 12, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 3} ,
-            {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
-            {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
+            
             {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
             {"action": "press_esc", "wait": 3} ,
             {"action": "click_image_if", "target": "images/qua_tan_thu.png", "target": "images/skttt.png","timeout": 10, "confidence": 0.9},
@@ -1022,8 +1021,9 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 3},
             
             
-            {"action": "click_image_if", "target": "images/tuong4.png", "timeout": 6, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/tuong5.png", "timeout": 6, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/tuong4.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/tuong5.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 50, "confidence": 0.9},
             {
@@ -1040,10 +1040,31 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 20},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 3},
+            {"action": "click_any", "wait": 3},
             {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 2} ,
-            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2} ,
+            {"action": "press_esc", "wait": 2} ,
+            {
+                "action": "cases",
+                "timeout" : 120,
+                "cases": [
+                    {
+                        "trigger": "images/event_default.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "press_esc", "wait": 2},
+                            
+                        ]
+                    },
+                    {
+                        "trigger": "images_boxphone/pvp.png", 
+                        "confidence": 0.7,
+                        
+                    },
+                ]
+              } ,     
             {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
             {"action": "press_esc", "wait": 2},
             {"action": "wait", "timeout": 5},
@@ -1052,7 +1073,7 @@ class AutoClickerInstance:
         ]
 
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)
-         
+                  
         teamup_host_script = [
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target": "images/team5.png", "timeout": 60},
@@ -1119,6 +1140,7 @@ class AutoClickerInstance:
             },
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 7, "confidence": 0.9},
             
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 60, "confidence": 0.9},
