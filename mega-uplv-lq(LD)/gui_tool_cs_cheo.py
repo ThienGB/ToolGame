@@ -81,9 +81,30 @@ class AutoClickerInstance:
         self.skip_login_for_this_acc = False
         self.skip_all_retries = False
         self.use_external_codes = False
+        self.code_entered = False
 
-    def log(self, msg):
-        self.log_func(f"[{self.device_id}] {msg}")
+    def log(self, msg, force_ui=False):
+        # In trực tiếp ra console hệ thống (sys.__stdout__) để không bị Redirector đẩy lên UI
+        try:
+            sys.__stdout__.write(f"[{self.device_id}] {msg}\n")
+            sys.__stdout__.flush()
+        except: pass
+        
+        # Chỉ hiển thị lên UI nếu chứa các tiền tố thông báo quan trọng và KHÔNG phải là action hoặc timeout
+        allowed_prefixes = [
+            ">> START", 
+            "[THÀNH CÔNG]",
+            "[THẤT BẠI]"
+        ]
+        
+        # Chặn tuyệt đối nếu là log action (chứa ==> hoặc ->) hoặc log Timeout không quan trọng
+        is_action = "==>" in msg or "->" in msg
+        is_timeout = "Timeout" in msg and "SAI PASS" not in msg and "BẢO TRÌ" not in msg
+        
+        is_allowed = any(prefix in msg for prefix in allowed_prefixes) or ("!!" in msg and not is_timeout)
+        
+        if force_ui or (is_allowed and not is_action and not is_timeout):
+            self.log_func(f"[{self.device_id}] {msg}")
 
     def update_status(self, status, is_lagging=False):
         self.status = status
@@ -200,12 +221,15 @@ class AutoClickerInstance:
         if not self.running: return False
         action = step.get("action")
         target_info = step.get("target") or step.get("target1", "")
-        self.log(f"==> Bước: {action} {f'({target_info})' if target_info else ''}")
+        # self.log(f"==> Bước: {action} {f'({target_info})' if target_info else ''}") # Tắt log bước chạy chi tiết trên UI
         self.last_step_time = time.time()
         res = True
         
         if action == "click_image":
             res = bool(self.click_image_logic(step))
+            if not res and self.running and not step.get("skip_maintain"):
+                self.execute_step({"action": "handle_maintenance", "skip_maintain": True})
+            return res
         elif action == "click_image_if":
             matched_path = self.click_image_logic(step)
             if matched_path:
@@ -250,7 +274,7 @@ class AutoClickerInstance:
         elif action == "prepare_clipper":
             pkg = "com.example.clipper"
             # Khởi động Service của APK
-            self.log("Đang khởi động Clipper Service...")
+            # self.log("Đang khởi động Clipper Service...")
             self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
             # Xóa file cũ để tránh nhận nhầm mã cũ
             self.call_adb(["shell", "rm", "-f", f"/sdcard/Android/data/{pkg}/files/clip.txt"])
@@ -267,9 +291,17 @@ class AutoClickerInstance:
         elif action == "input_partner_code":
             self.call_adb(["shell", "input", "keyevent"] + ["67"] * 25) # Xóa cũ
             self.input_text_robust(self.partner_code)
+            self.code_entered = True
+            res = True
+        elif action == "mark_success":
+            if self.current_account:
+                self.current_account["success"] = True
             res = True
         elif action == "cases":
             res = self.cases_logic(step)
+            if not res and self.running and not step.get("skip_maintain") and "timeout_then" not in step:
+                self.execute_step({"action": "handle_maintenance", "skip_maintain": True})
+            
             if not res and "timeout_then" in step:
                 self.log(f"!! [DEBUG] Bước 'cases' bị Timeout sau {step.get('timeout', 10)}s. Đang gọi logic xử lý Timeout (handle_maintenance)...")
                 for sub_step in step.get("timeout_then", []):
@@ -290,13 +322,41 @@ class AutoClickerInstance:
             return False
         elif action == "handle_maintenance":
             app = step.get("app", "com.garena.game.kgvn")
-            self.log("!! PHÁT HIỆN BẢO TRÌ: Đang khởi động lại và sẽ bỏ qua phần đăng nhập...")
-            self.skip_login_for_this_acc = True
-            self.call_adb(["shell", "am", "force-stop", app])
-            time.sleep(2)
-            self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
-            self.log("Đợi game khởi động lại (20s)...")
-            time.sleep(20)
+            if self.code_entered:
+                self.log("!! PHÁT HIỆN LỖI (Đã nhập mã): Đang thực hiện đăng xuất kiên trì...")
+                while self.running:
+                    # 1. Kiểm tra xem đã ở màn hình đăng nhập chưa
+                    if self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.7}):
+                        self.log("==> Đã về màn hình Đăng nhập. Hoàn tất.")
+                        break
+                    
+                    # 2. Thử quy trình đăng xuất qua UI
+                    self.log("-> Đang thử thoát và đăng xuất qua UI...")
+                    for _ in range(2): self.call_adb(["shell", "input", "keyevent", "4"]); time.sleep(1)
+                    
+                    if self.execute_step({"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "skip_maintain": True}):
+                        time.sleep(2)
+                        self.execute_step({"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 20, "skip_maintain": True})
+                        time.sleep(2)
+                        self.execute_step({"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
+                        time.sleep(5)
+                        continue # Quay lại đầu vòng lặp để check màn hình đăng nhập
+                    
+                    # 3. Nếu UI vẫn đơ, restart app để làm sạch trạng thái
+                    self.log("!! UI đơ, đang Restart App để thoát hoàn toàn...")
+                    self.call_adb(["shell", "am", "force-stop", app])
+                    time.sleep(2)
+                    self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+                    self.log("Đợi game khởi động lại (25s) để kiểm tra...")
+                    time.sleep(25)
+            else:
+                self.log("!! PHÁT HIỆN BẢO TRÌ/LỖI: Đang khởi động lại và sẽ bỏ qua phần đăng nhập...")
+                self.skip_login_for_this_acc = True
+                self.call_adb(["shell", "am", "force-stop", app])
+                time.sleep(2)
+                self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+                self.log("Đợi game khởi động lại (20s)...")
+                time.sleep(20)
             return False
         elif action == "loop":
             count = step.get("count", 1)
@@ -356,7 +416,7 @@ class AutoClickerInstance:
                     if mv >= confidence:
                         th_s, tw_s = t_scaled.shape[:2]
                         self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
-                        self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f})")
+                        # self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f})")
                         return t_path
             time.sleep(1)
         
@@ -411,10 +471,11 @@ class AutoClickerInstance:
                     _, mv, _, _ = cv2.minMaxLoc(res)
                     
                     if mv >= item["confidence"]:
-                        self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({mv:.2f})")
+                        # self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({mv:.2f})")
                         for s_step in item["script"]:
                             if not self.running: break
-                            self.execute_step(s_step)
+                            if not self.execute_step(s_step):
+                                return False 
                         return True 
             time.sleep(1)
         return False
@@ -477,12 +538,12 @@ class AutoClickerInstance:
         if found: 
             return True
         
-        self.log(f"!! KHÔNG THẤY {target}. TIẾN HÀNH KHỞI ĐỘNG LẠI {app}!")
+        # self.log(f"!! KHÔNG THẤY {target}. TIẾN HÀNH KHỞI ĐỘNG LẠI {app}!")
         self.call_adb(["shell", "am", "force-stop", app])
         time.sleep(2)
         self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
         
-        self.log("Đợi game khởi động lại và chạy restart_script...")
+        # self.log("Đợi game khởi động lại và chạy restart_script...")
         r_script = step.get("script", [])
         for s in r_script:
             if not self.running: break
@@ -544,13 +605,13 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 5, "login_step": True},
             {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.7, "login_step": True, "then": [
                 {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.7},
-                {"action": "click_image_if", "target1": "images/loi_mang.jpg", "target2": "images/sai_pass.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
+                {"action": "click_image_if", "target": "images/sai_pass.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
                 {"action": "clear_android_data", "package": "com.garena.gaslite"},
                 {"action": "restart_app"}]
             },
             ]},
             
-            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.8},
             # {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
             # {
             #     "action": "cases",
@@ -600,9 +661,6 @@ class AutoClickerInstance:
         restart_script = [
             {"action": "wait", "timeout": 20}, # Đợi game khởi động
             {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/x_start.jpg", "timeout": 4, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/x_start1.jpg", "timeout": 4, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/x_start.jpg", "timeout": 4, "confidence": 0.7},
             {"action": "press_esc", "wait": 3},
         ]
         
@@ -617,6 +675,10 @@ class AutoClickerInstance:
                         "confidence": 0.7,
                         "script": [
                             {"action": "click_image", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 1},
                             {"action": "click_image", "target": "images/su_kien_cs.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
@@ -655,6 +717,7 @@ class AutoClickerInstance:
         confirm_script = [
             {"action": "click_image_if", "target": "images/ok_cs.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "click_image", "target": "images/xac_nhan_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "mark_success"},
             {"action": "click_image_if", "target": "images/xac_nhan_chung_suc1.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
@@ -667,7 +730,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/logout.jpg", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 15},
@@ -697,7 +760,13 @@ class AutoClickerInstance:
                         "confidence": 0.7,
                         "script": [
                             {"action": "click_image_if", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 1},
                             {"action": "click_image", "target": "images/su_kien_cs.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "press_esc", "wait": 2},
                             {"action": "press_esc", "wait": 2},
@@ -725,197 +794,144 @@ class AutoClickerInstance:
             if not self.current_account: break
             self.log(f">> START {self.role_name}: {self.current_account['tk']}")
             
-            # --- DỌN DẸP VÀ KHỞI ĐỘNG CLIPPER SERVICE CHO VÒNG MỚI ---
-            self.last_captured_code = None
-            self.skip_login_for_this_acc = False
-            self.skip_all_retries = False
-            self.use_external_codes = False
-            target_code = None
-            success = False
-            pkg = "com.example.clipper"
-            # Bật Service để hiện Nút nổi (Pill)
-            self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
-            # Xóa mã cũ
-            path_in_android = f"/sdcard/Android/data/{pkg}/files/clip.txt"
-            self.call_adb(["shell", "rm", "-f", path_in_android])
-
-            # --- THỰC HIỆN ĐĂNG NHẬP TRƯỚC ---
-            self.update_status("Đang Login...")
-            success_login = False
-            for retry_login in range(3):
-                success_login = True
-                for step in login_script:
-                    if not self.running: break
-                    
-                    # Nếu đang trong chế độ skip login và bước này là login_step thì bỏ qua
-                    if self.skip_login_for_this_acc and step.get("login_step"):
-                        continue
-                        
-                    if not self.execute_step(step):
-                        success_login = False; break
-                if success_login or not self.running or self.skip_all_retries: break
-                self.log(f"!! Login thất bại (vòng {retry_login+1}/3). Đang bắt đầu lại từ đầu cho account này...")
-                    
-            if not success_login or not self.running:
-                self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']}")
-                continue
-            
-            self.log(">> LOGIN THÀNH CÔNG. Bắt đầu giai đoạn tiếp theo...")
-            
-            # --- QUYẾT ĐỊNH LOGIC: CHÉO CẶP HAY DÙNG FILE MÃ ---
-            with self.shared_data["ext_lock"]:
-                self.use_external_codes = len(self.shared_data.get("external_codes", [])) > 0
-
-            if self.use_external_codes:
-                self.log(">>> CHẾ ĐỘ: SỬ DỤNG MÃ TỪ FILE (External Codes)")
-                success = True
-                
-                # 1. Lấy mã từ danh sách dùng chung
+            # --- VÒNG LẶP RETRY CHO CHÍNH TÀI KHOẢN NÀY ---
+            while self.running:
+                self.last_captured_code = None
+                self.skip_login_for_this_acc = False
+                self.skip_all_retries = False
+                self.use_external_codes = False
+                self.code_entered = False
                 target_code = None
-                with self.shared_data["ext_lock"]:
-                    codes = self.shared_data.get("external_codes", [])
-                    if codes:
-                        item = codes[0]
-                        target_code = item["code"]
-                        item["count"] -= 1
-                        if item["count"] <= 0:
-                            codes.pop(0)
-                        self.log(f"==> Đã lấy mã: {target_code} (Đang xử lý, còn lại {item['count']} lượt)")
-                
-                if not target_code:
-                    self.log("!! HẾT MÃ TRONG FILE. Dừng luồng.")
-                    success = False
-                else:
-                    # 2. Đi tới sự kiện và mở ô nhập mã
-                    self.update_status("Mở ô nhập mã...")
-                    for step in goto_input_code_only:
+                success = False
+                pkg = "com.example.clipper"
+                # Bật Service để hiện Nút nổi (Pill)
+                self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
+                # Xóa mã cũ
+                path_in_android = f"/sdcard/Android/data/{pkg}/files/clip.txt"
+                self.call_adb(["shell", "rm", "-f", path_in_android])
+
+                # --- THỰC HIỆN ĐĂNG NHẬP TRƯỚC ---
+                # self.update_status("Đang Login...")
+                success_login = False
+                for retry_login in range(3):
+                    success_login = True
+                    for step in login_script:
                         if not self.running: break
+                        if self.skip_login_for_this_acc and step.get("login_step"): continue
                         if not self.execute_step(step):
-                            success = False; break
-                    
-                    if success and self.running:
-                        # 4. Nhập mã và xác nhận
-                        self.partner_code = target_code
-                        if not self.execute_step(input_code_script[-1]):
-                            success = False
+                            success_login = False; break
+                    if success_login or not self.running or self.skip_all_retries: break
+                    self.log(f"!! Login thất bại (vòng {retry_login+1}/3). Đang bắt đầu lại...")
                         
-                        if success:
-                            for step in confirm_script:
-                                if not self.running: break
-                                if not self.execute_step(step):
-                                    success = False; break
-                    
-                    # --- HOÀN TRẢ MÃ NẾU THẤT BẠI ---
-                    if not success and target_code:
-                        self.log(f"!! THẤT BẠI. Hoàn trả lại mã {target_code} vào danh sách.")
-                        with self.shared_data["ext_lock"]:
-                            codes = self.shared_data.get("external_codes", [])
-                            found = False
-                            for item in codes:
-                                if item["code"] == target_code:
-                                    item["count"] += 1
-                                    found = True; break
-                            if not found:
-                                codes.insert(0, {"code": target_code, "count": 1})
-            else:
-                self.log(">>> CHẾ ĐỘ: CHÉO CẶP TỰ ĐỘNG (Auto Pairing)")
-                # --- KHỞI TẠO ĐỒNG BỘ CẶP ---
-                with self.shared_data["lock"]:
-                    if self.pair_id not in self.shared_data["codes"]:
-                        self.shared_data["codes"][self.pair_id] = {"A": None, "B": None, "acc_A": None, "acc_B": None}
-                    # Lưu acc đang chạy vào nhóm
-                    if self.is_role_a: self.shared_data["codes"][self.pair_id]["acc_A"] = self.current_account
-                    else: self.shared_data["codes"][self.pair_id]["acc_B"] = self.current_account
-                
-                success = True
-                
-                # KỊCH BẢN COPY MÃ VÀ ĐỔI MÃ:
-                # 1. Tìm và click nút LẤY MÃ
-                self.update_status("Đang lấy mã...")
-                
-                for retry in range(2):
-                    copy_ok = True
-                    for step in copy_script:
-                        if not self.running: break
-                        if not self.execute_step(step):
-                            copy_ok = False; break
-                    if copy_ok: 
+                if not success_login or self.skip_all_retries or not self.running:
+                    if self.skip_all_retries:
+                        self.report_stats_func(False, f"{self.current_account['tk']} (SAI PASS)")
                         break
-                
-                if not copy_ok:
-                    success = False
-                
-                # 2. Đọc mã mới đã được lưu trong self.last_captured_code
-                my_code = self.last_captured_code
-                if not my_code:
-                    self.log("!! KHÔNG LẤY ĐƯỢC MÃ QUA CLIPBOARD. Bỏ qua.")
-                    success = False
-                else:
-                    self.log(f"==> Đã lấy được mã: {my_code}")
-                    # Chia sẻ mã lên bộ nhớ dùng chung
-                    with self.shared_data["lock"]:
-                        if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = my_code
-                        else: self.shared_data["codes"][self.pair_id]["B"] = my_code
-
-                if success and self.running:
-                    # 3. Chủ động chuẩn bị sẵn ở màn hình nhập mã (trong lúc đợi đối phương)
-                    self.update_status("Đang chuẩn bị nhập mã...")
-                    # Chạy các bước navigation (tất cả trừ bước cuối cùng là nhập mã)
-                    for step in input_code_script[:-1]:
-                        if not self.running: break
-                        if not self.execute_step(step):
-                            success = False; break
-
-                    # 4. Đợi mã của đối phương
-                    self.update_status("Đợi mã đối phương...")
-                    partner_code = None
-                    wait_start = time.time()
-                    while time.time() - wait_start < 120 and self.running:
-                        with self.shared_data["lock"]:
-                            partner_code = self.shared_data["codes"][self.pair_id]["B"] if self.is_role_a else self.shared_data["codes"][self.pair_id]["A"]
-                        if partner_code: break
-                        time.sleep(2)
-                    
-                    if not partner_code:
-                        self.log("!! TIME OUT: Không nhận được mã từ đối phương.")
-                        success = False
-                    else:
-                        self.log(f"==> Nhận được mã đối phương: {partner_code}")
-                        # 5. Điền mã và xác nhận
-                        self.partner_code = partner_code
-                        self.update_status("Đang nhập mã...")
-                        # Chạy bước cuối cùng của input_code_script (input_partner_code)
-                        if not self.execute_step(input_code_script[-1]):
-                            success = False
-                        
-                        if success:
-                            # Click các bước xác nhận
-                            for step in confirm_script:
-                                if not self.running: break
-                                if not self.execute_step(step):
-                                    success = False; break
+                    if not self.running: break
+                    self.log(f"!! Lỗi đăng nhập, đang thử lại chính tài khoản: {self.current_account['tk']}")
+                    continue
             
-            # --- KẾT THÚC VÀ BÁO CÁO ---
-            if self.running:
-                if success:
-                    if self.use_external_codes:
-                        # Báo cáo cho chế độ dùng file mã
-                        self.report_stats_func(True, f"ACC: {self.current_account['tk']} | Dùng mã: {target_code} (THÀNH CÔNG)")
-                    elif self.is_role_a:
-                        # Báo cáo cho chế độ Chéo cặp (Chỉ máy A báo cáo để tránh trùng)
-                        with self.shared_data["lock"]:
-                            pair_data = self.shared_data["codes"].get(self.pair_id, {})
-                            a_acc = pair_data.get("acc_A")
-                            b_acc = pair_data.get("acc_B")
-                            code_a = pair_data.get("A")
-                            code_b = pair_data.get("B")
-                        
-                        a_info = f"{a_acc['tk']}" if a_acc else "N/A"
-                        b_info = f"{b_acc['tk']}" if b_acc else "N/A"
-                        self.report_stats_func(True, f"Cặp {self.pair_id+1}: {a_info} <-> {b_info} | Mã: {code_a} & {code_b}")
-                else:
-                    self.report_stats_func(False, f"{self.current_account['tk']} (THẤT BẠI)")
+                # --- QUYẾT ĐỊNH LOGIC: CHÉO CẶP HAY DÙNG FILE MÃ ---
+                with self.shared_data["ext_lock"]:
+                    self.use_external_codes = len(self.shared_data.get("external_codes", [])) > 0
+
+                if self.use_external_codes:
+                    success = True
+                    target_code = None
+                    with self.shared_data["ext_lock"]:
+                        codes = self.shared_data.get("external_codes", [])
+                        if codes:
+                            item = codes[0]
+                            target_code = item["code"]; item["count"] -= 1
+                            if item["count"] <= 0: codes.pop(0)
                     
+                    if not target_code: success = False
+                    else:
+                        for step in goto_input_code_only:
+                            if not self.running: break
+                            if not self.execute_step(step): success = False; break
+                        
+                        if success and self.running:
+                            self.partner_code = target_code
+                            if not self.execute_step(input_code_script[-1]): success = False
+                            if success:
+                                for step in confirm_script:
+                                    if not self.running: break
+                                    if not self.execute_step(step): success = False; break
+                        
+                        if (not success or not self.running) and target_code:
+                            with self.shared_data["ext_lock"]:
+                                codes = self.shared_data.get("external_codes", [])
+                                found = False
+                                for item in codes:
+                                    if item["code"] == target_code: item["count"] += 1; found = True; break
+                                if not found: codes.insert(0, {"code": target_code, "count": 1})
+                else:
+                    with self.shared_data["lock"]:
+                        if self.pair_id not in self.shared_data["codes"]:
+                            self.shared_data["codes"][self.pair_id] = {"A": None, "B": None, "acc_A": None, "acc_B": None}
+                        if self.is_role_a: self.shared_data["codes"][self.pair_id]["acc_A"] = self.current_account
+                        else: self.shared_data["codes"][self.pair_id]["acc_B"] = self.current_account
+                    
+                    success = True
+                    for retry in range(2):
+                        copy_ok = True
+                        for step in copy_script:
+                            if not self.running: break
+                            if not self.execute_step(step): copy_ok = False; break
+                        if copy_ok: break
+                    
+                    if not copy_ok: success = False
+                    else:
+                        my_code = self.last_captured_code
+                        if not my_code: success = False
+                        else:
+                            with self.shared_data["lock"]:
+                                if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = my_code
+                                else: self.shared_data["codes"][self.pair_id]["B"] = my_code
+
+                        if success and self.running:
+                            for step in input_code_script[:-1]:
+                                if not self.running: break
+                                if not self.execute_step(step): success = False; break
+
+                            partner_code = None; wait_start = time.time()
+                            while time.time() - wait_start < 120 and self.running:
+                                with self.shared_data["lock"]:
+                                    partner_code = self.shared_data["codes"][self.pair_id]["B"] if self.is_role_a else self.shared_data["codes"][self.pair_id]["A"]
+                                if partner_code: break
+                                time.sleep(2)
+                            
+                            if not partner_code: success = False
+                            else:
+                                self.partner_code = partner_code
+                                if not self.execute_step(input_code_script[-1]): success = False
+                                if success:
+                                    for step in confirm_script:
+                                        if not self.running: break
+                                        if not self.execute_step(step): success = False; break
+                
+                # --- KẾT THÚC VÀ BÁO CÁO ---
+                if self.running:
+                    if success:
+                        self.current_account["success"] = True
+                        if self.use_external_codes:
+                            self.report_stats_func(True, target_code, True)
+                        elif self.is_role_a:
+                            with self.shared_data["lock"]:
+                                pair_data = self.shared_data["codes"].get(self.pair_id, {})
+                                a_acc = pair_data.get("acc_A")
+                                b_acc = pair_data.get("acc_B")
+                            
+                            a_info = f"{a_acc['tk']}" if a_acc else "N/A"
+                            b_info = f"{b_acc['tk']}" if b_acc else "N/A"
+                            self.report_stats_func(True, f"Cặp {self.pair_id+1}: {a_info} <-> {b_info}")
+                        break # THÀNH CÔNG - Thoát vòng lặp retry
+                    else:
+                        # THẤT BẠI - Ghi log và để vòng lặp while tiếp tục thử lại chính acc này
+                        self.log(f"!! Lỗi thực thi, đang thử lại chính tài khoản: {self.current_account['tk']}")
+                        time.sleep(2) # Đợi một chút trước khi thử lại
+                
             gc.collect()
 
         self.log(">> LUỒNG ĐÃ DỪNG HOÀN TOÀN.")
@@ -935,6 +951,7 @@ class MultiPremiumApp(ctk.CTk):
         self.active_workers = []
         self.success_count = 0
         self.failure_count = 0
+        self.total_accounts_loaded = 0
         self.shared_data = {
             "codes": {}, 
             "lock": threading.Lock(),
@@ -964,9 +981,9 @@ class MultiPremiumApp(ctk.CTk):
         if self.logo_img: ctk.CTkLabel(self.sidebar, image=self.logo_img, text="").pack(pady=20)
         ctk.CTkLabel(self.sidebar, text="PAIRING EDITION", font=("Arial", 16, "bold"), text_color=ACCENT_GREEN).pack()
         
-        self.account_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR); self.account_card.pack(padx=20, pady=10, fill="x")
-        ctk.CTkButton(self.account_card, text="NẠP FILE ACC", command=self.load_accounts, fg_color="#EAB308", text_color="#000").pack(pady=5, padx=10, fill="x")
-        ctk.CTkButton(self.account_card, text="NẠP FILE MÃ MỜI", command=self.load_external_codes, fg_color="#00D2FF", text_color="#000").pack(pady=5, padx=10, fill="x")
+        self.account_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR, corner_radius=10); self.account_card.pack(padx=15, pady=10, fill="x")
+        ctk.CTkButton(self.account_card, text="NẠP FILE ACC", command=self.load_accounts, fg_color="#f59e0b", hover_color="#d97706", text_color="#fff", font=("Segoe UI", 11, "bold"), height=32).pack(pady=(10, 5), padx=10, fill="x")
+        ctk.CTkButton(self.account_card, text="NẠP FILE MÃ MỜI", command=self.load_external_codes, fg_color="#0ea5e9", hover_color="#0284c7", text_color="#fff", font=("Segoe UI", 11, "bold"), height=32).pack(pady=(5, 10), padx=10, fill="x")
 
         self.adb_config_frame = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR); self.adb_config_frame.pack(padx=20, pady=5, fill="x")
         ctk.CTkLabel(self.adb_config_frame, text="ADB PATH", font=("Arial", 10, "bold")).pack(pady=(5,0))
@@ -980,25 +997,50 @@ class MultiPremiumApp(ctk.CTk):
         self.btn_stop = ctk.CTkButton(self.sidebar, text=" DỪNG TẤT CẢ", image=self.stop_icon, compound="left", command=self.stop_all, fg_color="#4b5563", hover_color="#374151", height=40)
         self.btn_stop.pack(side="bottom", padx=20, pady=0, fill="x")
 
-        self.main_content = ctk.CTkFrame(self, fg_color="transparent"); self.main_content.pack(side="right", fill="both", expand=True, padx=20, pady=20)
+        self.main_content = ctk.CTkFrame(self, fg_color="transparent"); self.main_content.pack(side="right", fill="both", expand=True, padx=20, pady=15)
         
-        inst_header = ctk.CTkFrame(self.main_content, fg_color="transparent"); inst_header.pack(fill="x")
-        ctk.CTkLabel(inst_header, text="DANH SÁCH BOXPHONE", font=("Arial", 14, "bold"), text_color=ACCENT_GREEN).pack(side="left")
-        self.btn_refresh = ctk.CTkButton(inst_header, text="Làm Mới", command=self.scan_devices, width=80)
+        # --- HEADER & STATS CARDS ---
+        stats_container = ctk.CTkFrame(self.main_content, fg_color="transparent")
+        stats_container.pack(fill="x", pady=(0, 10))
+        
+        # Thẻ Tổng Acc
+        self.card_acc = ctk.CTkFrame(stats_container, fg_color=CARD_COLOR, height=80, corner_radius=12, border_width=1, border_color="#333")
+        self.card_acc.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        ctk.CTkLabel(self.card_acc, text="TỔNG TÀI KHOẢN", font=("Segoe UI", 10, "bold"), text_color="#94a3b8").pack(pady=(10, 0))
+        self.acc_count_val = ctk.CTkLabel(self.card_acc, text="0", font=("Segoe UI", 28, "bold"), text_color="#38bdf8")
+        self.acc_count_val.pack(pady=(0, 5))
+
+        # Thẻ Mã Mời
+        self.card_code = ctk.CTkFrame(stats_container, fg_color=CARD_COLOR, height=80, corner_radius=12, border_width=1, border_color="#333")
+        self.card_code.pack(side="left", fill="both", expand=True, padx=5)
+        ctk.CTkLabel(self.card_code, text="MÃ MỜI CÒN LẠI", font=("Segoe UI", 10, "bold"), text_color="#94a3b8").pack(pady=(10, 0))
+        self.code_count_val = ctk.CTkLabel(self.card_code, text="0", font=("Segoe UI", 28, "bold"), text_color="#fbbf24")
+        self.code_count_val.pack(pady=(0, 5))
+
+        # Thẻ Thành Công
+        self.card_success = ctk.CTkFrame(stats_container, fg_color=CARD_COLOR, height=80, corner_radius=12, border_width=1, border_color="#333")
+        self.card_success.pack(side="left", fill="both", expand=True, padx=(10, 0))
+        ctk.CTkLabel(self.card_success, text="CẶP THÀNH CÔNG", font=("Segoe UI", 10, "bold"), text_color="#94a3b8").pack(pady=(10, 0))
+        self.success_val = ctk.CTkLabel(self.card_success, text="0", font=("Segoe UI", 28, "bold"), text_color="#34d399")
+        self.success_val.pack(pady=(0, 5))
+
+        # --- DEVICE LIST SECTION ---
+        inst_header = ctk.CTkFrame(self.main_content, fg_color="transparent")
+        inst_header.pack(fill="x", pady=(10, 0))
+        ctk.CTkLabel(inst_header, text="DANH SÁCH THIẾT BỊ HOẠT ĐỘNG", font=("Segoe UI", 13, "bold"), text_color=ACCENT_GREEN).pack(side="left")
+        self.btn_refresh = ctk.CTkButton(inst_header, text="Làm Mới ADB", command=self.scan_devices, width=100, height=28, font=("Segoe UI", 11, "bold"), fg_color="#334155", hover_color="#475569")
         self.btn_refresh.pack(side="right")
         
-        self.device_list_frame = ctk.CTkScrollableFrame(self.main_content, height=250, fg_color=CARD_COLOR); self.device_list_frame.pack(fill="x", pady=10)
+        self.device_list_frame = ctk.CTkScrollableFrame(self.main_content, height=220, fg_color="#111", corner_radius=12, border_width=1, border_color="#222")
+        self.device_list_frame.pack(fill="x", pady=10)
         
-        self.stats_inner = ctk.CTkFrame(self.main_content, fg_color="transparent"); self.stats_inner.pack(fill="x", pady=10)
-        self.success_val = ctk.CTkLabel(self.stats_inner, text="0", font=("Arial", 40, "bold"), text_color="#4ADE80"); self.success_val.pack()
-        ctk.CTkLabel(self.stats_inner, text="CẶP THÀNH CÔNG", font=("Arial", 12)).pack()
+        # --- LOG SYSTEM ---
+        log_header = ctk.CTkFrame(self.main_content, fg_color="transparent")
+        log_header.pack(fill="x", pady=(5, 0))
+        ctk.CTkLabel(log_header, text="HỆ THỐNG GIÁM SÁT REAL-TIME", font=("Segoe UI", 11, "bold"), text_color="#64748b").pack(side="left")
         
-        self.code_count_val = ctk.CTkLabel(self.stats_inner, text="0", font=("Arial", 40, "bold"), text_color="#00D2FF"); self.code_count_val.pack(pady=(10, 0))
-        ctk.CTkLabel(self.stats_inner, text="MÃ MỜI CÒN LẠI", font=("Arial", 12)).pack()
-        
-        ctk.CTkLabel(self.main_content, text="LOG HỆ THỐNG", font=("Arial", 12, "bold"), text_color="#888").pack(pady=(10,0))
-        self.log_txt = ctk.CTkTextbox(self.main_content, height=150, fg_color="#18181b", text_color="#d1d5db", font=("Consolas", 11))
-        self.log_txt.pack(fill="both", expand=True, pady=10)
+        self.log_txt = ctk.CTkTextbox(self.main_content, height=180, fg_color="#09090b", text_color="#e2e8f0", font=("Consolas", 11), border_width=1, border_color="#222")
+        self.log_txt.pack(fill="both", expand=True, pady=(5, 0))
         self.load_adb_config()
 
     def find_adb(self):
@@ -1062,49 +1104,49 @@ class MultiPremiumApp(ctk.CTk):
             team_serials = serials[i:i+2]
             team_num = (i // 2) + 1
             
-            team_card = ctk.CTkFrame(self.device_list_frame, fg_color="#1a1a1a", corner_radius=8, border_width=1, border_color="#333")
-            team_card.pack(fill="x", pady=4, padx=10)
+            team_card = ctk.CTkFrame(self.device_list_frame, fg_color="#18181b", corner_radius=12, border_width=1, border_color="#27272a")
+            team_card.pack(fill="x", pady=6, padx=10)
             
-            header = ctk.CTkFrame(team_card, fg_color="transparent", height=30)
-            header.pack(fill="x", padx=10, pady=2)
-            ctk.CTkLabel(header, text=f"PAIR {team_num}", font=("Arial", 12, "bold"), text_color=ACCENT_GREEN).pack(side="left")
+            header = ctk.CTkFrame(team_card, fg_color="transparent", height=32)
+            header.pack(fill="x", padx=12, pady=4)
+            ctk.CTkLabel(header, text=f"NHÓM CẶP #{team_num:02d}", font=("Segoe UI", 11, "bold"), text_color="#38bdf8").pack(side="left")
             
-            btn_play_all = ctk.CTkButton(header, text="START PAIR", image=self.start_icon, width=90, height=24, fg_color="#10b981", font=("Arial", 10, "bold"), command=lambda ts=team_serials: self.start_team(ts))
-            btn_play_all.pack(side="right", padx=2)
-            btn_stop_all = ctk.CTkButton(header, text="STOP PAIR", image=self.stop_icon, width=90, height=24, fg_color="#4b5563", font=("Arial", 10, "bold"), command=lambda ts=team_serials: self.stop_team(ts))
+            btn_stop_all = ctk.CTkButton(header, text="DỪNG CẶP", image=self.stop_icon, width=90, height=26, fg_color="#3f3f46", hover_color="#52525b", font=("Segoe UI", 10, "bold"), command=lambda ts=team_serials: self.stop_team(ts))
             btn_stop_all.pack(side="right", padx=2)
+            btn_play_all = ctk.CTkButton(header, text="CHẠY CẶP", image=self.start_icon, width=90, height=26, fg_color="#10b981", hover_color="#059669", font=("Segoe UI", 10, "bold"), command=lambda ts=team_serials: self.start_team(ts))
+            btn_play_all.pack(side="right", padx=2)
 
             device_grid = ctk.CTkFrame(team_card, fg_color="transparent")
-            device_grid.pack(fill="x", padx=10, pady=(0, 5))
+            device_grid.pack(fill="x", padx=8, pady=(0, 8))
             
             for idx_in_team, s in enumerate(team_serials):
                 global_idx = i + idx_in_team
                 self.device_map[s] = global_idx
                 is_role_a = (idx_in_team == 0)
                 
-                dev_box = ctk.CTkFrame(device_grid, fg_color="#252525", corner_radius=6)
-                dev_box.pack(side="left", padx=2, fill="x", expand=True)
+                dev_box = ctk.CTkFrame(device_grid, fg_color="#09090b", corner_radius=10, border_width=1, border_color="#1e1e1e")
+                dev_box.pack(side="left", padx=4, fill="x", expand=True)
                 
-                color = "#3b82f6" if is_role_a else "#f59e0b"
-                lbl_role = "MÁY A" if is_role_a else "MÁY B"
+                color = "#38bdf8" if is_role_a else "#fbbf24"
+                lbl_role = "MÁY A (Chủ)" if is_role_a else "MÁY B (Khách)"
                 
                 # Header máy (Role + Serial)
                 top_row = ctk.CTkFrame(dev_box, fg_color="transparent")
-                top_row.pack(fill="x", padx=5, pady=2)
-                ctk.CTkLabel(top_row, text=lbl_role, font=("Arial", 9, "bold"), text_color=color).pack(side="left")
-                ctk.CTkLabel(top_row, text=f"({s})", font=("Arial", 8), text_color="#555").pack(side="left", padx=5)
+                top_row.pack(fill="x", padx=8, pady=(6, 2))
+                ctk.CTkLabel(top_row, text=lbl_role, font=("Segoe UI", 10, "bold"), text_color=color).pack(side="left")
+                ctk.CTkLabel(top_row, text=f"[{s}]", font=("Consolas", 9), text_color="#4b5563").pack(side="left", padx=5)
                 
                 # Bottom row (Status + Buttons)
                 bot_row = ctk.CTkFrame(dev_box, fg_color="transparent")
-                bot_row.pack(fill="x", padx=5, pady=(0, 2))
+                bot_row.pack(fill="x", padx=8, pady=(0, 6))
                 
-                status_lbl = ctk.CTkLabel(bot_row, text="Ready", font=("Arial", 10, "bold"), text_color="#888")
+                status_lbl = ctk.CTkLabel(bot_row, text="Sẵn sàng", font=("Segoe UI", 10), text_color="#64748b")
                 status_lbl.pack(side="left")
                 
-                b_stop = ctk.CTkButton(bot_row, text="", image=self.stop_icon, width=20, height=20, fg_color="#1f2937", command=lambda sn=s: self.stop_single_device(sn))
-                b_stop.pack(side="right", padx=1)
-                b_start = ctk.CTkButton(bot_row, text="", image=self.start_icon, width=20, height=20, fg_color="#1f2937", command=lambda sn=s: self.start_single_device(sn))
-                b_start.pack(side="right", padx=1)
+                b_stop = ctk.CTkButton(bot_row, text="", image=self.stop_icon, width=24, height=24, fg_color="#27272a", hover_color="#ef4444", command=lambda sn=s: self.stop_single_device(sn))
+                b_stop.pack(side="right", padx=2)
+                b_start = ctk.CTkButton(bot_row, text="", image=self.start_icon, width=24, height=24, fg_color="#27272a", hover_color="#10b981", command=lambda sn=s: self.start_single_device(sn))
+                b_start.pack(side="right", padx=2)
                 
                 self.device_cards[s] = {"status": status_lbl, "start_btn": b_start, "stop_btn": b_stop}
 
@@ -1126,7 +1168,9 @@ class MultiPremiumApp(ctk.CTk):
             for l in f:
                 parts = l.strip().split('|', 1)
                 if len(parts)>=2: self.accounts_data.append({"tk":parts[0], "mk":parts[1], "used":False})
-        self.add_log(f"Đã nạp {len(self.accounts_data)} acc.")
+        self.total_accounts_loaded = len(self.accounts_data)
+        self.add_log(f"Đã nạp {self.total_accounts_loaded} acc.")
+        self.update_all_ui()
 
     def load_external_codes(self):
         p = fd.askopenfilename(filetypes=[("Text Files", "*.txt")])
@@ -1155,8 +1199,28 @@ class MultiPremiumApp(ctk.CTk):
         if not self.accounts_data: 
             self.add_log("Vui lòng nạp file tài khoản trước.")
             return
-        for s in self.device_map:
+            
+        # Lấy số lượng tài khoản và mã mời để tính toán giới hạn tab
+        total_accounts = len(self.accounts_data)
+        with self.shared_data["ext_lock"]:
+            total_codes = sum(item["count"] for item in self.shared_data.get("external_codes", []))
+            
+        # Xác định giới hạn tab (máy) chạy đồng thời theo yêu cầu: cái nào ít hơn thì chạy cái đó
+        if total_codes > 0:
+            limit = min(total_accounts, total_codes)
+            self.add_log(f"CHẠY TẤT CẢ: Giới hạn {limit} tab (Min: {total_accounts} acc, {total_codes} mã)")
+        else:
+            limit = total_accounts
+            self.add_log(f"CHẠY TẤT CẢ: Giới hạn {limit} tab theo số tài khoản ({total_accounts} acc)")
+
+        count = 0
+        # Sắp xếp danh sách serial để khởi động thiết bị theo thứ tự ổn định
+        serials = sorted(self.device_map.keys())
+        for s in serials:
+            if count >= limit:
+                break
             self.start_single_device(s)
+            count += 1
 
     def stop_all(self):
         for w in self.active_workers:
@@ -1196,29 +1260,88 @@ class MultiPremiumApp(ctk.CTk):
         if serial in self.device_cards:
             self.device_cards[serial]["status"].configure(text="Stopping...", text_color="#F87171")
 
-    def report_stats(self, success, info):
+    def save_input_files(self):
+        # Cập nhật lại file Account (Xóa những acc đã success)
+        if self.account_file_path:
+            with FILE_LOCK:
+                try:
+                    remaining_accs = [acc for acc in self.accounts_data if not acc.get("success")]
+                    with open(self.account_file_path, 'w', encoding='utf-8') as f:
+                        for acc in remaining_accs:
+                            f.write(f"{acc['tk']}|{acc['mk']}\n")
+                except: pass
+
+        # Cập nhật lại file Mã mời (Xóa hoặc giảm lượt dùng)
+        if hasattr(self, 'ext_codes_file_path') and self.ext_codes_file_path:
+            with self.shared_data["ext_lock"]:
+                try:
+                    codes = self.shared_data.get("external_codes", [])
+                    with open(self.ext_codes_file_path, 'w', encoding='utf-8') as f:
+                        for item in codes:
+                            if item["count"] > 0:
+                                f.write(f"{item['code']}|{item['count']}\n")
+                except: pass
+
+    def report_stats(self, success, info, is_code=False):
         if success: self.success_count += 1
         else: self.failure_count += 1
-        fn = "SUCCESS_PAIRS.txt" if success else "FAILED_PAIRS.txt"
-        with FILE_LOCK:
-            with open(fn, "a", encoding="utf-8") as f: f.write(f"{info}\n")
+        
+        if is_code:
+            # Aggregate and rewrite for external codes
+            with self.shared_data["ext_lock"]:
+                if "success_map" not in self.shared_data:
+                    self.shared_data["success_map"] = {}
+                
+                code = info
+                self.shared_data["success_map"][code] = self.shared_data["success_map"].get(code, 0) + 1
+                
+                try:
+                    with open("SUCCESS_CODES.txt", "w", encoding="utf-8") as f:
+                        for c, count in self.shared_data["success_map"].items():
+                            f.write(f"{c}|{count}\n")
+                except Exception as e:
+                    self.add_log(f"LỖI ghi file SUCCESS_CODES.txt: {e}")
+        else:
+            fn = "SUCCESS_PAIRS.txt" if success else "FAILED_PAIRS.txt"
+            status_text = "THÀNH CÔNG" if success else "THẤT BẠI"
+            self.add_log(f"[{status_text}] {info}")
+            with FILE_LOCK:
+                with open(fn, "a", encoding="utf-8") as f: f.write(f"{info}\n")
+        
+        if success:
+            self.save_input_files()
+
         self.after(0, self.update_all_ui)
+        gc.collect() # Giải phóng bộ nhớ sau mỗi lần báo cáo
 
     def update_all_ui(self):
         self.success_val.configure(text=str(self.success_count))
+        self.acc_count_val.configure(text=str(self.total_accounts_loaded))
         with self.shared_data["ext_lock"]:
             total_remaining = sum(item["count"] for item in self.shared_data.get("external_codes", []))
         self.code_count_val.configure(text=str(total_remaining))
 
     def add_log(self, text):
         now = datetime.now().strftime("%H:%M:%S")
-        full_text = f"[{now}] {text}"
-        try: self.after(0, lambda: self._safe_append_log(full_text))
-        except: pass
+        # Chỉ cho phép log hệ thống (nạp file) hoặc log đã được lọc từ Instance
+        allowed_system = ["Đã nạp", "CHẠY TẤT CẢ", "Đã bắt chạy", "ADB"]
+        is_allowed = any(s in text for s in allowed_system) or ">> START" in text or "[" in text
+        
+        if is_allowed:
+            full_text = f"[{now}] {text}"
+            try: self.after(0, lambda: self._safe_append_log(full_text))
+            except: pass
 
     def _safe_append_log(self, msg):
         try:
             self.log_txt.insert("end", msg + "\n")
+            
+            # Giới hạn 100 dòng log để tránh tràn bộ nhớ gây văng app
+            current_index = self.log_txt.index("end-1c")
+            num_lines = int(current_index.split(".")[0])
+            if num_lines > 100:
+                self.log_txt.delete("1.0", f"{num_lines - 100}.0")
+                
             self.log_txt.see("end")
         except: pass
 
