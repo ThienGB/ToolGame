@@ -743,7 +743,7 @@ class AutoClickerInstance:
                         ]
                     },
                     {
-                        "trigger": "images_boxphone/pvp.png",
+                        "trigger": "images_boxphone/tuy_chon.png",
                         "confidence": 0.7,
                         "script": []
                     }
