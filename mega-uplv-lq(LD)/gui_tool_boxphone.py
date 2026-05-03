@@ -855,8 +855,8 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 112, "y": 513, "timeout": 2},
             {"action": "click_coords", "x": 112, "y": 513, "timeout": 2},
             {"action": "click_image_if", "target": "images_boxphone/shopruby.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_coords", "x": 1161, "y": 1021, "timeout": 2},
-            {"action": "click_coords", "x": 1161, "y": 1021, "timeout": 2},
+            {"action": "click_coords", "x": 800, "y": 1021, "timeout": 2},
+            {"action": "click_coords", "x": 800, "y": 1021, "timeout": 2},
             {"action": "click_image", "target": "images_boxphone/ruby1.png","timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/mua.png","timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/mo.png","timeout": 20, "confidence": 0.7},
@@ -917,11 +917,11 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 600, "confidence": 0.7},
             {"action": "wait", "timeout": 10},
             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 600, "confidence": 0.7},
-            
+            {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_any", "wait": 2},
             {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 2} ,
-{
+            {
                 "action": "cases",
                 "timeout" : 120,
                 "cases": [
@@ -979,15 +979,15 @@ class AutoClickerInstance:
         # 5. CÁC HÀNH ĐỘNG LẶP LẠI (SHARED BATTLE LOGIC)
         idx = (self.device_index % 5) + 1
         t1 = f"images_boxphone/tuong{idx}.png"
-        t2 = f"images_boxphone/tuong{idx+5:2d}.png" 
+        t2 = f"images_boxphone/tuong{idx+5}.png" 
         
         shared_battle_script = [
             {"action": "click_image", "target1": "images_boxphone/logo1.png", "target2": "images_boxphone/logo.png", "timeout": 50, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/off.png", "timeout": 5, "confidence": 0.75,"use_color": True},
-           {"action": "click_image_if", "target1": "images_boxphone/minimize4.png","target2": "images_boxphone/minimize1.png","target3": "images_boxphone/minimize2.png","target4": "images_boxphone/minimize3.png","target5": "images_boxphone/minimize.png", "timeout": 20, "confidence": 0.9},
-            
-            {"action": "click_image", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 60, "confidence": 0.7},
-            
+            {"action": "click_image_if", "target1": "images_boxphone/minimize4.png","target2": "images_boxphone/minimize1.png","target3": "images_boxphone/minimize2.png","target4": "images_boxphone/minimize3.png","target5": "images_boxphone/minimize.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 3, "confidence": 0.7},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "target4": "images_boxphone/da_san_sang.png", "timeout": 60, "confidence": 0.7},
             
             {"action": "click_image_if", "target": "images_boxphone/open.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image_if", "target1": t1, "target2": t2, "timeout": 10, "confidence": 0.7},
@@ -1010,14 +1010,16 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 20, "confidence": 0.7},
             
-            {"action": "click_coords", "x": 883, "y": 1005, "timeout": 3},
-            {"action": "click_coords", "x": 883, "y": 1005, "timeout": 3},
-            {"action": "click_coords", "x": 883, "y": 1005, "timeout": 3},
+            {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
+            {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
+            {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
             {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 4, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 4, "confidence": 0.7},
-            {"action": "click_coords", "x": 883, "y": 1005, "timeout": 3},
+            {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
             {"action": "click_coords", "x": 956, "y": 65, "timeout": 3},
             {"action": "click_image_if", "target1": "images_boxphone/x.png","target2": "images_boxphone/x2.png", "timeout": 4, "confidence": 0.7},
+            {"action": "click_any", "wait": 3},
+            {"action": "click_image_if", "target": "images_boxphone/x_dau_lai.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/daulai.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 5, "confidence": 0.7},
@@ -1054,7 +1056,7 @@ class AutoClickerInstance:
             
             battle_loop = {
                 "action": "loop", 
-                "count": self.modes.get("battle_count", 2), 
+                "count": self.modes.get("battle_count", 3), 
                 "steps": shared_battle_script
             }
             self.script.append(battle_loop)
@@ -1172,8 +1174,8 @@ class MultiPremiumApp(ctk.CTk):
         self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME"); self.mode_dinh_game.grid(row=0, column=3); self.mode_dinh_game.select()
         self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI"); self.mode_teamup.grid(row=0, column=4); self.mode_teamup.select()
         
-        self.battle_count_entry = ctk.CTkEntry(self.main_content, width=80, placeholder_text="Số trận Battle (2)")
-        self.battle_count_entry.pack(pady=5); self.battle_count_entry.insert(0, "2")
+        self.battle_count_entry = ctk.CTkEntry(self.main_content, width=80, placeholder_text="Số trận Battle (3)")
+        self.battle_count_entry.pack(pady=5); self.battle_count_entry.insert(0, "3")
 
         # Stats
         self.stats_inner = ctk.CTkFrame(self.main_content, fg_color="transparent"); self.stats_inner.pack(fill="x", pady=10)
@@ -1356,7 +1358,7 @@ class MultiPremiumApp(ctk.CTk):
             if w.device_id == serial and w.running:
                 return
 
-        b_count = 2
+        b_count = 3
         try: b_count = int(self.battle_count_entry.get().strip())
         except: pass
         modes = {"login":self.mode_login.get(), "tutorial":self.mode_tutorial.get(), "mua_exp":self.mode_mua_exp.get(), "dinh_game":self.mode_dinh_game.get(), "teamup":self.mode_teamup.get(), "battle_count":b_count}
