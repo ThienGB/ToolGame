@@ -958,9 +958,7 @@ class AutoClickerInstance:
             
             {"action": "click_image", "target": "images_boxphone/pve.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 20, "confidence": 0.7},
-
-            
+            {"action": "click_image", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 20, "confidence": 0.7}, 
         ]
         
         teamup_guest_script = [
@@ -985,8 +983,6 @@ class AutoClickerInstance:
             {"action": "click_image", "target1": "images_boxphone/logo1.png", "target2": "images_boxphone/logo.png", "timeout": 50, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/off.png", "timeout": 5, "confidence": 0.75,"use_color": True},
             {"action": "click_image_if", "target1": "images_boxphone/minimize4.png","target2": "images_boxphone/minimize1.png","target3": "images_boxphone/minimize2.png","target4": "images_boxphone/minimize3.png","target5": "images_boxphone/minimize.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 3, "confidence": 0.7},
-            {"action": "wait", "timeout": 3},
             {"action": "click_image", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "target4": "images_boxphone/da_san_sang.png", "timeout": 60, "confidence": 0.7},
             
             {"action": "click_image_if", "target": "images_boxphone/open.png", "timeout": 30, "confidence": 0.7},
@@ -1009,22 +1005,8 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 600, "confidence": 0.7},
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 20, "confidence": 0.7},
-            
-            {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
-            {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
-            {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
-            {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 4, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 4, "confidence": 0.7},
-            {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
-            {"action": "click_coords", "x": 956, "y": 65, "timeout": 3},
-            {"action": "click_image_if", "target1": "images_boxphone/x.png","target2": "images_boxphone/x2.png", "timeout": 4, "confidence": 0.7},
-            {"action": "click_any", "wait": 3},
-            {"action": "click_image_if", "target": "images_boxphone/x_dau_lai.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/daulai.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 5, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 5, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/huy.png", "timeout": 2, "confidence": 0.7},
-            
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 3},
         ]
 
         # 6. GIAI ĐOẠN ĐĂNG XUẤT
@@ -1046,18 +1028,22 @@ class AutoClickerInstance:
         if self.modes.get("mua_exp"): self.script += mua_exp_script
         if self.modes.get("dinh_game"): self.script += dinh_game_script
         if self.modes.get("teamup"):
+            loop_steps = []
             if self.is_host:
-                # Host: wait_for_players đã có sẵn trong teamup_host_script
-                self.script += teamup_host_script
+                # Host: tạo phòng và đợi
+                loop_steps += teamup_host_script
             else:
-                # Guest: vào phòng → notify_joined (đã có trong script) → chờ host bắt đầu
-                self.script += teamup_guest_script
-                self.script.append({"action": "wait_for_players", "count": 4, "timeout": 300})
+                # Guest: vào phòng và đợi host bắt đầu
+                loop_steps += teamup_guest_script
+                loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
+            
+            # Thêm logic chiến đấu vào sau khi đã ghép đội xong
+            loop_steps += shared_battle_script
             
             battle_loop = {
                 "action": "loop", 
                 "count": self.modes.get("battle_count", 3), 
-                "steps": shared_battle_script
+                "steps": loop_steps
             }
             self.script.append(battle_loop)
         
