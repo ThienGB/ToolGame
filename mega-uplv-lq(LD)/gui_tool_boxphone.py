@@ -993,7 +993,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images_boxphone/menu.png", "timeout": 200, "confidence": 0.7},
             {
                 "action": "loop",
-                "count": 11,
+                "count": 12,
                 "steps": [
                     {"action": "click_coords", "x": 903, "y": 945},
                     {"action": "wait", "timeout": 15}
@@ -1005,6 +1005,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 600, "confidence": 0.7},
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
             {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 3},
         ]
