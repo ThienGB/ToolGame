@@ -282,6 +282,8 @@ class AutoClickerInstance:
             res = self.sync_autowin_logic(step)
         elif action == "buy_exp":
             res = self.buy_exp_logic(step)
+        elif action == "clear_room_id":
+            res = self.clear_room_id_logic()
         elif action == "cases":
             res = self.cases_logic(step)
         elif action == "loop":
@@ -597,6 +599,14 @@ class AutoClickerInstance:
             old = self.shared_data["joined_counts"].get(self.group_id, 0)
             self.shared_data["joined_counts"][self.group_id] = old + 1
         self.log(f"===> Đã thông báo vào phòng. Tổng: {self.shared_data['joined_counts'].get(self.group_id, 0)}")
+        return True
+
+    def clear_room_id_logic(self):
+        with self.shared_data["lock"]:
+            if self.group_id in self.shared_data["room_ids"]:
+                del self.shared_data["room_ids"][self.group_id]
+            self.shared_data["joined_counts"][self.group_id] = 0
+        self.log("==> Đã xóa ID phòng cũ và reset số người cho ván mới.")
         return True
 
     def wait_for_players_logic(self, step):
@@ -1033,6 +1043,8 @@ class AutoClickerInstance:
             if self.is_host:
                 # Host: tạo phòng và đợi
                 loop_steps += teamup_host_script
+                # Xóa ID ngay sau khi ghép đội xong để các ván sau Guest không nhận nhầm ID cũ
+                loop_steps.append({"action": "clear_room_id"})
             else:
                 # Guest: vào phòng và đợi host bắt đầu
                 loop_steps += teamup_guest_script
