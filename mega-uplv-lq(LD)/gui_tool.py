@@ -893,8 +893,8 @@ class AutoClickerInstance:
                     {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.9},
                     {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 3, "confidence": 0.9},
                     {"action": "wait", "timeout": 5},
-                    {"action": "click_image", "target": "images/vao_tran_button_2.png", "timeout": 30, "confidence": 0.9},
-                    {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 4, "confidence": 0.9}
+                    {"action": "click_image", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button3.png", "timeout": 30, "confidence": 0.9},
+                    {"action": "click_image_if", "target1": "images/vao_tran_button_2.png", "target2": "images/vao_tran_button3.png", "timeout": 4, "confidence": 0.9}
                 ]
             },
             {"action": "click_image_if", "target1": "images/skip.png","target2": "images/dkysau.jpg", "timeout": 20, "confidence": 0.9},
@@ -1152,6 +1152,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/pve.png", "timeout": 30},
             {"action": "click_image", "target": "images/ready.png", "timeout": 30},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ready.png", "timeout": 5, "confidence": 0.9},
             
         ]
         
@@ -1171,11 +1172,11 @@ class AutoClickerInstance:
         tuong_target = f"images/tuong{(self.worker_index % 5) + 2 }.png"
         shared_battle_script = [
             {"action": "click_image", "target": "images/logo1.png", "timeout": 50, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/off.png", "timeout": 20, "confidence": 0.9,"use_color": True},
-            {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/ready.png", "timeout": 5, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/off.png", "timeout": 3, "confidence": 0.9,"use_color": True},
+            {"action": "click_image", "target1": "images/minimize.png","target2": "images/minimize5.png", "timeout": 20, "confidence": 0.9},
+            
             {"action": "click_image_if", "target": "images/guest.png", "timeout": 60, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/sansang5v5.png", "timeout": 60, "confidence": 0.9},
+            {"action": "click_image_if", "target1": "images/sansang5v5.png", "target2": "images/sansang3.png","timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/open.png", "timeout": 50, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             
@@ -1228,14 +1229,15 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 10},
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/huy.png", "timeout": 2, "confidence": 0.9},
-            {"action": "wait", "timeout": 3},
+            {"action": "press_esc", "wait": 5} ,
+            # {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
+            # {"action": "wait", "timeout": 2},
+            # {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
+            # {"action": "wait", "timeout": 2},
+            # {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
+            # {"action": "wait", "timeout": 2},
+            # {"action": "click_image_if", "target": "images/huy.png", "timeout": 2, "confidence": 0.9},
+            # {"action": "wait", "timeout": 3},
             
         ]
         
