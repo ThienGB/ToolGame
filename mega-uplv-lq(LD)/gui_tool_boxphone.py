@@ -960,7 +960,8 @@ class AutoClickerInstance:
                         
                     },
                 ]
-            }        
+            },
+            {"action": "press_esc", "wait": 2},
         ]
         
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)        
@@ -1082,13 +1083,14 @@ class AutoClickerInstance:
                 loop_steps += teamup_host_script
                 # Chèn thêm một bước đợi người nữa trước khi vào trận để đảm bảo ván 2, 3 luôn đủ người
                 loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
-                loop_steps += shared_battle_script
-                # Quan trọng: Reset đếm người ở CUỐI mỗi ván để ván sau Guest báo danh lại từ đầu
+                # Quan trọng: Reset đếm người ngay khi đủ người để ván sau Guest báo danh lại từ đầu
                 loop_steps.append({"action": "clear_room_id"})
+                loop_steps += shared_battle_script
             else:
                 # Guest: vào phòng và đợi host bắt đầu
                 loop_steps += teamup_guest_script
                 loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
+                loop_steps.append({"action": "clear_room_id"})
                 loop_steps += shared_battle_script
             
             battle_loop = {

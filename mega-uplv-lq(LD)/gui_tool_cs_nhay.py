@@ -629,7 +629,8 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.8},
             {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
-            {"action": "loop", "count": 9, "until": "images/0_ve_cs.jpg", "steps": [
+            {"action": "loop", "count": 10, "until": "images/0_ve_cs.jpg", "steps": [
+                {"action": "click_image_if", "target": "images/x_cs2.jpg", "timeout": 2, "confidence": 0.7},
                 {"action": "long_click", "target": "images/nhay_nao.jpg", "duration": 5000},
                 {"action": "click_any", "timeout": 8},
             ]},
