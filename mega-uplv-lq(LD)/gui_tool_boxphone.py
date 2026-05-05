@@ -729,7 +729,9 @@ class AutoClickerInstance:
                         "script": [
                             {"action": "click_image_if", "target1": "images_boxphone/dkysau.png", "target2": "images_boxphone/dkysau1.jpg", "timeout": 3, "confidence": 0.7},
                             {"action": "press_esc", "wait": 1},
-                            {"action": "click_image_if", "target1": "images_boxphone/vao_button.png","target2": "images_boxphone/vao_button1.png","target3": "images_boxphone/vao_button2.png","target4": "images_boxphone/vao1.png", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images_boxphone/vao_button.png","target2": "images_boxphone/vao_button1.png","target3": "images_boxphone/vao_button2.png","target4": "images_boxphone/vao1.png", "timeout": 10, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images_boxphone/vao_button.png","target2": "images_boxphone/vao_button1.png","target3": "images_boxphone/vao_button2.png","target4": "images_boxphone/vao1.png", "timeout": 2, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images_boxphone/vao_button.png","target2": "images_boxphone/vao_button1.png","target3": "images_boxphone/vao_button2.png","target4": "images_boxphone/vao1.png", "timeout": 2, "confidence": 0.7},
                             {"action": "click_image", "target": "images_boxphone/logo1.png", "timeout": 20, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images_boxphone/on.png", "timeout": 5, "confidence": 0.75, "use_color": True},
                             {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2":"images_boxphone/minimize1.png", "target3":"images_boxphone/minimize2.png", "target4":"images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.7},
@@ -940,8 +942,9 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_any", "wait": 2},
-            {"action": "press_esc", "wait": 2} ,
-            {"action": "press_esc", "wait": 2} ,
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
             {
                 "action": "cases",
                 "timeout" : 120,
@@ -962,6 +965,7 @@ class AutoClickerInstance:
                     },
                 ]
             },
+            {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
         ]
         
@@ -1084,14 +1088,13 @@ class AutoClickerInstance:
                 loop_steps += teamup_host_script
                 # Chèn thêm một bước đợi người nữa trước khi vào trận để đảm bảo ván 2, 3 luôn đủ người
                 loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
-                # Quan trọng: Reset đếm người ngay khi đủ người để ván sau Guest báo danh lại từ đầu
-                loop_steps.append({"action": "clear_room_id"})
                 loop_steps += shared_battle_script
+                # Quan trọng: Reset đếm người ở CUỐI mỗi ván để ván sau Guest báo danh lại từ đầu
+                loop_steps.append({"action": "clear_room_id"})
             else:
                 # Guest: vào phòng và đợi host bắt đầu
                 loop_steps += teamup_guest_script
                 loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
-                loop_steps.append({"action": "clear_room_id"})
                 loop_steps += shared_battle_script
             
             battle_loop = {
@@ -1155,6 +1158,7 @@ class MultiPremiumApp(ctk.CTk):
         self.adb_path = self.find_adb()
         self.device_map = {}
         self.device_cards = {}
+        self.log_txt = None
         
         try:
             self.logo_img = ctk.CTkImage(Image.open(resource_path("logo.png")), size=(64, 64))
@@ -1230,9 +1234,10 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(self.stats_inner, text="TÀI KHOẢN THÀNH CÔNG", font=("Arial", 14)).pack()
         
         # Log Window
-        ctk.CTkLabel(self.main_content, text="LOG HỆ THỐNG", font=("Arial", 12, "bold"), text_color="#888").pack(pady=(10,0))
-        self.log_txt = ctk.CTkTextbox(self.main_content, height=150, fg_color="#18181b", text_color="#d1d5db", font=("Consolas", 11))
-        self.log_txt.pack(fill="both", expand=True, pady=10)
+        if not getattr(sys, 'frozen', False):
+            ctk.CTkLabel(self.main_content, text="LOG HỆ THỐNG", font=("Arial", 12, "bold"), text_color="#888").pack(pady=(10,0))
+            self.log_txt = ctk.CTkTextbox(self.main_content, height=150, fg_color="#18181b", text_color="#d1d5db", font=("Consolas", 11))
+            self.log_txt.pack(fill="both", expand=True, pady=10)
         self.load_adb_config()
 
     def find_adb(self):

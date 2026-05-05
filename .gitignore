@@ -15,6 +15,10 @@ __pycache__/
 
 # PyInstaller files
 *.spec
+!mega-uplv-lq(LD)/MegaUpLvTool_BoxPhone.spec
+!mega-uplv-lq(LD)/MegaLQCSCheo.spec
+!mega-uplv-lq(LD)/MegaUpLvTool_CS_Cheo.spec
+!mega-uplv-lq(LD)/MegaUpLvTool.spec
 
 # Env files
 .env
