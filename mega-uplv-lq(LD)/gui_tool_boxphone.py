@@ -938,6 +938,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 10},
             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 600, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_any", "wait": 2},
             {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 2} ,
