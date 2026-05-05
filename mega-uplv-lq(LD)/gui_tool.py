@@ -1195,7 +1195,7 @@ class AutoClickerInstance:
             
             
             {"action": "wait", "timeout": 7},
-            {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 60, "confidence": 0.9},
+            {"action": "click_coords", "x": 22, "y": 129, "timeout": 3},
             {"action": "wait", "timeout": 10},
             # Lặp lại click bản đồ 18 lần, mỗi lần cách nhau khoảng 10 giây
             {
