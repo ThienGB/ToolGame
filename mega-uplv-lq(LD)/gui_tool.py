@@ -972,7 +972,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "wait", "timeout": 7},
-            {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png", "timeout": 12, "confidence": 0.9},
+            {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 3} ,
             
@@ -1175,7 +1175,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/off.png", "timeout": 3, "confidence": 0.9,"use_color": True},
             {"action": "click_image", "target1": "images/minimize.png","target2": "images/minimize5.png", "timeout": 20, "confidence": 0.9},
             
-            {"action": "click_image_if", "target": "images/guest.png", "timeout": 60, "confidence": 0.9},
+            # {"action": "click_image_if", "target": "images/guest.png", "timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target1": "images/sansang5v5.png", "target2": "images/sansang3.png","timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/open.png", "timeout": 50, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
@@ -1190,6 +1190,7 @@ class AutoClickerInstance:
                 ]
             },
             {"action": "click_coords", "x": 899, "y": 482, "timeout": 4},
+            {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
             
             
@@ -1229,15 +1230,15 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 10},
-            {"action": "press_esc", "wait": 5} ,
-            # {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
-            # {"action": "wait", "timeout": 2},
-            # {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
-            # {"action": "wait", "timeout": 2},
-            # {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
-            # {"action": "wait", "timeout": 2},
-            # {"action": "click_image_if", "target": "images/huy.png", "timeout": 2, "confidence": 0.9},
-            # {"action": "wait", "timeout": 3},
+            # {"action": "press_esc", "wait": 5} ,
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 2, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 2, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
             
         ]
         
