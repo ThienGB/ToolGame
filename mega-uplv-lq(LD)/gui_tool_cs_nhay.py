@@ -369,7 +369,7 @@ class AutoClickerInstance:
             until_img = step.get("until")
             for i in range(count):
                 if not self.running: return False
-                if until_img and self.search_logic({"target": until_img, "timeout": 3, "confidence": 0.9}):
+                if until_img and self.search_logic({"target": until_img, "timeout": 3, "confidence": 0.95}):
                     self.log(f"==> [LOOP] Đã tìm thấy {os.path.basename(until_img)}, dừng loop.")
                     break
                 for s in sub_steps:
@@ -635,7 +635,9 @@ class AutoClickerInstance:
                 {"action": "click_any", "timeout": 8},
             ]},
             {"action": "click_image", "target": "images/doi_qua_cs.jpg", "timeout": 25, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/doi_qua_cs.jpg", "timeout": 3, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/doi_qua_cs.jpg", "timeout": 2, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/doi_qua_cs.jpg", "timeout": 2, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/doi_qua_cs.jpg", "timeout": 2, "confidence": 0.8},
             {"action": "click_image", "target": "images/ruong_ss.jpg", "timeout": 10, "confidence": 0.8, "decisive_failure": True, "skip_maintain": True},
             {"action": "click_image", "target": "images/xac_nhan_ruong_ss.jpg", "timeout": 10, "confidence": 0.8, "decisive_failure": True, "skip_maintain": True},
             {"action": "press_esc", "wait": 2},
