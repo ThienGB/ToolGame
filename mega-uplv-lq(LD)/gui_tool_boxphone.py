@@ -727,7 +727,8 @@ class AutoClickerInstance:
                         "trigger2": "images_boxphone/dkysau1.jpg",
                         "confidence": 0.7,
                         "script": [
-                            {"action": "click_image", "target1": "images_boxphone/dkysau.png", "target2": "images_boxphone/dkysau1.jpg", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images_boxphone/dkysau.png", "target2": "images_boxphone/dkysau1.jpg", "timeout": 3, "confidence": 0.7},
+                            {"action": "press_esc", "wait": 1},
                             {"action": "click_image_if", "target1": "images_boxphone/vao_button.png","target2": "images_boxphone/vao_button1.png","target3": "images_boxphone/vao_button2.png","target4": "images_boxphone/vao1.png", "timeout": 5, "confidence": 0.7},
                             {"action": "click_image", "target": "images_boxphone/logo1.png", "timeout": 20, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images_boxphone/on.png", "timeout": 5, "confidence": 0.75, "use_color": True},
