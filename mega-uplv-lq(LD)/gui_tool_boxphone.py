@@ -594,9 +594,9 @@ class AutoClickerInstance:
                     break
                 
                 if found:
-                    time.sleep(0.4)
+                    time.sleep(0.8)
                     break
-                time.sleep(0.5)
+                time.sleep(1)
             if not found:
                 self.log(f"!! Không tìm thấy nút số {digit} trên màn hình.")
         return True
@@ -982,6 +982,9 @@ class AutoClickerInstance:
         
         teamup_guest_script = [
             {"action": "press_esc", "wait": 2},
+            {"action": "click_image", "target": "images_boxphone/dau_thuong1.png", "timeout": 60, "confidence": 0.7},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target": "images_boxphone/tuy_chon.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/idphong.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait_for_room", "timeout": 300},
@@ -1048,7 +1051,7 @@ class AutoClickerInstance:
                     }
                 ]
             },
-            {"action": "wait", "timeout": 90},      
+            {"action": "wait", "timeout": 5},      
         ]
 
         # 6. GIAI ĐOẠN ĐĂNG XUẤT
