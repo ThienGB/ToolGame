@@ -328,7 +328,7 @@ class AutoClickerInstance:
                 self.log("!! PHÁT HIỆN LỖI (Đã nhập mã): Đang thực hiện đăng xuất kiên trì...")
                 while self.running:
                     # 1. Kiểm tra xem đã ở màn hình đăng nhập chưa
-                    if self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.7}):
+                    if self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
                         self.log("==> Đã về màn hình Đăng nhập. Hoàn tất.")
                         break
                     
@@ -366,8 +366,12 @@ class AutoClickerInstance:
         elif action == "loop":
             count = step.get("count", 1)
             sub_steps = step.get("steps", [])
+            until_img = step.get("until")
             for i in range(count):
                 if not self.running: return False
+                if until_img and self.search_logic({"target": until_img, "timeout": 1, "confidence": 0.8}):
+                    self.log(f"==> [LOOP] Đã tìm thấy {os.path.basename(until_img)}, dừng loop.")
+                    break
                 for s in sub_steps:
                     if not self.execute_step(s): return False
             res = True
@@ -474,25 +478,22 @@ class AutoClickerInstance:
                         return True 
             time.sleep(1)
         return False
-
+    def search_logic(self, step):
+        target = step.get("target")
+        timeout = step.get("timeout", 10)
+        conf = step.get("confidence", 0.8)
+        use_color = step.get("use_color", False)
         t_img = get_cached_template(target, use_color)
         if t_img is None: return False
-        
         start = time.time()
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
-                if not use_color: compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-                else: compare_screen = screen
-
-                # Tỉ lệ 1:1
-                t_scaled = t_img
-
-                if t_scaled.shape[0] > compare_screen.shape[0] or t_scaled.shape[1] > compare_screen.shape[1]:
-                    continue
-                res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
-                _, mv, _, _ = cv2.minMaxLoc(res)
-                if mv >= conf: return True
+                compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                if t_img.shape[0] <= compare_screen.shape[0] and t_img.shape[1] <= compare_screen.shape[1]:
+                    res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
+                    _, mv, _, _ = cv2.minMaxLoc(res)
+                    if mv >= conf: return True
             time.sleep(1)
         return False
 
@@ -545,7 +546,7 @@ class AutoClickerInstance:
         timeout = step.get("timeout", 15)
         app = step.get("app", "com.garena.game.kgvn")
         
-        found = self.search_logic({"target": target, "timeout": timeout, "confidence": step.get("confidence", 0.7)})
+        found = self.search_logic({"target": target, "timeout": timeout, "confidence": step.get("confidence", 0.8)})
         if found: 
             return True
         
@@ -588,20 +589,20 @@ class AutoClickerInstance:
         self.running = True
 
         login_script = [
-            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 3, "confidence": 0.7, "login_step": True},
-            {"action": "click_image", "target1": "images/account_input1.jpg","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.7, "login_step": True},
+            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 3, "confidence": 0.8, "login_step": True},
+            {"action": "click_image", "target1": "images/account_input1.jpg","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.8, "login_step": True},
             {"action": "input_account", "login_step": True},
-            {"action": "click_image", "target1": "images/tiep_theo.jpg", "target2": "images/tiep_theo1.jpg", "timeout": 60, "confidence": 0.7, "login_step": True},
+            {"action": "click_image", "target1": "images/tiep_theo.jpg", "target2": "images/tiep_theo1.jpg", "timeout": 60, "confidence": 0.8, "login_step": True},
             {"action": "input_password", "login_step": True},
             {"action": "wait", "timeout": 2, "login_step": True},
-            {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "timeout": 30, "confidence": 0.7, "login_step": True},
+            {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "timeout": 30, "confidence": 0.8, "login_step": True},
             {"action": "wait", "timeout": 5, "login_step": True},
-            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.7, "login_step": True},
-            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 2, "confidence": 0.7, "login_step": True},
+            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.8, "login_step": True},
+            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 2, "confidence": 0.8, "login_step": True},
             {"action": "wait", "timeout": 5, "login_step": True},
-            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.7, "login_step": True, "then": [
-                {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.8, "login_step": True, "then": [
+                {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.8},
                 {"action": "click_image_if", "target": "images/sai_pass.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
                 {"action": "clear_android_data", "package": "com.garena.gaslite"},
                 {"action": "restart_app"}]
@@ -613,27 +614,40 @@ class AutoClickerInstance:
         ]
 
         nhay_script = [
-            {"action": "loop", "count": 9, "steps": [
-                {"action": "long_click", "target": "images/nhay_nao.jpg", "duration": 6000},
-                {"action": "click_any", "timeout": 10},
+            {"action": "click_image", "target1": "images/su_kien.jpg","target2": "images/su_kien2.jpg", "timeout": 25, "confidence": 0.8},
+            {"action": "click_image_if", "target1": "images/su_kien.jpg", "target2": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.8},
+            {"action": "press_esc", "wait": 1},
+            {"action": "press_esc", "wait": 1},
+            {"action": "press_esc", "wait": 1},
+            {"action": "press_esc", "wait": 1},
+            {"action": "click_image", "target": "images/su_kien_cs.jpg", "timeout": 10, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.8},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            {"action": "loop", "count": 9, "until": "images/0_ve_cs.jpg", "steps": [
+                {"action": "long_click", "target": "images/nhay_nao.jpg", "duration": 5000},
+                {"action": "click_any", "timeout": 8},
             ]},
-            {"action": "click_image", "target": "images/doi_qua_cs.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image", "target": "images/ruong_ss.jpg", "timeout": 10, "confidence": 0.7, "decisive_failure": True, "skip_maintain": True},
-            {"action": "click_image", "target": "images/xac_nhan_ruong_ss.jpg", "timeout": 10, "confidence": 0.7},
-
-            {"action": "click_image", "target": "images/back_sk1.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.7},
+            {"action": "click_image", "target": "images/doi_qua_cs.jpg", "timeout": 10, "confidence": 0.8},
+            {"action": "click_image", "target": "images/ruong_ss.jpg", "timeout": 10, "confidence": 0.8, "decisive_failure": True, "skip_maintain": True},
+            {"action": "click_image", "target": "images/xac_nhan_ruong_ss.jpg", "timeout": 10, "confidence": 0.8, "decisive_failure": True, "skip_maintain": True},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_image", "target": "images/back_sk1.jpg", "timeout": 10, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.8},
         ]
 
         dang_xuat_script = [
             {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "confidence": 0.8},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 30, "confidence": 0.8},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 30, "confidence": 0.8},
             {"action": "wait", "timeout": 15},
         ]
 
@@ -666,7 +680,7 @@ class AutoClickerInstance:
                 
                 if not success_login or self.skip_all_retries or not self.running:
                     if self.skip_all_retries:
-                        self.report_stats_func(False, f"{self.current_account['tk']} (SAI PASS)")
+                        self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']} (SAI PASS)")
                         break
                     if not self.running: break
                     continue
@@ -697,16 +711,16 @@ class AutoClickerInstance:
                 if self.running and success_nhay:
                     for step in dang_xuat_script:
                         if not self.running: break
-                        self.execute_step(step)
+                        if not self.execute_step(step): break
 
                 # --- 4. KẾT THÚC ---
                 if self.running:
                     if decisive_failure:
-                        self.report_stats_func(False, f"{self.current_account['tk']} (KHÔNG THẤY RƯƠNG)")
+                        self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']} (KHÔNG THẤY RƯƠNG)")
                         break # Thoát vòng lặp retry, chuyển sang acc tiếp theo
                     elif success_nhay or self.chest_claimed:
                         self.current_account["success"] = True
-                        self.report_stats_func(True, f"{self.current_account['tk']}")
+                        self.report_stats_func(True, f"{self.current_account['tk']}|{self.current_account['mk']}")
                         break # Thoát vòng lặp retry, chuyển sang acc tiếp theo
                     else:
                         self.log(f"!! Lỗi thực thi Script Nhảy, đang thử lại: {self.current_account['tk']}")

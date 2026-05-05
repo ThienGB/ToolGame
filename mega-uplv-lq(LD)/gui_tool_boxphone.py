@@ -77,11 +77,18 @@ def init_ocr_reader(log_func=None):
         return None
 
 def resource_path(relative_path):
+    """Lấy đường dẫn tài nguyên, hỗ trợ cả khi chạy script (.py) và khi đã đóng gói (.exe)"""
     try:
-        base_path = sys._MEIPASS
+        # Khi chạy bằng PyInstaller, sys._MEIPASS là thư mục tạm chứa tài nguyên
+        if hasattr(sys, '_MEIPASS'):
+            bundle_path = os.path.join(sys._MEIPASS, relative_path)
+            if os.path.exists(bundle_path):
+                return bundle_path
+        
+        # Nếu không thấy trong bundle hoặc đang chạy .py, tìm ở thư mục hiện tại
+        return os.path.abspath(relative_path)
     except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+        return os.path.abspath(relative_path)
 
 class StdoutRedirector:
     def __init__(self, log_func):
@@ -324,6 +331,7 @@ class AutoClickerInstance:
                     target_imgs.append((t_path, img))
         
         if not target_imgs:
+            self.log(f"!! LỖI: Không tìm thấy bất kỳ ảnh mẫu nào cho: {targets}")
             return False
 
         start = time.time()
@@ -705,7 +713,7 @@ class AutoClickerInstance:
                         "confidence": 0.7,
                         "script": [
                             {"action": "click_image_if", "target": "images_boxphone/vaotran.png", "timeout": 3, "confidence": 0.7},
-                             {"action": "click_image_if", "target": "images_boxphone/vaotran.png", "timeout": 3, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images_boxphone/vaotran.png", "timeout": 3, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images_boxphone/vaotran.png", "timeout": 3, "confidence": 0.7},
                             {"action": "wait", "timeout": 3},
                             {"action": "click_image_if", "target1": "images_boxphone/vaotran1.png", "target2": "images_boxphone/vao_tran_button_3.png", "target3": "images_boxphone/vao_tran_button_2.png","target4": "images_boxphone/vao_tran_box.png", "timeout": 30, "confidence": 0.7},
@@ -715,18 +723,17 @@ class AutoClickerInstance:
                         ]
                     },
                     {
-                        "trigger": "images_boxphone/dkysau.png", 
+                        "trigger1": "images_boxphone/dkysau.png", 
+                        "trigger2": "images_boxphone/dkysau1.jpg",
                         "confidence": 0.7,
                         "script": [
-                            {"action": "click_image", "target": "images_boxphone/dkysau.png", "timeout": 20, "confidence": 0.7},
+                            {"action": "click_image", "target1": "images_boxphone/dkysau.png", "target2": "images_boxphone/dkysau1.jpg", "timeout": 20, "confidence": 0.7},
                             {"action": "click_image_if", "target1": "images_boxphone/vao_button.png","target2": "images_boxphone/vao_button1.png","target3": "images_boxphone/vao_button2.png","target4": "images_boxphone/vao1.png", "timeout": 5, "confidence": 0.7},
                             {"action": "click_image", "target": "images_boxphone/logo1.png", "timeout": 20, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images_boxphone/on.png", "timeout": 5, "confidence": 0.75, "use_color": True},
                             {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2":"images_boxphone/minimize1.png", "target3":"images_boxphone/minimize2.png", "target4":"images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.7},
                             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 120, "confidence": 0.7},
                             {"action": "click_any", "wait": 12},
-                            
-                            
                         ]
                     },
                     {
@@ -810,7 +817,8 @@ class AutoClickerInstance:
                             {"action": "click_coords", "x": 883, "y": 1005, "timeout": 3},
                             {"action": "click_any", "wait": 2},
                             {"action": "click_image_if", "target1": "images_boxphone/lam.png", "target2": "images_boxphone/lam1.png", "timeout": 5, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images_boxphone/dauhang.png",  "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images_boxphone/lam.png", "target2": "images_boxphone/lam1.png", "timeout": 3, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images_boxphone/dauhang.png",  "timeout": 10, "confidence": 0.7},
                             {"action": "press_esc", "wait": 2} ,     
                             {"action": "press_esc", "wait": 2} ,
                             {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 20, "confidence": 0.7},
@@ -822,19 +830,20 @@ class AutoClickerInstance:
                         "trigger": "images_boxphone/dauhang.png", 
                         "confidence": 0.7,
                         "script": [
-                            {"action": "click_image_if", "target": "images_boxphone/dauhang.png", "timeout": 7, "confidence": 0.7},
-                            {"action": "press_esc", "wait": 2} ,
-            
-                            
-                            
+                            {"action": "click_image_if", "target1": "images_boxphone/dauhang.png", "target2": "images_boxphone/dau_hang1.jpg", "timeout": 7, "confidence": 0.7},
+                            {"action": "press_esc", "wait": 2},
                         ]
                     },
                 ]
             },          
-            {"action": "click_image_if", "target": "images_boxphone/dauhang.png", "timeout": 7, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2} ,
+            {"action": "click_image_if", "target1": "images_boxphone/dauhang.png", "target2": "images_boxphone/dau_hang1.jpg", "timeout": 15, "confidence": 0.7},
+            {"action": "press_esc", "wait": 2},
             
             {"action": "click_coords", "x": 1702, "y": 210, "timeout": 2},
+            {"action": "press_esc", "wait": 1},
+            {"action": "press_esc", "wait": 1},
+            {"action": "press_esc", "wait": 1},
+            {"action": "press_esc", "wait": 1},
             {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
             {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
             # {"action": "click_image", "target": "images_boxphone/event.png", "timeout": 20, "confidence": 0.7},
@@ -1015,9 +1024,31 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 600, "confidence": 0.7},
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
             {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 3},
+            {"action": "click_coords", "x": 959, "y": 500, "timeout": 3},
+            {
+                "action": "cases",
+                "timeout" : 120,
+                "cases": [
+                    {
+                        "trigger": "images_boxphone/sukien.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},                 
+                        ]
+                    },
+                    {
+                        "trigger": "images_boxphone/tuy_chon.png", 
+                        "confidence": 0.7,  
+                    }
+                ]
+            },
+            {"action": "wait", "timeout": 90},      
         ]
 
         # 6. GIAI ĐOẠN ĐĂNG XUẤT
@@ -1025,9 +1056,8 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images_boxphone/logo.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/off.png", "timeout": 5, "confidence": 0.75, "use_color": True},
             {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2": "images_boxphone/minimize1.png", "target3": "images_boxphone/minimize2.png", "target4": "images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/home.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/cai_dat_button.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/logout.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images_boxphone/dangxuat.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/ok1.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 15},
         ]
@@ -1041,17 +1071,18 @@ class AutoClickerInstance:
         if self.modes.get("teamup"):
             loop_steps = []
             if self.is_host:
-                # Host: tạo phòng và đợi
+                # Host: tạo phòng và đợi đủ 5 người (4 khách + 1 host)
                 loop_steps += teamup_host_script
-                # Xóa ID ngay sau khi ghép đội xong để các ván sau Guest không nhận nhầm ID cũ
+                # Chèn thêm một bước đợi người nữa trước khi vào trận để đảm bảo ván 2, 3 luôn đủ người
+                loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
+                loop_steps += shared_battle_script
+                # Quan trọng: Reset đếm người ở CUỐI mỗi ván để ván sau Guest báo danh lại từ đầu
                 loop_steps.append({"action": "clear_room_id"})
             else:
                 # Guest: vào phòng và đợi host bắt đầu
                 loop_steps += teamup_guest_script
                 loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
-            
-            # Thêm logic chiến đấu vào sau khi đã ghép đội xong
-            loop_steps += shared_battle_script
+                loop_steps += shared_battle_script
             
             battle_loop = {
                 "action": "loop", 
@@ -1086,6 +1117,13 @@ class AutoClickerInstance:
                     success = False; break
             
             if self.running:
+                if not success:
+                    self.update_status("LỖI - DỪNG", True)
+                    self.log("!! CẢNH BÁO: Acc gặp lỗi hoặc Timeout. Đã dừng máy để kiểm tra.")
+                    # Vòng lặp chờ ở đây để không chuyển sang acc tiếp theo
+                    while self.running:
+                        time.sleep(2)
+                
                 self.report_stats_func(success, self.current_account)
                 self.accounts_processed += 1
             gc.collect()
