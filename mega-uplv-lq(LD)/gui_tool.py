@@ -1118,6 +1118,7 @@ class AutoClickerInstance:
               } ,     
             
             {"action": "press_esc", "wait": 2},
+            {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 60},
             {"action": "click_image", "target": "images/x5.png", "timeout": 7, "confidence": 0.9},
             {"action": "wait", "timeout": 5},
             {"action": "press_esc", "wait": 2} ,
