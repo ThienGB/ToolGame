@@ -892,9 +892,12 @@ class AutoClickerInstance:
                         "script": [
                             {"action": "click_image", "target": "images/vao_tran_button_1.png", "timeout": 20, "confidence": 0.9},
                             {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "wait", "timeout": 4},
+                            {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
                             {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
 
-                            {"action": "press_esc", "wait": 2},
+                            
                             
                         ]
                     },
@@ -909,7 +912,7 @@ class AutoClickerInstance:
                             {"action": "click_image_if", "target": "images/victory.png", "timeout": 200, "confidence": 0.9},
                             {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
 
-                            {"action": "press_esc", "wait": 2},
+                            
                             
                         ]
                     },
