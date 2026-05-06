@@ -387,6 +387,17 @@ class AutoClickerInstance:
             res = self.cases_logic(step)
         elif action == "sync_autowin":
             res = self.sync_autowin_logic(step)
+        elif action == "restart_app":
+            app = step.get("app", "com.garena.game.kgvn")
+            self.log(f"!! PHÁT HIỆN LỖI: Đóng game và khởi động lại {app}...")
+            self.call_adb(["shell", "am", "force-stop", app])
+            time.sleep(2)
+            self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+            self.log("Đợi game khởi động lại (20s)...")
+            start_wait = time.time()
+            while time.time() - start_wait < 20 and self.running:
+                time.sleep(0.5)
+            res = False
         elif action == "loop":
             # Lặp lại một nhóm hành động N lần
             count = step.get("count", 1)
