@@ -330,6 +330,11 @@ class AutoClickerInstance:
 
     def execute_step(self, step):
         if not self.running: return False
+        
+        # Nếu có flag only_host=True thì chỉ máy chủ phòng (worker_index % 5 == 0) mới thực hiện
+        if step.get("only_host") and getattr(self, "worker_index", 0) % 5 != 0:
+            return True
+
         action = step.get("action")
         target_info = step.get("target") or step.get("target1", "")
         self.log(f"==> Bước: {action} {f'({target_info})' if target_info else ''}")
@@ -1071,9 +1076,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 3},
             
             
-            
-            {"action": "click_image_if", "target": "images/tuong5.png", "timeout": 10, "confidence": 0.9},
-            
+                        
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 10, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "target4": "images/logo3.png", "timeout": 50, "confidence": 0.9},
             {
