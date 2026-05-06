@@ -656,14 +656,11 @@ class AutoClickerInstance:
             # {"action": "click_image_if", "target": "images/x_start2.jpg", "confidence": 0.7, "timeout": 2},
             {"action": "press_esc", "wait": 2},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
+            {"action": "press_esc", "wait": 2},
+            {"action": "wait", "timeout": 8},
+            {"action": "press_esc", "wait": 2},
         ]
-        
-        restart_script = [
-            {"action": "wait", "timeout": 20}, # Đợi game khởi động
-            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.7},
-            {"action": "press_esc", "wait": 3},
-        ]
-        
+       
         copy_script = [
             {
                 "action": "cases",
@@ -674,16 +671,16 @@ class AutoClickerInstance:
                         "trigger": "images/su_kien.jpg",
                         "confidence": 0.7,
                         "script": [
-                            {"action": "click_image", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image", "target1": "images/su_kien.jpg","target2": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/su_kien.jpg", "target2": "images/su_kien2.jpg", "timeout": 2, "confidence": 0.8},
                             {"action": "press_esc", "wait": 1},
                             {"action": "press_esc", "wait": 1},
                             {"action": "press_esc", "wait": 1},
                             {"action": "press_esc", "wait": 1},
-                            {"action": "click_image", "target": "images/su_kien_cs.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 10, "confidence": 0.8},
+                            {"action": "click_image_if", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 2, "confidence": 0.8},
+                            {"action": "click_image_if", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 2, "confidence": 0.8},
+                            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.8},
                             {"action": "press_esc", "wait": 2},
                             {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
                             {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
@@ -759,7 +756,8 @@ class AutoClickerInstance:
                         "trigger": "images/su_kien.jpg",
                         "confidence": 0.7,
                         "script": [
-                            {"action": "click_image_if", "target": "images/su_kien.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image", "target1": "images/su_kien.jpg","target2": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image_if", "target1": "images/su_kien.jpg", "target2": "images/su_kien2.jpg", "timeout": 2, "confidence": 0.8},
                             {"action": "press_esc", "wait": 1},
                             {"action": "press_esc", "wait": 1},
                             {"action": "press_esc", "wait": 1},
@@ -770,7 +768,6 @@ class AutoClickerInstance:
                             {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "press_esc", "wait": 2},
                             {"action": "press_esc", "wait": 2},
-                            {"action": "verify_or_restart", "target": "images/nhap_ma_moi.jpg", "timeout": 15, "script": restart_script},
                             {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
@@ -781,7 +778,6 @@ class AutoClickerInstance:
                 ]
             },
             {"action": "wait", "timeout": 5},
-
         ]
 
         while self.running:
