@@ -965,6 +965,7 @@ class AutoClickerInstance:
                     },
                 ]
             },
+            {"action": "click_image_if", "target": "images_boxphone/tuy_chon.png", "timeout": 20, "confidence": 0.7},
             {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
         ]
@@ -1152,6 +1153,7 @@ class MultiPremiumApp(ctk.CTk):
         self.account_file_path = None
         self.instances = []
         self.active_workers = []
+        self.total_count = 0
         self.success_count = 0
         self.failure_count = 0
         self.shared_data = {"room_ids": {}, "joined_counts": {}, "autowin_barrier": {}, "lock": threading.Lock()}
@@ -1229,9 +1231,30 @@ class MultiPremiumApp(ctk.CTk):
         self.battle_count_entry.pack(pady=5); self.battle_count_entry.insert(0, "3")
 
         # Stats
-        self.stats_inner = ctk.CTkFrame(self.main_content, fg_color="transparent"); self.stats_inner.pack(fill="x", pady=10)
-        self.success_val = ctk.CTkLabel(self.stats_inner, text="0", font=("Arial", 50, "bold"), text_color="#4ADE80"); self.success_val.pack()
-        ctk.CTkLabel(self.stats_inner, text="TÀI KHOẢN THÀNH CÔNG", font=("Arial", 14)).pack()
+        self.stats_container = ctk.CTkFrame(self.main_content, fg_color="transparent")
+        self.stats_container.pack(fill="x", pady=10)
+        self.stats_container.columnconfigure((0, 1, 2), weight=1)
+
+        # Card Total
+        self.card_total = ctk.CTkFrame(self.stats_container, fg_color=CARD_COLOR, height=70)
+        self.card_total.grid(row=0, column=0, padx=5, sticky="nsew")
+        self.total_val = ctk.CTkLabel(self.card_total, text="0", font=("Arial", 24, "bold"), text_color=ACCENT_GREEN)
+        self.total_val.pack(pady=(10, 0))
+        ctk.CTkLabel(self.card_total, text="TỔNG ACC ĐÃ NẠP", font=("Arial", 11)).pack(pady=(0, 10))
+
+        # Card Success
+        self.card_success = ctk.CTkFrame(self.stats_container, fg_color=CARD_COLOR, height=70)
+        self.card_success.grid(row=0, column=1, padx=5, sticky="nsew")
+        self.success_val = ctk.CTkLabel(self.card_success, text="0", font=("Arial", 24, "bold"), text_color="#4ADE80")
+        self.success_val.pack(pady=(10, 0))
+        ctk.CTkLabel(self.card_success, text="THÀNH CÔNG", font=("Arial", 11)).pack(pady=(0, 10))
+
+        # Card Failure
+        self.card_failure = ctk.CTkFrame(self.stats_container, fg_color=CARD_COLOR, height=70)
+        self.card_failure.grid(row=0, column=2, padx=5, sticky="nsew")
+        self.failure_val = ctk.CTkLabel(self.card_failure, text="0", font=("Arial", 24, "bold"), text_color=ACCENT_RED)
+        self.failure_val.pack(pady=(10, 0))
+        ctk.CTkLabel(self.card_failure, text="THẤT BẠI", font=("Arial", 11)).pack(pady=(0, 10))
         
         # Log Window
         if not getattr(sys, 'frozen', False):
@@ -1388,7 +1411,9 @@ class MultiPremiumApp(ctk.CTk):
             for l in f:
                 parts = l.strip().split('|', 1)
                 if len(parts)>=2: self.accounts_data.append({"tk":parts[0], "mk":parts[1], "used":False})
-        self.add_log(f"Đã nạp {len(self.accounts_data)} acc.")
+        self.total_count = len(self.accounts_data)
+        self.update_all_ui()
+        self.add_log(f"Đã nạp {self.total_count} acc.")
 
     def start_all(self):
         if not self.accounts_data: 
@@ -1454,7 +1479,9 @@ class MultiPremiumApp(ctk.CTk):
         self.after(0, self.update_all_ui)
 
     def update_all_ui(self):
+        self.total_val.configure(text=str(self.total_count))
         self.success_val.configure(text=str(self.success_count))
+        self.failure_val.configure(text=str(self.failure_count))
 
     def add_log(self, text):
         now = datetime.now().strftime("%H:%M:%S")

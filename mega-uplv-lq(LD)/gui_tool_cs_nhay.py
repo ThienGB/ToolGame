@@ -130,6 +130,36 @@ class AutoClickerInstance:
         self.is_lagging = is_lagging
         self.update_ui_func()
 
+    def check_captcha(self, screen, step):
+        """Kiểm tra nếu màn hình bị xoay dọc (Captcha) trong bước đăng nhập."""
+        if screen is not None and step.get("login_step"):
+            h, w = screen.shape[:2]
+            if h > w: # Chiều cao > Chiều rộng => Màn hình dọc
+                # Kiểm tra Focus để tránh nhận nhầm khi đang Restart/Bảo trì (về Launcher)
+                res = self.call_adb(["shell", "dumpsys window | grep mCurrentFocus"])
+                focus_out = res.stdout.decode('utf-8', errors='ignore')
+                
+                # Danh sách các app "nghi vấn" là Captcha (Game, Garena, hoặc Trình duyệt)
+                is_captcha_app = any(pkg in focus_out for pkg in [
+                    "com.garena.game.kgvn", 
+                    "com.garena.gaslite", 
+                    "chrome", 
+                    "browser", 
+                    "firefox", 
+                    "opera"
+                ])
+                
+                if is_captcha_app:
+                    self.log("!! PHÁT HIỆN CAPTCHA (Focus: Game/Garena/Browser): Đang đổi Acc...")
+                    self.call_adb(["shell", "am", "force-stop", "com.garena.game.kgvn"])
+                    self.call_adb(["shell", "pm", "clear", "com.garena.gaslite"])
+                    self.skip_all_retries = True
+                    self.skip_reason = "CAPTCHA"
+                    return True
+                else:
+                    return False
+        return False
+
     def input_text_robust(self, text):
         if not text: return
         parts = text.split(' ')
@@ -262,6 +292,7 @@ class AutoClickerInstance:
                 if matched_path and "sai_pass.jpg" in matched_path:
                     self.log("!! PHÁT HIỆN SAI MẬT KHẨU: Bỏ qua tài khoản này.")
                     self.skip_all_retries = True
+                    self.skip_reason = "SAI PASS"
                     return False
             res = True
         elif action == "wait":
@@ -289,6 +320,7 @@ class AutoClickerInstance:
         elif action == "mark_success":
             if self.current_account:
                 self.current_account["success"] = True
+            self.chest_claimed = True
             res = True
         elif action == "cases":
             res = self.cases_logic(step)
@@ -404,6 +436,8 @@ class AutoClickerInstance:
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
+                if self.check_captcha(screen, step): return None
+                
                 compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 
                 for t_path, t_img in target_imgs:
@@ -458,6 +492,8 @@ class AutoClickerInstance:
             if screen is None:
                 time.sleep(1); continue
             
+            if self.check_captcha(screen, step): return False
+            
             scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
             
             for item in case_templates:
@@ -489,6 +525,7 @@ class AutoClickerInstance:
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
+                if self.check_captcha(screen, step): return False
                 compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 if t_img.shape[0] <= compare_screen.shape[0] and t_img.shape[1] <= compare_screen.shape[1]:
                     res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
@@ -521,6 +558,7 @@ class AutoClickerInstance:
             while time.time() - start < timeout and self.running:
                 screen = self.get_screenshot()
                 if screen is not None:
+                    if self.check_captcha(screen, step): return False
                     scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                     if t_img.shape[0] <= scr_gray.shape[0] and t_img.shape[1] <= scr_gray.shape[1]:
                         res = cv2.matchTemplate(scr_gray, t_img, cv2.TM_CCOEFF_NORMED)
@@ -628,6 +666,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 2, "confidence": 0.8},
             {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.8},
             {"action": "press_esc", "wait": 2},
+            {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
             {"action": "press_esc", "wait": 2},
             {"action": "loop", "count": 10, "until": "images/0_ve_cs.jpg", "steps": [
                 {"action": "click_image_if", "target": "images/x_cs2.jpg", "timeout": 2, "confidence": 0.7},
@@ -638,8 +677,29 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/doi_qua_cs.jpg", "timeout": 2, "confidence": 0.8},
             {"action": "click_image_if", "target": "images/doi_qua_cs.jpg", "timeout": 2, "confidence": 0.8},
             {"action": "click_image_if", "target": "images/doi_qua_cs.jpg", "timeout": 2, "confidence": 0.8},
-            {"action": "click_image", "target": "images/ruong_ss.jpg", "timeout": 10, "confidence": 0.8, "decisive_failure": True, "skip_maintain": True},
-            {"action": "click_image", "target": "images/xac_nhan_ruong_ss.jpg", "timeout": 10, "confidence": 0.8, "decisive_failure": True, "skip_maintain": True},
+            {
+                "action": "cases",
+                "timeout": 15,
+                "confidence": 0.8,
+                "decisive_failure": True,
+                "skip_maintain": True,
+                "cases": [
+                    {
+                        "trigger": "images/ruong_ss.jpg",
+                        "script": [
+                            {"action": "click_image", "target": "images/ruong_ss.jpg", "timeout": 5},
+                            {"action": "click_image", "target": "images/xac_nhan_ruong_ss.jpg", "timeout": 10},
+                            {"action": "mark_success"}
+                        ]
+                    },
+                    {
+                        "trigger": "images/da_doi.jpg",
+                        "script": [
+                            {"action": "mark_success"}
+                        ]
+                    }
+                ]
+            },
             {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target": "images/back_sk1.jpg", "timeout": 10, "confidence": 0.8},
@@ -668,7 +728,14 @@ class AutoClickerInstance:
             if not self.current_account: break
             self.log(f">> START: {self.current_account['tk']}")
             
+            account_retries = 0
             while self.running:
+                account_retries += 1
+                if account_retries > 3:
+                    self.log(f"!! Quá 3 lần thử lại cho Acc: {self.current_account['tk']}. Bỏ qua.")
+                    self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']} (QUÁ 3 LẦN THỬ)")
+                    break
+
                 self.skip_login_for_this_acc = False
                 self.skip_all_retries = False
                 success = False
@@ -687,7 +754,8 @@ class AutoClickerInstance:
                 
                 if not success_login or self.skip_all_retries or not self.running:
                     if self.skip_all_retries:
-                        self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']} (SAI PASS)")
+                        reason = getattr(self, "skip_reason", "LỖI")
+                        self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']} ({reason})")
                         break
                     if not self.running: break
                     continue
