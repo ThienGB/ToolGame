@@ -1110,17 +1110,22 @@ class AutoClickerInstance:
                         ]
                     },
                     {
-                        "trigger": "images_boxphone/pvp.png", 
+                        "trigger": "images/pvp.png", 
                         "confidence": 0.7,
                         
+                    },
+                    {
+                        "trigger": "images/x5.png", 
+                        "script": [
+                        {"action": "click_image_if", "target": "images/x5.png", "timeout": 10, "confidence": 0.9},
+                        ]
                     },
                 ]
               } ,     
             
             {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 60},
-            {"action": "click_image", "target": "images/x5.png", "timeout": 7, "confidence": 0.9},
-            {"action": "wait", "timeout": 5},
+            
+            
             {"action": "press_esc", "wait": 2} ,
             
         ]
