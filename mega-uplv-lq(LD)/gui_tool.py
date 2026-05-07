@@ -1694,18 +1694,63 @@ class MultiPremiumApp(ctk.CTk):
         return -1
 
     def scan_devices(self):
+        # Chạy quét máy ảo trong luồng riêng để tránh lag UI
+        threading.Thread(target=self._perform_scan, daemon=True).start()
+
+    def _perform_scan(self):
         base_path = self.ld_path_entry.get().strip()
         self.adb_path = os.path.join(base_path, "adb.exe")
         if not os.path.exists(self.adb_path): self.adb_path = "adb"
+        
+        try:
+            # 1. Tìm file console điều khiển
+            ldconsole_path = None
+            for exe in ["ldconsole.exe", "dnconsole.exe", "ld.exe"]:
+                p = os.path.join(base_path, exe)
+                if os.path.exists(p):
+                    ldconsole_path = p
+                    break
+            
+            # 2. Lấy danh sách máy ảo đang chạy và connect ADB
+            if ldconsole_path:
+                try:
+                    res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                    for line in res_ld.stdout.splitlines():
+                        parts = line.split(',')
+                        if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON (Status = 1)
+                            idx = parts[0]
+                            port = 5554 + (int(idx) * 2)
+                            subprocess.run([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                                         capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
+                except: pass
+
+            # 3. Quét dự phòng các port phổ biến
+            for i in range(10): 
+                port = 5554 + (i * 2)
+                subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
+                               creationflags=subprocess.CREATE_NO_WINDOW)
+            
+            # Đợi ADB cập nhật danh sách
+            time.sleep(3)
+
+            # 4. Lấy danh sách thiết bị cuối cùng
+            res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+            lines = res.stdout.strip().split('\n')[1:]
+            device_serials = [line.split('\t')[0] for line in lines if "device" in line]
+            
+            # Cập nhật UI trên main thread
+            self.after(0, lambda: self._update_device_ui(device_serials))
+        except Exception as e:
+            self.add_log(f"LỖI QUÉT: {e}")
+
+    def _update_device_ui(self, device_serials):
         for w in self.device_list_frame.winfo_children(): w.destroy()
         self.device_cards = {}
         self.team_frames = {}
         self.device_map = {}
+        
         try:
-            res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            lines = res.stdout.strip().split('\n')[1:]
-            device_serials = [line.split('\t')[0] for line in lines if "device" in line]
-            
             # Lấy tất cả serials và gán index dựa trên port ADB để sắp xếp
             # Việc sắp xếp giúp thứ tự máy ổn định (máy index thấp luôn đứng trước)
             serials_with_idx = []
@@ -1724,6 +1769,7 @@ class MultiPremiumApp(ctk.CTk):
             
             if not self.device_map:
                 self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào.")
+                self.update_stats_ui()
                 return
 
             # Gom nhóm theo Team (0-4: Team 1, 5-9: Team 2...)
@@ -1758,7 +1804,7 @@ class MultiPremiumApp(ctk.CTk):
                 current_team_devices = sorted(teams_data[team_idx], key=lambda s: self.device_map[s])
                 
                 for i, serial in enumerate(current_team_devices):
-                    abs_idx = self.device_map[serial]
+                    abs_idx = self.get_absolute_index(serial)
                     is_host = (abs_idx % 5 == 0)
                     
                     card_color = "#2d3748" if is_host else "#252525"
@@ -1777,7 +1823,7 @@ class MultiPremiumApp(ctk.CTk):
             
             self.update_stats_ui()
         except Exception as e:
-            self.add_log(f"LỖI: Không thể quét thiết bị: {e}")
+            self.add_log(f"LỖI CẬP NHẬT UI THIẾT BỊ: {e}")
 
     def load_accounts(self):
         file_path = fd.askopenfilename(filetypes=[("Text Files", "*.txt")])

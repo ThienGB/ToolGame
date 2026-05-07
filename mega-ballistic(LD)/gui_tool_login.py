@@ -180,14 +180,14 @@ class AutoClickerInstance:
     def input_account_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("tk", "")
-        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40) # Xóa text cũ
+        self.call_adb(["shell", "input", "keyevent", "123"] + ["67"] * 30) # Di chuyển đến cuối và xóa 30 kí tự
         self.input_text_robust(content)
         return True
 
     def input_password_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("mk", "")
-        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
+        self.call_adb(["shell", "input", "keyevent", "123"] + ["67"] * 30)
         self.input_text_robust(content)
         return True
 
@@ -298,7 +298,7 @@ class AutoClickerInstance:
 class MultiPremiumApp(ctk.CTk):
     def __init__(self, restart_threshold=0):
         super().__init__()
-        self.title("MLogin")
+        self.title("BallisticLogin")
         self.geometry("300x480")
         self.resizable(False, False)
         self.configure(fg_color=BG_COLOR)
@@ -307,7 +307,7 @@ class MultiPremiumApp(ctk.CTk):
         self.restart_threshold = 0
         self.account_lock = threading.Lock()
         self.adb_path = self.find_adb()
-        self.logo_img = ctk.CTkImage(Image.open(resource_path("logo.png")), size=(40, 40))
+        self.logo_img = ctk.CTkImage(Image.open(resource_path("mega_login_logo.png")), size=(40, 40))
         self.start_icon = ctk.CTkImage(Image.open(resource_path("start.png")), size=(20, 20))
         self.stop_icon = ctk.CTkImage(Image.open(resource_path("stop.png")), size=(20, 20))
 
@@ -365,11 +365,12 @@ class MultiPremiumApp(ctk.CTk):
         # 4. Simple Stats Row
         stat_f = ctk.CTkFrame(self.main_f, fg_color=CARD_COLOR, corner_radius=8, height=40)
         stat_f.pack(fill="x", pady=(5, 0))
-        stat_f.columnconfigure((0, 1, 2), weight=1)
+        stat_f.columnconfigure((0, 1, 2, 3), weight=1)
         
-        self.success_val = self.create_mini_stat(stat_f, "Xong", "0", 0, "#4ADE80")
-        self.progress_val = self.create_mini_stat(stat_f, "Tiến độ", "0/0", 1, "#3B82F6")
-        self.fail_val_ui = self.create_mini_stat(stat_f, "Lỗi", "0", 2, ACCENT_RED)
+        self.devices_val = self.create_mini_stat(stat_f, "Thiết bị", "0", 0, "#A855F7")
+        self.success_val = self.create_mini_stat(stat_f, "Xong", "0", 1, "#4ADE80")
+        self.progress_val = self.create_mini_stat(stat_f, "Tiến độ", "0/0", 2, "#3B82F6")
+        self.fail_val_ui = self.create_mini_stat(stat_f, "Lỗi", "0", 3, ACCENT_RED)
 
     def create_mini_stat(self, parent, title, value, col, color):
         f = ctk.CTkFrame(parent, fg_color="transparent")
@@ -426,7 +427,7 @@ class MultiPremiumApp(ctk.CTk):
                         ldconsole_path = p
                         break
                 
-                # 2. Ép ADB kết nối dựa trên danh sách máy ảo thực tế trong LD
+                # 2. Lấy danh sách máy ảo đang chạy và connect ADB
                 if ldconsole_path:
                     try:
                         res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
@@ -435,25 +436,24 @@ class MultiPremiumApp(ctk.CTk):
                             if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON (Status = 1)
                                 idx = parts[0]
                                 port = 5554 + (int(idx) * 2)
-                                for host in ["127.0.0.1", "localhost"]:
-                                    subprocess.Popen([self.adb_path, "connect", f"{host}:{port}"], 
-                                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+                                subprocess.run([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                                             capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
                     except: pass
 
-                # 3. Quét dải port rộng hơn (0-30 máy ảo) đề phòng ADB chưa nhận
-                for i in range(30):
+                # 3. Quét dự phòng các port phổ biến nếu danh sách LD trống hoặc lỗi
+                for i in range(10): # Quét 10 máy đầu tiên nhanh
                     port = 5554 + (i * 2)
                     subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
                                    creationflags=subprocess.CREATE_NO_WINDOW)
             else:
-                # BoxPhone mode: Thường dùng 'adb devices' trực tiếp hoặc quét dải IP nếu cần
-                # Ở đây ta chỉ làm mới ADB server để nhận diện thiết bị đang cắm
+                # BoxPhone mode: Làm mới kết nối
                 subprocess.run([self.adb_path, "kill-server"], creationflags=subprocess.CREATE_NO_WINDOW)
+                time.sleep(1)
                 subprocess.run([self.adb_path, "start-server"], creationflags=subprocess.CREATE_NO_WINDOW)
             
-            # Đợi ADB cập nhật danh sách
-            time.sleep(2)
+            # Đợi ADB cập nhật danh sách (tăng thời gian lên 3s để ổn định hơn)
+            time.sleep(3)
 
             # 4. Lấy danh sách thiết bị cuối cùng
             res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
@@ -504,10 +504,10 @@ class MultiPremiumApp(ctk.CTk):
 
             done = sum(1 for a in self.accounts_data if a['done'])
             total = len(self.accounts_data)
+            self.devices_val.configure(text=str(len(self.device_cards)))
             self.success_val.configure(text=str(done))
             self.progress_val.configure(text=f"{done}/{total}")
             self.fail_val_ui.configure(text=str(self.failure_count))
-            self.lag_val.configure(text=str(sum(1 for w in self.active_workers if w.is_lagging)))
             
             # Nếu tất cả worker đã dừng, mở lại nút Start
             if self.active_workers and all(not w.running for w in self.active_workers):
@@ -580,4 +580,4 @@ if __name__ == "__main__":
             if v: MultiPremiumApp().mainloop(); sys.exit()
     LoginApp().mainloop()
 
-# pyinstaller --noconfirm --onefile --windowed --name "MegaLoginCF" --add-data "images;images" --add-data "logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool.py
+# pyinstaller --noconfirm --onefile --windowed --name "MegaLogin" --icon "mega_login_logo.png" --add-data "mega_login_logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool_login.py
