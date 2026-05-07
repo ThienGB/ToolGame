@@ -184,7 +184,7 @@ class AutoClickerInstance:
                 escaped_text += char
         return escaped_text
 
-    def call_adb(self, args, timeout=None):
+    def call_adb(self, args, timeout=30):
         cmd = [self.adb_path, "-s", self.device_id] + args
         try:
             return subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=timeout)
@@ -278,8 +278,6 @@ class AutoClickerInstance:
         
         if action == "click_image":
             res = bool(self.click_image_logic(step))
-            if not res and self.running and not step.get("skip_maintain"):
-                self.execute_step({"action": "handle_maintenance", "skip_maintain": True})
             return res
         elif action == "click_image_if":
             matched_path = self.click_image_logic(step)
@@ -324,8 +322,6 @@ class AutoClickerInstance:
             res = True
         elif action == "cases":
             res = self.cases_logic(step)
-            if not res and self.running and not step.get("skip_maintain") and "timeout_then" not in step:
-                self.execute_step({"action": "handle_maintenance", "skip_maintain": True})
             
             if not res and "timeout_then" in step:
                 self.log(f"!! [DEBUG] Bước 'cases' bị Timeout sau {step.get('timeout', 10)}s. Đang gọi logic xử lý Timeout (handle_maintenance)...")
@@ -384,13 +380,23 @@ class AutoClickerInstance:
                     self.log("Đợi game khởi động lại (25s) để kiểm tra...")
                     time.sleep(25)
             else:
-                self.log("!! PHÁT HIỆN BẢO TRÌ/LỖI: Đang khởi động lại và sẽ bỏ qua phần đăng nhập...")
-                self.skip_login_for_this_acc = True
-                self.call_adb(["shell", "am", "force-stop", app])
-                time.sleep(2)
-                self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
-                self.log("Đợi game khởi động lại (20s)...")
-                time.sleep(20)
+                self.log("!! PHÁT HIỆN BẢO TRÌ/LỖI: Đang thực hiện khôi phục...")
+                while self.running:
+                    # Nếu đã về màn hình đăng nhập hoặc sảnh chính (nếu skip_login)
+                    if self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.8}) or \
+                       self.search_logic({"target": "images/batdau.png", "timeout": 5, "confidence": 0.8}):
+                        self.log("==> Đã về màn hình có thể tiếp tục. Hoàn tất.")
+                        break
+                    
+                    self.log("!! Đang Restart App để làm sạch trạng thái...")
+                    self.skip_login_for_this_acc = True
+                    self.call_adb(["shell", "am", "force-stop", app])
+                    time.sleep(2)
+                    self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+                    self.log("Đợi game khởi động lại (25s) để kiểm tra...")
+                    start_wait = time.time()
+                    while time.time() - start_wait < 25 and self.running:
+                        time.sleep(1)
             return False
         elif action == "long_click":
             duration = step.get("duration", 5000)
@@ -407,6 +413,10 @@ class AutoClickerInstance:
                 for s in sub_steps:
                     if not self.execute_step(s): return False
             res = True
+
+        # Tự động handle maintain nếu bước bị lỗi (trừ click_image_if hoặc đã skip_maintain)
+        if not res and self.running and not step.get("skip_maintain") and action not in ["click_image_if", "handle_maintenance"]:
+            self.execute_step({"action": "handle_maintenance", "skip_maintain": True})
         
         duration = time.time() - self.last_step_time
         if duration > 35: self.update_status("Lag", True)
@@ -647,6 +657,49 @@ class AutoClickerInstance:
             },
             ]},
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.8},
+            {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
+            {
+                "action": "cases",
+                "timeout" : 120,
+                "timeout_then": [{"action": "handle_maintenance"}],
+                "cases": [
+                    {
+                        "trigger": "images/an_de_tro_lai.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
+                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7}
+                        ]
+                    },
+                    {
+                        "trigger": "images/x_start.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 5},
+                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 2},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7, "timeout": 2},
+
+                        ]
+                    },
+                    {
+                        "trigger": "images/pvp.png",
+                        "confidence": 0.7,
+                        "script": []
+                    }
+                ]
+            },
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 3},
+            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7, "timeout": 2},
+            {"action": "click_image_if", "target": "images/x_start2.jpg", "confidence": 0.7, "timeout": 2},
+
             {"action": "press_esc", "wait": 2},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
@@ -673,6 +726,7 @@ class AutoClickerInstance:
                 {"action": "long_click", "target": "images/nhay_nao.jpg", "duration": 5000},
                 {"action": "click_any", "timeout": 8},
             ]},
+            {"action": "click_image_if", "target": "images/x_cs2.jpg", "timeout": 2, "confidence": 0.7},
             {"action": "click_image", "target": "images/doi_qua_cs.jpg", "timeout": 25, "confidence": 0.8},
             {"action": "click_image_if", "target": "images/doi_qua_cs.jpg", "timeout": 2, "confidence": 0.8},
             {"action": "click_image_if", "target": "images/doi_qua_cs.jpg", "timeout": 2, "confidence": 0.8},
@@ -685,16 +739,16 @@ class AutoClickerInstance:
                 "skip_maintain": True,
                 "cases": [
                     {
-                        "trigger": "images/ruong_ss.jpg",
+                        "trigger": "images/da_doi.jpg",
                         "script": [
-                            {"action": "click_image", "target": "images/ruong_ss.jpg", "timeout": 5},
-                            {"action": "click_image", "target": "images/xac_nhan_ruong_ss.jpg", "timeout": 10},
                             {"action": "mark_success"}
                         ]
                     },
                     {
-                        "trigger": "images/da_doi.jpg",
+                        "trigger": "images/ruong_ss.jpg",
                         "script": [
+                            {"action": "click_image", "target": "images/ruong_ss.jpg", "timeout": 5},
+                            {"action": "click_image", "target": "images/xac_nhan_ruong_ss.jpg", "timeout": 10},
                             {"action": "mark_success"}
                         ]
                     }
