@@ -879,7 +879,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
-
+            {"action": "click_coords", "x": 173, "y": 442, "timeout": 3},
             {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg","timeout": 60, "confidence": 0.9},
             {"action": "input_account"},
             {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "target3": "images/matkhau.jpg", "timeout": 60, "confidence": 0.9},
@@ -891,6 +891,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.9},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
 
@@ -898,18 +899,25 @@ class AutoClickerInstance:
 
         # 2. GIAI ĐOẠN VƯỢT TÂN THỦ
         tutorial_script = [
-            {
+            {"action": "click_coords", "x": 867, "y": 492, "timeout": 8},
+            {"action": "click_coords", "x": 867, "y": 492, "timeout": 2},
+        {
+
+
+
+                                          
                 "action": "cases",
                 "timeout" : 120,
                 "cases": [
                     {
-                        "trigger": "images/vao_tran_button_1.png",
+                        "trigger": "images/vao_tran_button_2.png",
                         "confidence": 0.7,
                         "script": [
-                            {"action": "click_image", "target": "images/vao_tran_button_1.png", "timeout": 20, "confidence": 0.9},
-                            {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 5, "confidence": 0.9},
-                            {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 5, "confidence": 0.9},
-                            {"action": "wait", "timeout": 4},
+                            {"action": "click_coords", "x": 867, "y": 492, "timeout": 3},
+                            {"action": "click_coords", "x": 867, "y": 492, "timeout": 3},
+                            {"action": "click_coords", "x": 867, "y": 492, "timeout": 3},
+                            {"action": "wait", "timeout": 3},
+                            {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
                             {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
                             {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
 
@@ -918,15 +926,21 @@ class AutoClickerInstance:
                         ]
                     },
                     {
-                        "trigger1": "images/dkysau.png", "trigger2": "images/dang_ky_sau.png", "trigger3": "images/dang_ky_sau1.png", 
+                        "trigger1": "images/any2.png" ,
                         "confidence": 0.7,
                          "script": [
-                            {"action": "click_image", "target1": "images/vao.png","target2": "images/vao_button.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images/any2.png", "timeout": 10, "confidence": 0.9},
+                            {"action": "click_image", "target1": "images/vao.png","target2": "images/vao_button.png","target3": "images/vaoo.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "click_image_if", "target1": "images/vao.png","target2": "images/vao_button.png","target3": "images/vaoo.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images/logo.png", "timeout": 10, "confidence": 0.9},
                             {"action": "click_image_if", "target": "images/logo.png", "timeout": 10, "confidence": 0.9},
                             {"action": "click_image_if", "target": "images/on.png", "timeout": 10, "confidence": 0.9,"use_color": True},
                             {"action": "click_image_if", "target": "images/minimize.png", "timeout": 5, "confidence": 0.9},
                             {"action": "click_image_if", "target": "images/victory.png", "timeout": 200, "confidence": 0.9},
-                            {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "wait", "timeout": 10},
+                            {"action": "click_image_if", "target": "images/victory.png", "timeout": 200, "confidence": 0.9},
+                            {"action": "click_coords", "x": 463, "y": 492, "timeout": 20},
+                            
 
                             
                             
@@ -935,28 +949,36 @@ class AutoClickerInstance:
                     {
                         "trigger": "images/maychubaotri.png", 
                         "script":  [
-                        {"action": "restart_app", "app": "com.garena.game.kgvn"}
+                        {"action": "click_image_if", "target": "images/ok.png", "timeout": 10, "confidence": 0.7},    
+                        {"action": "restart_app", "app": "com.garena.game.kgvn"},
                         {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
                         {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
-                        {"action": "click_image", "target": "images/vao_tran_button_1.png", "timeout": 20, "confidence": 0.9},
-                        {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 5, "confidence": 0.9},
-                        {"action": "click_image_if", "target": "images/vao_tran_button_1.png", "timeout": 5, "confidence": 0.9},
-                        {"action": "wait", "timeout": 4},
-                        {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
-                        {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
+                        {"action": "click_image", "target": "images/vaohuongdan.png", "timeout": 420, "confidence": 0.9},
+                        {"action": "click_image", "target1": "images/dkysau.png", "target2": "images/dang_ky_sau.png", "target3": "images/dang_ky_sau1.png", "target4": "images/skip.png", "confidence": 0.7},
+
+                        {"action": "click_image_if", "target": "images/any2.png", "timeout": 10, "confidence": 0.9},
+                        {"action": "click_image", "target1": "images/vao.png","target2": "images/vao_button.png","target3": "images/vaoo.png", "timeout": 20, "confidence": 0.9},
+                        {"action": "click_image_if", "target1": "images/vao.png","target2": "images/vao_button.png","target3": "images/vaoo.png", "timeout": 5, "confidence": 0.9},
+                        {"action": "click_image_if", "target": "images/logo.png", "timeout": 10, "confidence": 0.9},
+                        {"action": "click_image_if", "target": "images/logo.png", "timeout": 10, "confidence": 0.9},
+                        {"action": "click_image_if", "target": "images/on.png", "timeout": 10, "confidence": 0.9,"use_color": True},
+                        {"action": "click_image_if", "target": "images/minimize.png", "timeout": 5, "confidence": 0.9},
+                        {"action": "click_image_if", "target": "images/victory.png", "timeout": 200, "confidence": 0.9},
+                        {"action": "click_coords", "x": 463, "y": 492, "timeout": 20},
+                        
                         ]
                     },
                 ]
               } ,     
             
             {"action": "wait", "timeout": 5},
-            {"action": "click_coords", "x": 48, "y": 92, "timeout": 2},
-            {"action": "wait", "timeout": 2},
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "click_image", "target": "images/pvp.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/1v1.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/x2.png", "timeout": 5, "confidence": 0.9},
+            
             {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/pve.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.9},
@@ -964,9 +986,11 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
+            
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image", "target1": "images/tuong5.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 20},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
@@ -978,12 +1002,14 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image", "target1": "images/tuong5.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 20},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 10, "confidence": 0.9},
             {"action": "wait", "timeout": 5},
             {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.9},
-            
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
             {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","timeout": 7, "confidence": 0.9},
             
             {"action": "press_esc", "wait": 2} ,
@@ -995,35 +1021,37 @@ class AutoClickerInstance:
             {"action": "click_any", "wait": 4},
             {"action": "press_esc", "wait": 2} ,
             {"action": "wait", "timeout": 5},
-            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 5, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 3, "confidence": 0.9},
             {"action": "press_esc", "wait": 2} ,
             
             {"action": "press_esc", "wait": 2} ,
             
             {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 5, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 3, "confidence": 0.9},
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "wait", "timeout": 5},
             {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","target3": "images/dauhang1.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 3},
+            
             {"action": "press_esc", "wait": 3} ,
             {"action": "click_image_if", "target": "images/co.png", "timeout": 7, "confidence": 0.9},
             {"action": "press_esc", "wait": 2} ,
             
             {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
-            {"action": "press_esc", "wait": 3} ,
-            {"action": "click_coords", "x": 26, "y": 228, "timeout": 3},
-            {"action": "click_coords", "x": 26, "y": 228, "timeout": 3},
+            
+            {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
+            {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
+            {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
+            {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
+            {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
             {"action": "wait", "timeout": 3},
             {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.2, "duration": 600},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target1": "images/sktt.jpg", "target2": "images/sktt1.jpg", "target3": "images/sktt2.jpg", "target4": "images/sktt3.jpg", "target5": "images/sktt4.jpg", "target6": "images/sktt5.jpg", "target7": "images/sktt6.jpg", "target8": "images/sktt7.jpg", "target9": "images/sktt8.jpg", "target10": "images/sktt9.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target1": "images/sktt.jpg", "target2": "images/sktt1.jpg", "target3": "images/sktt2.jpg", "target4": "images/sktt3.jpg", "target5": "images/sktt4.jpg", "target6": "images/sktt5.jpg", "target7": "images/sktt6.jpg", "target8": "images/sktt7.jpg", "target9": "images/sktt8.jpg", "target10": "images/sktt9.jpg", "timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 124, "y": 446, "timeout": 2},
+            {"action": "click_coords", "x": 124, "y": 446, "timeout": 2},
             {"action": "click_image", "target": "images/nhan_ruby_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/any.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target": "images/thoat_sk.png","target2": "images/quaylaisktt.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 42, "y": 28, "timeout": 2},
             {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image", "target1": "images/vat_pham.png", "target2": "images/vat_pham1.png","target3": "images/vat_pham2.png","target4": "images/vat_pham3.png","target5": "images/vat_pham4.png","target6": "images/vat_pham5.png","timeout": 20, "confidence": 0.9},
@@ -1033,7 +1061,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/ok.png","target2": "images/ok1.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2} ,
-            {"action": "click_image", "target": "images/shop.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target1": "images/shop.png",  "target2": "images/shop1.png","timeout": 20, "confidence": 0.9},
             {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
             {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
             {"action": "click_image", "target": "images/shopruby.png", "timeout": 20, "confidence": 0.9},
@@ -1099,11 +1127,13 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/ready.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
-            {"action": "wait", "timeout": 3},
+             {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image", "target": "images/sansang5v5.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 3},
+            
             {"action": "click_image_if", "target": "images/ok3.png", "timeout": 15, "confidence": 0.9},
-            {"action": "wait", "timeout": 3},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/tuong5.png", "timeout": 15, "confidence": 0.9},
+
             
             
                         
@@ -1117,12 +1147,12 @@ class AutoClickerInstance:
                     {"action": "wait", "timeout": 15}
                 ]
             },
-            {"action": "click_image_if", "target": "images/logo.png", "target2": "images/logo1.png", "target3": "images/logo2.png", "timeout": 5, "confidence": 0.9},
+            {"action": "click_coords", "x": 22, "y": 133, "timeout": 2},
             {"action": "click_image_if", "target": "images/on.png", "timeout": 20, "confidence": 0.9,"use_color": True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
-            {"action": "wait", "timeout": 20},
-            {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 463, "y": 492, "timeout": 20},
+            {"action": "click_coords", "x": 463, "y": 492, "timeout": 20},
             {"action": "click_any", "wait": 3},
             {"action": "press_esc", "wait": 2} ,
             
@@ -1220,7 +1250,8 @@ class AutoClickerInstance:
             
             
             {"action": "click_image_if", "target1": "images/sansang5v5.png", "target2": "images/sansang3.png","timeout": 60, "confidence": 0.9},
-            {"action": "click_image_if", "target1": "images/sansang5v5.png", "target2": "images/sansang3.png","timeout": 10, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image_if", "target1": "images/sansang5v5.png", "target2": "images/sansang3.png","timeout": 5, "confidence": 0.9},
 
 
             {"action": "click_image_if", "target": "images/open.png", "timeout": 50, "confidence": 0.9},
@@ -1261,7 +1292,8 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 30},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 4},
+            
+            
             {"action": "click_image", "target": "images/tiep_tuc1.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 4},
             {"action": "click_image", "target": "images/tiep_tuc2.png", "timeout": 120, "confidence": 0.9},
@@ -1271,24 +1303,29 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
             {"action": "click_coords", "x": 476, "y": 498, "timeout": 3},
             {"action": "click_coords", "x": 459, "y": 36, "timeout": 3},
-            {"action": "click_image_if", "target": "images/x4.png", "timeout": 4, "confidence": 0.9},
+          
 
             {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
             
             # {"action": "press_esc", "wait": 5} ,
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 10, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 10, "confidence": 0.9,"only_host": True},
            
             {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9,"only_host": True},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9,"only_host": True},
             {"action": "wait", "timeout": 3},
             
         ]
         
         # GIAI ĐĂNG XUẤT - XUẤT FILE
         uplevel_script = [
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 10, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/off.png", "timeout": 30, "confidence": 0.9,"use_color": True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
