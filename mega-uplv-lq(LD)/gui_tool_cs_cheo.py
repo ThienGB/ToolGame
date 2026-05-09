@@ -119,6 +119,7 @@ class AutoClickerInstance:
                 quoted = shlex.quote(part)
                 cmd = [self.adb_path, "-s", self.device_id, "shell", f"input text {quoted}"]
                 subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                time.sleep(0.1)
             if i < len(parts) - 1:
                 self.call_adb(["shell", "input", "text", "%s"])
 
@@ -136,11 +137,25 @@ class AutoClickerInstance:
         return escaped_text
 
     def call_adb(self, args, timeout=None):
+        if timeout is None: timeout = 30
         cmd = [self.adb_path, "-s", self.device_id] + args
         try:
             return subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=timeout)
         except subprocess.TimeoutExpired:
+            self.log(f"!! ADB TIMEOUT ({timeout}s): {' '.join(args)}")
             return subprocess.CompletedProcess(cmd, 1, b'', b'')
+
+    def force_stop_game(self):
+        self.log("-> Đang thực hiện đóng ứng dụng triệt để...")
+        # 1. Nhấn Home để thoát về launcher trước
+        self.call_adb(["shell", "input", "keyevent", "3"])
+        time.sleep(1)
+        # 2. Force stop các package liên quan
+        apps = ["com.garena.game.kgvn"]
+        for app in apps:
+            self.call_adb(["shell", "am", "force-stop", app])
+            self.call_adb(["shell", "pkill", "-f", app])
+        time.sleep(2)
 
     def get_screenshot(self):
         try:
@@ -280,17 +295,31 @@ class AutoClickerInstance:
             self.call_adb(["shell", "rm", "-f", f"/sdcard/Android/data/{pkg}/files/clip.txt"])
             res = True
         elif action == "get_code":
-            # Lấy mã hoàn toàn từ Clipboard Helper
-            self.last_captured_code = self.get_clipboard()
+            timeout = step.get("timeout", 10)
+            start_get = time.time()
+            self.last_captured_code = ""
+            while time.time() - start_get < timeout and self.running:
+                self.last_captured_code = self.get_clipboard()
+                if self.last_captured_code:
+                    self.log(f"==> KẾT QUẢ LẤY MÃ: {self.last_captured_code}")
+                    break
+                time.sleep(2)
             
-            if self.last_captured_code:
-                self.log(f"==> KẾT QUẢ LẤY MÃ: {self.last_captured_code}")
-            else:
+            if not self.last_captured_code:
                 self.log("!! KẾT QUẢ LẤY MÃ: Thất bại (Vui lòng kiểm tra APK Helper)")
             res = (self.last_captured_code != "")
         elif action == "input_partner_code":
-            self.call_adb(["shell", "input", "keyevent"] + ["67"] * 25) # Xóa cũ
+            if not self.partner_code:
+                self.log("!! KHÔNG CÓ MÃ ĐỐI PHƯƠNG ĐỂ NHẬP")
+                return False
+            self.log(f"-> ĐANG NHẬP MÃ: {self.partner_code}")
+            time.sleep(1.5) # Đợi bàn phím/input box hiện hẳn lên
+            # Xóa cũ chắc chắn hơn
+            for _ in range(3):
+                self.call_adb(["shell", "input", "keyevent"] + ["67"] * 10)
+                time.sleep(0.2)
             self.input_text_robust(self.partner_code)
+            time.sleep(1)
             self.code_entered = True
             res = True
         elif action == "mark_success":
@@ -299,21 +328,17 @@ class AutoClickerInstance:
             res = True
         elif action == "cases":
             res = self.cases_logic(step)
-            if not res and self.running and not step.get("skip_maintain") and "timeout_then" not in step:
-                self.execute_step({"action": "handle_maintenance", "skip_maintain": True})
             
             if not res and "timeout_then" in step:
-                self.log(f"!! [DEBUG] Bước 'cases' bị Timeout sau {step.get('timeout', 10)}s. Đang gọi logic xử lý Timeout (handle_maintenance)...")
+                self.log(f"!! [DEBUG] Bước 'cases' bị Timeout sau {step.get('timeout', 10)}s. Đang gọi logic xử lý Timeout...")
                 for sub_step in step.get("timeout_then", []):
-                    if not self.execute_step(sub_step):
-                        return False
-                return True # Đã xử lý bằng timeout_then, coi như bước này thành công
-            return res # Trả về True nếu khớp case, False nếu timeout mà không có timeout_then
+                    self.execute_step(sub_step)
+                return False 
+            return res 
         elif action == "restart_app":
             app = step.get("app", "com.garena.game.kgvn")
             self.log(f"!! PHÁT HIỆN LỖI: Đóng game và khởi động lại {app}...")
-            self.call_adb(["shell", "am", "force-stop", app])
-            time.sleep(2)
+            self.force_stop_game()
             self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
             self.log("Đợi game khởi động lại (20s)...")
             start_wait = time.time()
@@ -321,42 +346,45 @@ class AutoClickerInstance:
                 time.sleep(0.5)
             return False
         elif action == "handle_maintenance":
-            app = step.get("app", "com.garena.game.kgvn")
+            # Tự động tìm package game có trên máy
+            potential_apps = ["com.garena.game.kgvn64x", "com.garena.game.kgvn", "com.garena.game.kgtw"]
+            app = "com.garena.game.kgvn" # Mặc định
+            for p in potential_apps:
+                check = self.call_adb(["shell", "pm", "path", p])
+                if check.returncode == 0 and check.stdout.strip():
+                    app = p
+                    break
+            
             if self.code_entered:
-                self.log("!! PHÁT HIỆN LỖI (Đã nhập mã): Đang thực hiện đăng xuất kiên trì...")
-                while self.running:
-                    # 1. Kiểm tra xem đã ở màn hình đăng nhập chưa
-                    if self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.7}):
-                        self.log("==> Đã về màn hình Đăng nhập. Hoàn tất.")
-                        break
-                    
-                    # 2. Thử quy trình đăng xuất qua UI
-                    self.log("-> Đang thử thoát và đăng xuất qua UI...")
-                    for _ in range(2): self.call_adb(["shell", "input", "keyevent", "4"]); time.sleep(1)
-                    
-                    if self.execute_step({"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "skip_maintain": True}):
-                        time.sleep(2)
-                        self.execute_step({"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 20, "skip_maintain": True})
-                        time.sleep(2)
-                        self.execute_step({"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
-                        time.sleep(5)
-                        continue # Quay lại đầu vòng lặp để check màn hình đăng nhập
-                    
-                    # 3. Nếu UI vẫn đơ, restart app để làm sạch trạng thái
-                    self.log("!! UI đơ, đang Restart App để thoát hoàn toàn...")
-                    self.call_adb(["shell", "am", "force-stop", app])
+                self.log("!! PHÁT HIỆN LỖI (Đã nhập mã): Đang thực hiện đăng xuất...")
+                # Quy trình thoát ra Đăng nhập (như nhay script)
+                for _ in range(2): self.call_adb(["shell", "input", "keyevent", "4"]); time.sleep(1)
+                if self.execute_step({"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "skip_maintain": True}):
+                    time.sleep(2)
+                    self.execute_step({"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 20, "skip_maintain": True})
+                    time.sleep(2)
+                    self.execute_step({"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
+                    time.sleep(5)
+                
+                if not self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
+                    for p in potential_apps: self.call_adb(["shell", "am", "force-stop", p])
                     time.sleep(2)
                     self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
-                    self.log("Đợi game khởi động lại (25s) để kiểm tra...")
-                    time.sleep(25)
+                    self.log("Đợi game mở và nhấn Garena...")
+                    self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
+                    time.sleep(5)
+
+                self.log("[THÀNH CÔNG] Đã xử lý xong acc đã nhập mã.")
+                self.current_account["success"] = True
             else:
-                self.log("!! PHÁT HIỆN BẢO TRÌ/LỖI: Đang khởi động lại và sẽ bỏ qua phần đăng nhập...")
-                self.skip_login_for_this_acc = True
-                self.call_adb(["shell", "am", "force-stop", app])
+                self.log(f"!! PHÁT HIỆN BẢO TRÌ/LỖI: Tiến hành Restart {app}...")
+                for p in potential_apps: self.call_adb(["shell", "am", "force-stop", p])
                 time.sleep(2)
                 self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
-                self.log("Đợi game khởi động lại (20s)...")
-                time.sleep(20)
+                self.skip_login_for_this_acc = True
+                self.log("Đợi game mở và nhấn Garena...")
+                self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
+                time.sleep(5)
             return False
         elif action == "loop":
             count = step.get("count", 1)
@@ -415,8 +443,12 @@ class AutoClickerInstance:
                         
                     if mv >= confidence:
                         th_s, tw_s = t_scaled.shape[:2]
-                        self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
-                        # self.log(f"==> CLICK OK: {os.path.basename(t_path)} ({mv:.2f})")
+                        # Click exactly in the center of the found image
+                        center_x = ml[0] + tw_s // 2
+                        center_y = ml[1] + th_s // 2
+                        
+                        self.call_adb(["shell", "input", "tap", str(center_x), str(center_y)])
+                        self.log(f"-> CLICK: {os.path.basename(t_path)} ({mv:.2f})")
                         return t_path
             time.sleep(1)
         
@@ -532,16 +564,27 @@ class AutoClickerInstance:
     def verify_or_restart_logic(self, step):
         target = step.get("target")
         timeout = step.get("timeout", 15)
-        app = step.get("app", "com.garena.game.kgvn")
+        
+        potential_apps = ["com.garena.game.kgvn64x", "com.garena.game.kgvn", "com.garena.game.kgtw"]
+        app = "com.garena.game.kgvn"
+        for p in potential_apps:
+            check = self.call_adb(["shell", "pm", "path", p])
+            if check.returncode == 0 and check.stdout.strip():
+                app = p
+                break
         
         found = self.search_logic({"target": target, "timeout": timeout, "confidence": step.get("confidence", 0.7)})
         if found: 
             return True
         
         # self.log(f"!! KHÔNG THẤY {target}. TIẾN HÀNH KHỞI ĐỘNG LẠI {app}!")
-        self.call_adb(["shell", "am", "force-stop", app])
+        for p in potential_apps: self.call_adb(["shell", "am", "force-stop", p])
         time.sleep(2)
         self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+        
+        self.log("Đợi game mở và nhấn Garena...")
+        self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
+        time.sleep(5)
         
         # self.log("Đợi game khởi động lại và chạy restart_script...")
         r_script = step.get("script", [])
@@ -591,14 +634,14 @@ class AutoClickerInstance:
         self.running = True
 
         login_script = [
-            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images/login_garena2.jpg", "timeout": 15, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 3, "confidence": 0.7, "login_step": True},
             {"action": "click_image", "target1": "images/account_input1.jpg","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.7, "login_step": True},
             {"action": "input_account", "login_step": True},
-            {"action": "click_image", "target1": "images/tiep_theo.jpg", "target2": "images/tiep_theo1.jpg", "timeout": 60, "confidence": 0.7, "login_step": True},
+            {"action": "click_image", "target1": "images/tiep_theo.jpg", "target2": "images/tiep_theo1.jpg", "target3": "images/tiep_theo2.png", "timeout": 60, "confidence": 0.7, "login_step": True},
             {"action": "input_password", "login_step": True},
             {"action": "wait", "timeout": 2, "login_step": True},
-            {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "timeout": 30, "confidence": 0.7, "login_step": True},
+            {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "target3": "images/xong2.png", "timeout": 30, "confidence": 0.7, "login_step": True},
             {"action": "wait", "timeout": 5, "login_step": True},
             {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.7, "login_step": True},
             {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 2, "confidence": 0.7, "login_step": True},
@@ -612,58 +655,56 @@ class AutoClickerInstance:
             ]},
             
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.8},
-            # {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 15, "confidence": 0.7},
-            # {
-            #     "action": "cases",
-            #     "timeout" : 120,
-            #     "timeout_then": [{"action": "handle_maintenance"}],
-            #     "cases": [
-            #         {
-            #             "trigger": "images/an_de_tro_lai.jpg",
-            #             "confidence": 0.7,
-            #             "script": [
-            #                 {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
-            #                 {"action": "wait", "timeout": 2},
-            #                 {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
-            #                 {"action": "wait", "timeout": 2},
-            #                 {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
-            #                 {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
-            #                 {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
-            #                 {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
-            #                 {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7}
-            #             ]
-            #         },
-            #         {
-            #             "trigger": "images/x_start.jpg",
-            #             "confidence": 0.7,
-            #             "script": [
-            #                 {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 5},
-            #                 {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 2},
-            #                 {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7, "timeout": 2},
+            {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 5, "confidence": 0.7},
+            {"action": "press_esc", "wait": 2},
+            {
+                "action": "cases",
+                "timeout" : 120,
+                "timeout_then": [{"action": "handle_maintenance"}],
+                "cases": [
+                    {
+                        "trigger": "images/an_de_tro_lai.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
+                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
+                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7}
+                        ]
+                    },
+                    {
+                        "trigger": "images/x_start.jpg",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 5},
+                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 2},
+                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7, "timeout": 2},
 
-            #             ]
-            #         },
-            #         {
-            #             "trigger": "images/pvp.png",
-            #             "confidence": 0.7,
-            #             "script": []
-            #         }
-            #     ]
-            # },
-            # {"action": "press_esc", "wait": 2},
-            # {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 3},
-            # {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7, "timeout": 2},
-            # {"action": "click_image_if", "target": "images/x_start2.jpg", "confidence": 0.7, "timeout": 2},
+                        ]
+                    },
+                    {
+                        "trigger1": "images/su_kien.jpg",
+                        "trigger2": "images/input_gift_code2.jpg",
+                        "confidence": 0.7,
+                        "script": []
+                    }
+                ]
+            },
+            {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
             {"action": "press_esc", "wait": 2},
-            {"action": "wait", "timeout": 8},
             {"action": "press_esc", "wait": 2},
         ]
        
         copy_script = [
             {
-                "action": "cases",
+                "action": "cases",  
                 "timeout" : 60,
                 "timeout_then": [{"action": "handle_maintenance"}],
                 "cases": [
@@ -673,10 +714,10 @@ class AutoClickerInstance:
                         "script": [
                             {"action": "click_image", "target1": "images/su_kien.jpg","target2": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7},
                             {"action": "click_image_if", "target1": "images/su_kien.jpg", "target2": "images/su_kien2.jpg", "timeout": 2, "confidence": 0.8},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
                             {"action": "click_image", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 10, "confidence": 0.8},
                             {"action": "click_image_if", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 2, "confidence": 0.8},
                             {"action": "click_image_if", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 2, "confidence": 0.8},
@@ -684,27 +725,42 @@ class AutoClickerInstance:
                             {"action": "press_esc", "wait": 2},
                             {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
                             {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/sao_chep_ma.jpg", "timeout": 2, "confidence": 0.7},
                             {"action": "get_code", "timeout": 10},
                             {"action": "wait", "timeout": 2},
+                            {"action": "press_esc", "wait": 2},
                             {"action": "press_esc", "wait": 2},
                             {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
                             {"action": "click_image", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "target3": "images/input_gift_code2.jpg", "target4": "images/input_gift_code3.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images/input_gift_code1.jpg", "target2": "images/input_gift_code2.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg", "timeout": 2, "confidence": 0.7},
                         ]
                     },
                     {
-                        "trigger": "images/input_gift_code2.jpg",
+                        "trigger1": "images/input_gift_code2.jpg",
+                        "trigger2": "images/input_gift_code1.jpg",
+                        "trigger3": "images/input_gift_code3.jpg",
+                        "trigger4": "images/input_gift_code.jpg",
                         "confidence": 0.7,
                         "script": [
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/sao_chep_ma.jpg", "timeout": 2, "confidence": 0.7},
+                            {"action": "get_code", "timeout": 10},
+                            {"action": "wait", "timeout": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
                             {"action": "click_image", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "target3": "images/input_gift_code2.jpg", "target4": "images/input_gift_code3.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images/input_gift_code1.jpg", "target2": "images/input_gift_code2.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg", "timeout": 2, "confidence": 0.7},
                         ]
                     }
                 ]
             },
+            {"action": "wait", "timeout": 5}
         ]
         
         input_code_script = [
@@ -716,10 +772,9 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/xac_nhan_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "mark_success"},
             {"action": "click_image_if", "target": "images/xac_nhan_chung_suc1.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target": "images/x_cs2.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 1},
+            {"action": "press_esc", "wait": 1},
             {"action": "click_image", "target": "images/back_sk1.jpg", "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.7},
@@ -758,10 +813,10 @@ class AutoClickerInstance:
                         "script": [
                             {"action": "click_image", "target1": "images/su_kien.jpg","target2": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7},
                             {"action": "click_image_if", "target1": "images/su_kien.jpg", "target2": "images/su_kien2.jpg", "timeout": 2, "confidence": 0.8},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
                             {"action": "click_image", "target": "images/su_kien_cs.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.7},
@@ -789,14 +844,21 @@ class AutoClickerInstance:
                         self.update_ui_func(); break
             if not self.current_account: break
             self.log(f">> START {self.role_name}: {self.current_account['tk']}")
+            self.skip_login_for_this_acc = False
             
             # --- VÒNG LẶP RETRY CHO CHÍNH TÀI KHOẢN NÀY ---
             while self.running:
                 self.last_captured_code = None
-                self.skip_login_for_this_acc = False
                 self.skip_all_retries = False
                 self.use_external_codes = False
                 self.code_entered = False
+                
+                # --- RESET SHARED CODE SLOTS FOR THIS PAIR ---
+                with self.shared_data["lock"]:
+                    if self.pair_id not in self.shared_data["codes"]:
+                        self.shared_data["codes"][self.pair_id] = {"A": None, "B": None, "acc_A": None, "acc_B": None}
+                    if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = None
+                    else: self.shared_data["codes"][self.pair_id]["B"] = None
                 target_code = None
                 success = False
                 pkg = "com.example.clipper"
@@ -892,15 +954,31 @@ class AutoClickerInstance:
                                 if not self.execute_step(step): success = False; break
 
                             partner_code = None; wait_start = time.time()
-                            while time.time() - wait_start < 120 and self.running:
+                            partner_info = None # Lưu thông tin đối phương cục bộ
+                            while time.time() - wait_start < 60 and self.running:
                                 with self.shared_data["lock"]:
-                                    partner_code = self.shared_data["codes"][self.pair_id]["B"] if self.is_role_a else self.shared_data["codes"][self.pair_id]["A"]
-                                if partner_code: break
-                                time.sleep(2)
+                                    pair_data = self.shared_data["codes"].get(self.pair_id, {})
+                                    partner_code = pair_data.get("B" if self.is_role_a else "A")
+                                    partner_info = pair_data.get("acc_B" if self.is_role_a else "acc_A")
+                                if partner_code and partner_info: 
+                                    self.log(f"==> ĐÃ NHẬN MÃ TỪ ĐỐI PHƯƠNG: {partner_code}")
+                                    break
+                                time.sleep(3)
                             
-                            if not partner_code: success = False
+                            if not partner_code:
+                                self.log("!! QUÁ THỜI GIAN CHỜ MÃ ĐỐI PHƯƠNG (60s). Đang khởi động lại...")
+                                self.execute_step({"action": "restart_app"})
+                                success = False
                             else:
                                 self.partner_code = partner_code
+                                # Lưu thông tin cặp để ghi report sau này (tránh bị reset khi máy kia sang acc mới)
+                                self.final_report_data = {
+                                    "my_acc": self.current_account,
+                                    "my_code": my_code,
+                                    "partner_acc": partner_info,
+                                    "partner_code": partner_code
+                                }
+                                
                                 if not self.execute_step(input_code_script[-1]): success = False
                                 if success:
                                     for step in confirm_script:
@@ -909,18 +987,18 @@ class AutoClickerInstance:
                 
                 # --- KẾT THÚC VÀ BÁO CÁO ---
                 if self.running:
-                    if success:
+                    if success or self.current_account.get("success"):
                         self.current_account["success"] = True
                         if self.use_external_codes:
                             self.report_stats_func(True, target_code, True)
-                        elif self.is_role_a:
-                            with self.shared_data["lock"]:
-                                pair_data = self.shared_data["codes"].get(self.pair_id, {})
-                                a_acc = pair_data.get("acc_A")
-                                b_acc = pair_data.get("acc_B")
+                        elif self.is_role_a and hasattr(self, 'final_report_data'):
+                            # Sử dụng dữ liệu đã chốt từ lúc bắt tay để ghi file
+                            d = self.final_report_data
+                            a_acc, a_code = d["my_acc"], d["my_code"]
+                            b_acc, b_code = d["partner_acc"], d["partner_code"]
                             
-                            a_info = f"{a_acc['tk']}" if a_acc else "N/A"
-                            b_info = f"{b_acc['tk']}" if b_acc else "N/A"
+                            a_info = f"{a_acc['tk']}|{a_acc['mk']}|{a_code}"
+                            b_info = f"{b_acc['tk']}|{b_acc['mk']}|{b_code}"
                             self.report_stats_func(True, f"Cặp {self.pair_id+1}: {a_info} <-> {b_info}")
                         break # THÀNH CÔNG - Thoát vòng lặp retry
                     else:
