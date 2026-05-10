@@ -1292,7 +1292,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 30},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 20, "confidence": 0.9},
-            
+            {"action": "click_image_if", "target": "images/victory.png", "timeout": 5, "confidence": 0.9},
             
             {"action": "click_image", "target": "images/tiep_tuc1.png", "timeout": 120, "confidence": 0.9},
             {"action": "wait", "timeout": 4},
