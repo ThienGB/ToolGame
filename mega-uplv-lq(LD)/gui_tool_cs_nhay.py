@@ -137,7 +137,10 @@ class AutoClickerInstance:
             if part:
                 quoted = shlex.quote(part)
                 cmd = [self.adb_path, "-s", self.device_id, "shell", f"input text {quoted}"]
-                subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                try:
+                    subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
+                except: pass
+                time.sleep(0.1)
             if i < len(parts) - 1:
                 self.call_adb(["shell", "input", "text", "%s"])
 
@@ -209,7 +212,11 @@ class AutoClickerInstance:
         
         # 2. Đọc file kết quả
         cmd = [self.adb_path, "-s", self.device_id, "shell", f"cat {path_in_android} 2>/dev/null"]
-        res = subprocess.run(cmd, capture_output=True, text=False, creationflags=subprocess.CREATE_NO_WINDOW)
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=False, creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
+        except subprocess.TimeoutExpired:
+            self.log("!! [CLIPBOARD] Timeout khi đọc clipboard.")
+            return ""
         
         if not res.stdout: 
             self.log("!! [CLIPBOARD] File trống hoặc chưa có mã.")
@@ -243,7 +250,7 @@ class AutoClickerInstance:
         # service call clipboard 2 i32 1 (lấy dữ liệu clipboard)
         try:
             cmd_service = [self.adb_path, "-s", self.device_id, "shell", "service call clipboard 2 i32 1"]
-            res_service = subprocess.run(cmd_service, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            res_service = subprocess.run(cmd_service, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
             # Kết quả service call cần parse rất phức tạp (HEX), nên đây chỉ là phương án dự phòng
         except: pass
 
@@ -444,10 +451,14 @@ class AutoClickerInstance:
                     if mv >= confidence:
                         th_s, tw_s = t_img.shape[:2]
                         self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
+                        del screen
+                        if not use_color: del compare_screen
+                        del res
                         return t_path
-            time.sleep(1)
-        
-        self.log(f"!! Timeout: Không thấy ảnh. Cao nhất: {best_match['name']} ({best_match['val']:.2f})")
+                    del res
+                if not use_color: del compare_screen
+            del screen
+            time.sleep(1.5)
         return None
 
     def cases_logic(self, step):
@@ -505,18 +516,33 @@ class AutoClickerInstance:
             time.sleep(1)
         return False
     def search_logic(self, step):
-        target = step.get("target")
+        targets = []
+        if step.get("target"): targets.append(step.get("target"))
+        i = 1
+        while f"target{i}" in step:
+            targets.append(step.get(f"target{i}"))
+            i += 1
+            
         timeout = step.get("timeout", 10)
         conf = step.get("confidence", 0.8)
         use_color = step.get("use_color", False)
-        t_img = get_cached_template(target, use_color)
-        if t_img is None: return False
+        
+        target_imgs = []
+        for t_path in targets:
+            img = get_cached_template(t_path, use_color)
+            if img is not None:
+                target_imgs.append(img)
+        
+        if not target_imgs: return False
+        
         start = time.time()
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
                 compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-                if t_img.shape[0] <= compare_screen.shape[0] and t_img.shape[1] <= compare_screen.shape[1]:
+                for t_img in target_imgs:
+                    if t_img.shape[0] > compare_screen.shape[0] or t_img.shape[1] > compare_screen.shape[1]:
+                        continue
                     res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
                     _, mv, _, _ = cv2.minMaxLoc(res)
                     if mv >= conf: return True
@@ -621,8 +647,12 @@ class AutoClickerInstance:
         self.shared_data = shared_data
         self.running = True
 
+        # --- TẢI KỊCH BẢN TỪ FILE NGOÀI NẾU CÓ ---
+        script_file = "script_nhay.json"
+        
+        # Giá trị mặc định (Hardcoded)
         login_script = [
-            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.8},
+            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 45, "confidence": 0.8},
             {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 3, "confidence": 0.8, "login_step": True},
             {"action": "click_image", "target1": "images/account_input1.jpg","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.8, "login_step": True},
             {"action": "input_account", "login_step": True},
@@ -689,6 +719,17 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 15},
         ]
 
+        if os.path.exists(script_file):
+            try:
+                with open(script_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if "login_script" in data: login_script = data["login_script"]
+                    if "nhay_script" in data: nhay_script = data["nhay_script"]
+                    if "dang_xuat_script" in data: dang_xuat_script = data["dang_xuat_script"]
+                    self.log(f"==> ĐÃ TẢI KỊCH BẢN TỪ {script_file}")
+            except Exception as e:
+                self.log(f"!! LỖI khi tải {script_file}: {str(e)}")
+
         while self.running:
             self.current_account = None
             with FILE_LOCK:
@@ -709,6 +750,12 @@ class AutoClickerInstance:
                 success_login = False
                 self.is_login_phase = True
                 for retry_login in range(3):
+                    # Check nếu đã ở trong sảnh rồi thì skip login luôn
+                    if self.search_logic({"target1": "images/su_kien.jpg", "target2": "images/setting.jpg", "target3": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7}):
+                        self.log("==> ĐÃ Ở TRONG SẢNH, BỎ QUA ĐĂNG NHẬP.")
+                        success_login = True
+                        break
+                        
                     success_login = True
                     for step in login_script:
                         if not self.running: break
@@ -717,6 +764,7 @@ class AutoClickerInstance:
                             success_login = False; break
                     if success_login or not self.running or self.skip_all_retries: break
                     self.log(f"!! Login thất bại (vòng {retry_login+1}/3). Đang bắt đầu lại...")
+                    self.skip_login_for_this_acc = False # Nếu skip login thất bại, vòng sau hãy làm full login
                 
                 if not success_login or self.skip_all_retries or not self.running:
                     if self.skip_all_retries:

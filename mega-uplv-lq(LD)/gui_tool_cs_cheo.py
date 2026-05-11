@@ -62,6 +62,25 @@ FILE_LOCK = threading.Lock()
 
 BASE_WIDTH = 960.0
 BASE_HEIGHT = 540.0
+ 
+# --- Global Cache for Performance ---
+GLOBAL_TEMPLATES = {}
+TEMPLATE_LOCK = threading.Lock()
+ 
+def get_cached_template(t_path, use_color=False):
+    key = (t_path, use_color)
+    with TEMPLATE_LOCK:
+        if key in GLOBAL_TEMPLATES:
+            return GLOBAL_TEMPLATES[key]
+        
+        real_path = resource_path(t_path)
+        if os.path.exists(real_path):
+            read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
+            img = cv2.imread(real_path, read_mode)
+            if img is not None:
+                GLOBAL_TEMPLATES[key] = img
+                return img
+    return None
 
 class AutoClickerInstance:
     def __init__(self, device_id, adb_path, log_func, update_ui_func, report_stats_func):
@@ -118,7 +137,9 @@ class AutoClickerInstance:
             if part:
                 quoted = shlex.quote(part)
                 cmd = [self.adb_path, "-s", self.device_id, "shell", f"input text {quoted}"]
-                subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                try:
+                    subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
+                except: pass
                 time.sleep(0.1)
             if i < len(parts) - 1:
                 self.call_adb(["shell", "input", "text", "%s"])
@@ -189,7 +210,11 @@ class AutoClickerInstance:
         
         # 2. Đọc file kết quả
         cmd = [self.adb_path, "-s", self.device_id, "shell", f"cat {path_in_android} 2>/dev/null"]
-        res = subprocess.run(cmd, capture_output=True, text=False, creationflags=subprocess.CREATE_NO_WINDOW)
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=False, creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
+        except subprocess.TimeoutExpired:
+            self.log("!! [CLIPBOARD] Timeout khi đọc clipboard.")
+            return ""
         
         if not res.stdout: 
             self.log("!! [CLIPBOARD] File trống hoặc chưa có mã.")
@@ -223,7 +248,7 @@ class AutoClickerInstance:
         # service call clipboard 2 i32 1 (lấy dữ liệu clipboard)
         try:
             cmd_service = [self.adb_path, "-s", self.device_id, "shell", "service call clipboard 2 i32 1"]
-            res_service = subprocess.run(cmd_service, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            res_service = subprocess.run(cmd_service, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
             # Kết quả service call cần parse rất phức tạp (HEX), nên đây chỉ là phương án dự phòng
         except: pass
 
@@ -451,14 +476,15 @@ class AutoClickerInstance:
                         
                     if mv >= confidence:
                         th_s, tw_s = t_scaled.shape[:2]
-                        # Click exactly in the center of the found image
-                        center_x = ml[0] + tw_s // 2
-                        center_y = ml[1] + th_s // 2
-                        
-                        self.call_adb(["shell", "input", "tap", str(center_x), str(center_y)])
+                        self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
                         self.log(f"-> CLICK: {os.path.basename(t_path)} ({mv:.2f})")
+                        del screen; del res
+                        if not use_color: del compare_screen
                         return t_path
-            time.sleep(1)
+                    del res
+                if not use_color: del compare_screen
+            del screen
+            time.sleep(1.5)
         
         self.log(f"!! Timeout: Không thấy ảnh. Cao nhất: {best_match['name']} ({best_match['val']:.2f})")
         return None
@@ -521,31 +547,36 @@ class AutoClickerInstance:
         return False
 
     def search_logic(self, step):
-        target = step.get("target")
+        targets = []
+        if step.get("target"): targets.append(step.get("target"))
+        i = 1
+        while f"target{i}" in step:
+            targets.append(step.get(f"target{i}"))
+            i += 1
+            
         timeout = step.get("timeout", 10)
         conf = step.get("confidence", 0.8)
         use_color = step.get("use_color", False)
-        real_path = resource_path(target)
-        if not os.path.exists(real_path): return False
         
-        read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
-        t_img = cv2.imread(real_path, read_mode)
+        target_imgs = []
+        for t_path in targets:
+            img = get_cached_template(t_path, use_color)
+            if img is not None:
+                target_imgs.append(img)
+        
+        if not target_imgs: return False
         
         start = time.time()
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
-                if not use_color: compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-                else: compare_screen = screen
-
-                # Tỉ lệ 1:1
-                t_scaled = t_img
-
-                if t_scaled.shape[0] > compare_screen.shape[0] or t_scaled.shape[1] > compare_screen.shape[1]:
-                    continue
-                res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
-                _, mv, _, _ = cv2.minMaxLoc(res)
-                if mv >= conf: return True
+                compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                for t_img in target_imgs:
+                    if t_img.shape[0] > compare_screen.shape[0] or t_img.shape[1] > compare_screen.shape[1]:
+                        continue
+                    res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
+                    _, mv, _, _ = cv2.minMaxLoc(res)
+                    if mv >= conf: return True
             time.sleep(1)
         return False
 
@@ -557,6 +588,7 @@ class AutoClickerInstance:
             h, w = screen.shape[:2]
             # Click thấp xuống một chút (60% màn hình) thay vì giữa (50%)
             self.call_adb(["shell", "input", "tap", str(w//2), str(int(h * 0.6))])
+            del screen
             return True
         return False
 
@@ -567,6 +599,7 @@ class AutoClickerInstance:
         x1, y1 = gv(step.get("x1", 0.5), w), gv(step.get("y1", 0.8), h)
         x2, y2 = gv(step.get("x2", 0.5), w), gv(step.get("y2", 0.3), h)
         self.call_adb(["shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), str(step.get("duration", 500))])
+        if screen is not None: del screen
         return True
 
     def verify_or_restart_logic(self, step):
@@ -805,179 +838,194 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 5},
         ]
 
-        while self.running:
-            self.current_account = None
-            with FILE_LOCK:
-                for acc in self.accounts_list:
-                    if not acc.get("used"):
-                        acc["used"] = True; self.current_account = acc
-                        self.update_ui_func(); break
-            if not self.current_account: break
-            self.log(f">> START {self.role_name}: {self.current_account['tk']}")
-            self.skip_login_for_this_acc = False
-            
-            # --- VÒNG LẶP RETRY CHO CHÍNH TÀI KHOẢN NÀY ---
+        try:
             while self.running:
-                self.last_captured_code = None
-                self.skip_all_retries = False
-                self.use_external_codes = False
-                self.code_entered = False
+                self.current_account = None
+                with FILE_LOCK:
+                    for acc in self.accounts_list:
+                        if not acc.get("used"):
+                            acc["used"] = True; self.current_account = acc
+                            self.update_ui_func(); break
+                if not self.current_account: break
+                self.log(f">> START {self.role_name}: {self.current_account['tk']}")
+                self.skip_login_for_this_acc = False
                 
-                # --- RESET SHARED CODE SLOTS FOR THIS PAIR ---
-                with self.shared_data["lock"]:
-                    if self.pair_id not in self.shared_data["codes"]:
-                        self.shared_data["codes"][self.pair_id] = {"A": None, "B": None, "acc_A": None, "acc_B": None}
-                    if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = None
-                    else: self.shared_data["codes"][self.pair_id]["B"] = None
-                target_code = None
-                success = False
-                pkg = "com.example.clipper"
-                # Bật Service để hiện Nút nổi (Pill)
-                self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
-                # Xóa mã cũ
-                path_in_android = f"/sdcard/Android/data/{pkg}/files/clip.txt"
-                self.call_adb(["shell", "rm", "-f", path_in_android])
-
-                # --- THỰC HIỆN ĐĂNG NHẬP TRƯỚC ---
-                # self.update_status("Đang Login...")
-                success_login = False
-                self.is_login_phase = True
-                for retry_login in range(3):
-                    success_login = True
-                    for step in login_script:
-                        if not self.running: break
-                        if self.skip_login_for_this_acc and step.get("login_step"): continue
-                        if not self.execute_step(step):
-                            success_login = False; break
-                    if success_login or not self.running or self.skip_all_retries: break
-                    self.log(f"!! Login thất bại (vòng {retry_login+1}/3). Đang bắt đầu lại...")
-                        
-                if not success_login or self.skip_all_retries or not self.running:
-                    if self.skip_all_retries:
-                        self.report_stats_func(False, f"{self.current_account['tk']} (SAI PASS)")
-                        break
-                    if not self.running: break
-                    self.log(f"!! Lỗi đăng nhập, đang thử lại chính tài khoản: {self.current_account['tk']}")
-                    continue
-                
-                self.is_login_phase = False
-            
-                # --- QUYẾT ĐỊNH LOGIC: CHÉO CẶP HAY DÙNG FILE MÃ ---
-                with self.shared_data["ext_lock"]:
-                    self.use_external_codes = len(self.shared_data.get("external_codes", [])) > 0
-
-                if self.use_external_codes:
-                    success = True
-                    target_code = None
-                    with self.shared_data["ext_lock"]:
-                        codes = self.shared_data.get("external_codes", [])
-                        if codes:
-                            item = codes[0]
-                            target_code = item["code"]; item["count"] -= 1
-                            if item["count"] <= 0: codes.pop(0)
+                # --- VÒNG LẶP RETRY CHO CHÍNH TÀI KHOẢN NÀY ---
+                while self.running:
+                    self.last_captured_code = None
+                    self.skip_all_retries = False
+                    self.use_external_codes = False
+                    self.code_entered = False
                     
-                    if not target_code: success = False
-                    else:
-                        for step in goto_input_code_only:
-                            if not self.running: break
-                            if not self.execute_step(step): success = False; break
-                        
-                        if success and self.running:
-                            self.partner_code = target_code
-                            if not self.execute_step(input_code_script[-1]): success = False
-                            if success:
-                                for step in confirm_script:
-                                    if not self.running: break
-                                    if not self.execute_step(step): success = False; break
-                        
-                        if (not success or not self.running) and target_code:
-                            with self.shared_data["ext_lock"]:
-                                codes = self.shared_data.get("external_codes", [])
-                                found = False
-                                for item in codes:
-                                    if item["code"] == target_code: item["count"] += 1; found = True; break
-                                if not found: codes.insert(0, {"code": target_code, "count": 1})
-                else:
+                    # --- RESET SHARED CODE SLOTS FOR THIS PAIR ---
                     with self.shared_data["lock"]:
                         if self.pair_id not in self.shared_data["codes"]:
                             self.shared_data["codes"][self.pair_id] = {"A": None, "B": None, "acc_A": None, "acc_B": None}
-                        if self.is_role_a: self.shared_data["codes"][self.pair_id]["acc_A"] = self.current_account
-                        else: self.shared_data["codes"][self.pair_id]["acc_B"] = self.current_account
-                    
-                    success = True
-                    for retry in range(2):
-                        copy_ok = True
-                        for step in copy_script:
-                            if not self.running: break
-                            if not self.execute_step(step): copy_ok = False; break
-                        if copy_ok: break
-                    
-                    if not copy_ok: success = False
-                    else:
-                        my_code = self.last_captured_code
-                        if not my_code: success = False
-                        else:
-                            with self.shared_data["lock"]:
-                                if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = my_code
-                                else: self.shared_data["codes"][self.pair_id]["B"] = my_code
+                        if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = None
+                        else: self.shared_data["codes"][self.pair_id]["B"] = None
+                    target_code = None
+                    success = False
+                    pkg = "com.example.clipper"
+                    # Bật Service để hiện Nút nổi (Pill)
+                    self.call_adb(["shell", "am", "start-foreground-service", f"{pkg}/.ClipboardService"])
+                    # Xóa mã cũ
+                    path_in_android = f"/sdcard/Android/data/{pkg}/files/clip.txt"
+                    self.call_adb(["shell", "rm", "-f", path_in_android])
 
-                        if success and self.running:
-                            for step in input_code_script[:-1]:
+                    # --- THỰC HIỆN ĐĂNG NHẬP TRƯỚC ---
+                    # self.update_status("Đang Login...")
+                    success_login = False
+                    self.is_login_phase = True
+                    for retry_login in range(3):
+                        # Check nếu đã ở trong sảnh rồi thì skip login luôn
+                        if self.search_logic({"target1": "images/su_kien.jpg", "target2": "images/setting.jpg", "target3": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7}):
+                            self.log("==> ĐÃ Ở TRONG SẢNH, BỎ QUA ĐĂNG NHẬP.")
+                            success_login = True
+                            break
+                            
+                        success_login = True
+                        for step in login_script:
+                            if not self.running: break
+                            if self.skip_login_for_this_acc and step.get("login_step"): continue
+                            if not self.execute_step(step):
+                                success_login = False; break
+                        if success_login or not self.running or self.skip_all_retries: break
+                        self.log(f"!! Login thất bại (vòng {retry_login+1}/3). Đang bắt đầu lại...")
+                        self.skip_login_for_this_acc = False # Nếu skip login thất bại, vòng sau hãy làm full login
+                            
+                    if not success_login or self.skip_all_retries or not self.running:
+                        if self.skip_all_retries:
+                            self.report_stats_func(False, f"{self.current_account['tk']} (SAI PASS)")
+                            break
+                        if not self.running: break
+                        self.log(f"!! Lỗi đăng nhập, đang thử lại chính tài khoản: {self.current_account['tk']}")
+                        continue
+                    
+                    self.is_login_phase = False
+                
+                    # --- QUYẾT ĐỊNH LOGIC: CHÉO CẶP HAY DÙNG FILE MÃ ---
+                    with self.shared_data["ext_lock"]:
+                        self.use_external_codes = len(self.shared_data.get("external_codes", [])) > 0
+
+                    if self.use_external_codes:
+                        success = True
+                        target_code = None
+                        with self.shared_data["ext_lock"]:
+                            codes = self.shared_data.get("external_codes", [])
+                            if codes:
+                                item = codes[0]
+                                target_code = item["code"]; item["count"] -= 1
+                                if item["count"] <= 0: codes.pop(0)
+                        
+                        if not target_code: success = False
+                        else:
+                            for step in goto_input_code_only:
                                 if not self.running: break
                                 if not self.execute_step(step): success = False; break
-
-                            partner_code = None; wait_start = time.time()
-                            partner_info = None # Lưu thông tin đối phương cục bộ
-                            while time.time() - wait_start < 60 and self.running:
-                                with self.shared_data["lock"]:
-                                    pair_data = self.shared_data["codes"].get(self.pair_id, {})
-                                    partner_code = pair_data.get("B" if self.is_role_a else "A")
-                                    partner_info = pair_data.get("acc_B" if self.is_role_a else "acc_A")
-                                if partner_code and partner_info: 
-                                    self.log(f"==> ĐÃ NHẬN MÃ TỪ ĐỐI PHƯƠNG: {partner_code}")
-                                    break
-                                time.sleep(3)
                             
-                            if not partner_code:
-                                self.log("!! QUÁ THỜI GIAN CHỜ MÃ ĐỐI PHƯƠNG (60s). Đang khởi động lại...")
-                                self.execute_step({"action": "restart_app"})
-                                success = False
-                            else:
-                                self.partner_code = partner_code
-                                # Lưu thông tin cặp để ghi report sau này (tránh bị reset khi máy kia sang acc mới)
-                                self.final_report_data = {
-                                    "my_acc": self.current_account,
-                                    "my_code": my_code,
-                                    "partner_acc": partner_info,
-                                    "partner_code": partner_code
-                                }
-                                
+                            if success and self.running:
+                                self.partner_code = target_code
                                 if not self.execute_step(input_code_script[-1]): success = False
                                 if success:
                                     for step in confirm_script:
                                         if not self.running: break
                                         if not self.execute_step(step): success = False; break
-                
-                # --- KẾT THÚC VÀ BÁO CÁO ---
-                if self.running:
-                    if success or self.current_account.get("success"):
-                        self.current_account["success"] = True
-                        if self.use_external_codes:
-                            self.report_stats_func(True, target_code, True)
-                        elif self.is_role_a and hasattr(self, 'final_report_data'):
-                            # Sử dụng dữ liệu đã chốt từ lúc bắt tay để ghi file
-                            d = self.final_report_data
-                            a_acc, a_code = d["my_acc"], d["my_code"]
-                            b_acc, b_code = d["partner_acc"], d["partner_code"]
                             
-                            a_info = f"{a_acc['tk']}|{a_acc['mk']}|{a_code}"
-                            b_info = f"{b_acc['tk']}|{b_acc['mk']}|{b_code}"
-                            self.report_stats_func(True, f"Cặp {self.pair_id+1}: {a_info} <-> {b_info}")
-                        break # THÀNH CÔNG - Thoát vòng lặp retry
+                            if (not success or not self.running) and target_code:
+                                with self.shared_data["ext_lock"]:
+                                    codes = self.shared_data.get("external_codes", [])
+                                    found = False
+                                    for item in codes:
+                                        if item["code"] == target_code: item["count"] += 1; found = True; break
+                                    if not found: codes.insert(0, {"code": target_code, "count": 1})
                     else:
-                        # THẤT BẠI - Ghi log và để vòng lặp while tiếp tục thử lại chính acc này
-                        self.log(f"!! Lỗi thực thi, đang thử lại chính tài khoản: {self.current_account['tk']}")
-                        time.sleep(2) # Đợi một chút trước khi thử lại
+                        with self.shared_data["lock"]:
+                            if self.pair_id not in self.shared_data["codes"]:
+                                self.shared_data["codes"][self.pair_id] = {"A": None, "B": None, "acc_A": None, "acc_B": None}
+                            if self.is_role_a: self.shared_data["codes"][self.pair_id]["acc_A"] = self.current_account
+                            else: self.shared_data["codes"][self.pair_id]["acc_B"] = self.current_account
+                        
+                        success = True
+                        for retry in range(2):
+                            copy_ok = True
+                            for step in copy_script:
+                                if not self.running: break
+                                if not self.execute_step(step): copy_ok = False; break
+                            if copy_ok: break
+                        
+                        if not copy_ok: success = False
+                        else:
+                            my_code = self.last_captured_code
+                            if not my_code: success = False
+                            else:
+                                with self.shared_data["lock"]:
+                                    if self.is_role_a: self.shared_data["codes"][self.pair_id]["A"] = my_code
+                                    else: self.shared_data["codes"][self.pair_id]["B"] = my_code
+
+                            if success and self.running:
+                                for step in input_code_script[:-1]:
+                                    if not self.running: break
+                                    if not self.execute_step(step): success = False; break
+
+                                partner_code = None; wait_start = time.time()
+                                partner_info = None # Lưu thông tin đối phương cục bộ
+                                while time.time() - wait_start < 60 and self.running:
+                                    with self.shared_data["lock"]:
+                                        pair_data = self.shared_data["codes"].get(self.pair_id, {})
+                                        partner_code = pair_data.get("B" if self.is_role_a else "A")
+                                        partner_info = pair_data.get("acc_B" if self.is_role_a else "acc_A")
+                                    if partner_code and partner_info: 
+                                        self.log(f"==> ĐÃ NHẬN MÃ TỪ ĐỐI PHƯƠNG: {partner_code}")
+                                        break
+                                    time.sleep(3)
+                                
+                                if not partner_code:
+                                    self.log("!! QUÁ THỜI GIAN CHỜ MÃ ĐỐI PHƯƠNG (60s). Đang khởi động lại...")
+                                    self.execute_step({"action": "restart_app"})
+                                    success = False
+                                else:
+                                    self.partner_code = partner_code
+                                    # Lưu thông tin cặp để ghi report sau này (tránh bị reset khi máy kia sang acc mới)
+                                    self.final_report_data = {
+                                        "my_acc": self.current_account,
+                                        "my_code": my_code,
+                                        "partner_acc": partner_info,
+                                        "partner_code": partner_code
+                                    }
+                                    
+                                    if not self.execute_step(input_code_script[-1]): success = False
+                                    if success:
+                                        for step in confirm_script:
+                                            if not self.running: break
+                                            if not self.execute_step(step): success = False; break
+                    
+                    # --- KẾT THÚC VÀ BÁO CÁO ---
+                    if self.running:
+                        if success or self.current_account.get("success"):
+                            self.current_account["success"] = True
+                            if self.use_external_codes:
+                                self.report_stats_func(True, target_code, True)
+                            elif self.is_role_a and hasattr(self, 'final_report_data'):
+                                # Sử dụng dữ liệu đã chốt từ lúc bắt tay để ghi file
+                                d = self.final_report_data
+                                a_acc, a_code = d["my_acc"], d["my_code"]
+                                b_acc, b_code = d["partner_acc"], d["partner_code"]
+                                
+                                a_info = f"{a_acc['tk']}|{a_acc['mk']}|{a_code}"
+                                b_info = f"{b_acc['tk']}|{b_acc['mk']}|{b_code}"
+                                self.report_stats_func(True, f"Cặp {self.pair_id+1}: {a_info} <-> {b_info}")
+                            break # THÀNH CÔNG - Thoát vòng lặp retry
+                        else:
+                            # THẤT BẠI - Ghi log và để vòng lặp while tiếp tục thử lại chính acc này
+                            self.log(f"!! Lỗi thực thi, đang thử lại chính tài khoản: {self.current_account['tk']}")
+                            time.sleep(2) # Đợi một chút trước khi thử lại
+                        
+                    # Giải phóng bộ nhớ sau mỗi acc/cặp
+                    gc.collect()
+        except Exception as e:
+            self.log(f"!! LỖI HỆ THỐNG (Thread Crash): {str(e)}")
+            import traceback
+            traceback.print_exc()
                 
             gc.collect()
 
