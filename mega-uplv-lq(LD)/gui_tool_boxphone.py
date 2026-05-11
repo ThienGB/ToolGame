@@ -824,6 +824,14 @@ class AutoClickerInstance:
                         "trigger": "images_boxphone/tuy_chon.png",
                         "confidence": 0.7,
                         "script": []
+                    },
+                    {
+                        "trigger": "images_boxphone/maychubaotri.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target": "images_boxphone/okbaotri.png", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images_boxphone/x_start1.png", "confidence": 0.7},
+                            {"action": "click_image_if", "target": "images_boxphone/x_start1.png", "confidence": 0.7},]
                     }
                 ]
             },
