@@ -1050,7 +1050,7 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 124, "y": 446, "timeout": 2},
             {"action": "click_image", "target": "images/nhan_ruby_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/any.png", "timeout": 20, "confidence": 0.9},
-            {"action": "wait", "timeout": 3},
+            {"action": "wait", "timeout": 5},
             {"action": "click_coords", "x": 42, "y": 28, "timeout": 2},
             {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
