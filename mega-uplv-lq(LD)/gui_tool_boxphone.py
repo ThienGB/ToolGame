@@ -247,6 +247,33 @@ class AutoClickerInstance:
             self.call_adb(["shell", "am", "force-stop", app])
             self.call_adb(["shell", "pkill", "-f", app])
         time.sleep(2)
+    def open_game_logic(self, step):
+        """Chỉ thực hiện khởi chạy game (Simplified)."""
+        potential_apps = ["com.garena.game.kgvn64x", "com.garena.game.kgvn", "com.garena.game.kgtw"]
+        app = step.get("package")
+        
+        if not app:
+            for p in potential_apps:
+                check = self.call_adb(["shell", "pm", "path", p])
+                if check.returncode == 0 and check.stdout.strip():
+                    app = p
+                    break
+        
+        if not app:
+            app = "com.garena.game.kgvn" # Mặc định nếu không thấy
+            
+        self.log(f"-> Khởi chạy game: {app}")
+        
+        # Mở game bằng monkey
+        self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+        
+        # Đợi game load (mặc định 5s hoặc theo script)
+        wait_time = step.get("wait", 5)
+        if wait_time > 0:
+            self.log(f"Đợi game khởi động ({wait_time}s)...")
+            time.sleep(wait_time)
+            
+        return True
 
 
     def execute_step(self, step):
@@ -318,6 +345,8 @@ class AutoClickerInstance:
             while time.time() - start_wait < 20 and self.running:
                 time.sleep(0.5)
             res = True
+        elif action == "open_game":
+            res = self.open_game_logic(step)
         elif action == "loop":
             count = step.get("count", 1)
             sub_steps = step.get("steps", [])
