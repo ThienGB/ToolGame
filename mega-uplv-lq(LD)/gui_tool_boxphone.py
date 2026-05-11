@@ -931,6 +931,8 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/sukien.png", "timeout": 3, "confidence": 0.7},
             {"action": "press_esc", "wait": 3},
+            {"action": "wait", "timeout": 10},
+
 
 
 
