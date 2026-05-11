@@ -1149,11 +1149,11 @@ class AutoClickerInstance:
         # 5. CÁC HÀNH ĐỘNG LẶP LẠI (SHARED BATTLE LOGIC)
         # Tọa độ chọn tướng cho 5 máy trên BoxPhone (Sửa tọa độ x, y tại đây)
         hero_coords = [
-            {"x": 100, "y": 500}, # Máy 1
-            {"x": 300, "y": 500}, # Máy 2
-            {"x": 500, "y": 500}, # Máy 3
-            {"x": 700, "y": 500}, # Máy 4
-            {"x": 900, "y": 500}, # Máy 5
+            {"x": 245, "y": 162}, # Máy 1
+            {"x": 403, "y": 158}, # Máy 2
+            {"x": 548, "y": 162}, # Máy 3
+            {"x": 705, "y": 162}, # Máy 4
+            {"x": 875, "y": 178}, # Máy 5
         ]
         my_hero_pos = hero_coords[self.device_index % 5]
         
@@ -1165,6 +1165,8 @@ class AutoClickerInstance:
             
             {"action": "click_image_if", "target": "images_boxphone/open.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 2},
+            {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 2},
+            {"action": "click_coords", "x": 1819, "y": 1021, "timeout": 3},
             {"action": "click_image_if", "target": "images_boxphone/ok1.png", "timeout": 20, "confidence": 0.7},
             
             {"action": "click_image_if", "target1": "images_boxphone/logo.png", "target2": "images_boxphone/logo1.png", "timeout": 60, "confidence": 0.7},
@@ -1177,7 +1179,8 @@ class AutoClickerInstance:
                     {"action": "wait", "timeout": 15}
                 ]
             },
-            {"action": "wait", "timeout": 6},
+
+            {"action": "click_coords", "x": 31, "y": 166, "timeout": 6},
             {"action": "sync_autowin", "timeout": 120},
             {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2": "images_boxphone/minimize1.png", "target3": "images_boxphone/minimize2.png", "target4": "images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 600, "confidence": 0.7},
