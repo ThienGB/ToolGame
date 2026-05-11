@@ -634,7 +634,7 @@ class AutoClickerInstance:
         self.running = True
 
         login_script = [
-            {"action": "click_image", "target": "images/login_garena2.jpg", "timeout": 15, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 15, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 3, "confidence": 0.7, "login_step": True},
             {"action": "click_image", "target1": "images/account_input1.jpg","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.7, "login_step": True},
             {"action": "input_account", "login_step": True},
@@ -655,51 +655,10 @@ class AutoClickerInstance:
             ]},
             
             {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.8},
-            {"action": "click_image_if", "target1": "images/skip.png", "target2": "images/dang_ky_sau.jpg", "timeout": 5, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2},
-            {
-                "action": "cases",
-                "timeout" : 120,
-                "timeout_then": [{"action": "handle_maintenance"}],
-                "cases": [
-                    {
-                        "trigger": "images/an_de_tro_lai.jpg",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7},
-                            {"action": "wait", "timeout": 2},
-                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
-                            {"action": "wait", "timeout": 2},
-                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
-                            {"action": "click_image_if", "target": "images/an_de_tro_lai.jpg", "confidence": 0.7, "timeout": 5},
-                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7}
-                        ]
-                    },
-                    {
-                        "trigger": "images/x_start.jpg",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 5},
-                            {"action": "click_image_if", "target": "images/x_start.jpg", "confidence": 0.7, "timeout": 2},
-                            {"action": "click_image_if", "target": "images/x_start1.jpg", "confidence": 0.7, "timeout": 2},
-
-                        ]
-                    },
-                    {
-                        "trigger1": "images/su_kien.jpg",
-                        "trigger2": "images/input_gift_code2.jpg",
-                        "confidence": 0.7,
-                        "script": []
-                    }
-                ]
-            },
-            {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
             {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 3},
         ]
        
         copy_script = [
@@ -737,15 +696,18 @@ class AutoClickerInstance:
                         ]
                     },
                     {
-                        "trigger1": "images/input_gift_code2.jpg",
-                        "trigger2": "images/input_gift_code1.jpg",
-                        "trigger3": "images/input_gift_code3.jpg",
-                        "trigger4": "images/input_gift_code.jpg",
+                        "trigger1": "images/xac_nhan_chung_suc1.png",
+                        "trigger2": "images/invite_friend.jpg",
                         "confidence": 0.7,
                         "script": [
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
+                            {"action": "wait", "timeout": 5},
+                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 1},
+                            {"action": "press_esc", "wait": 1},
                             {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
+                            {"action": "press_esc", "wait": 3},
+                            {"action": "click_image_if", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
                             {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
                             {"action": "click_image_if", "target": "images/sao_chep_ma.jpg", "timeout": 2, "confidence": 0.7},
                             {"action": "get_code", "timeout": 10},

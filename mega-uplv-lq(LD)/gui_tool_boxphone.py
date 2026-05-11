@@ -233,6 +233,21 @@ class AutoClickerInstance:
             self.log(f"LỖI Chụp màn hình: {str(e)}")
             return None
 
+    def force_stop_game(self, package=None):
+        self.log("-> Đang thực hiện đóng ứng dụng triệt để...")
+        # 1. Nhấn Home để thoát về launcher trước
+        self.call_adb(["shell", "input", "keyevent", "3"])
+        time.sleep(1)
+        # 2. Force stop các package liên quan
+        apps = ["com.garena.game.kgvn", "com.garena.game.kgvn64x", "com.garena.game.kgtw"]
+        if package and package not in apps:
+            apps.append(package)
+            
+        for app in apps:
+            self.call_adb(["shell", "am", "force-stop", app])
+            self.call_adb(["shell", "pkill", "-f", app])
+        time.sleep(2)
+
 
     def execute_step(self, step):
         if not self.running: return False
@@ -293,6 +308,16 @@ class AutoClickerInstance:
             res = self.clear_room_id_logic()
         elif action == "cases":
             res = self.cases_logic(step)
+        elif action == "restart_app":
+            app = step.get("app", "com.garena.game.kgvn")
+            self.log(f"!! YÊU CẦU: Khởi động lại ứng dụng {app}...")
+            self.force_stop_game(app)
+            self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+            self.log("Đợi game khởi động lại (20s)...")
+            start_wait = time.time()
+            while time.time() - start_wait < 20 and self.running:
+                time.sleep(0.5)
+            res = True
         elif action == "loop":
             count = step.get("count", 1)
             sub_steps = step.get("steps", [])
@@ -466,7 +491,9 @@ class AutoClickerInstance:
         screen = self.get_screenshot()
         if screen is not None:
             h, w = screen.shape[:2]
-            self.call_adb(["shell", "input", "tap", str(w//2), str(h//2)])
+            cx, cy = w // 2, int(h * 0.8)
+            self.call_adb(["shell", "input", "tap", str(cx), str(cy)])
+            self.log(f"==> CLICK ANY (80%): ({cx}, {cy})")
             return True
         return False
 
@@ -1009,9 +1036,15 @@ class AutoClickerInstance:
         ]
 
         # 5. CÁC HÀNH ĐỘNG LẶP LẠI (SHARED BATTLE LOGIC)
-        idx = (self.device_index % 5) + 1
-        t1 = f"images_boxphone/tuong{idx}.png"
-        t2 = f"images_boxphone/tuong{idx+5}.png" 
+        # Tọa độ chọn tướng cho 5 máy trên BoxPhone (Sửa tọa độ x, y tại đây)
+        hero_coords = [
+            {"x": 100, "y": 500}, # Máy 1
+            {"x": 300, "y": 500}, # Máy 2
+            {"x": 500, "y": 500}, # Máy 3
+            {"x": 700, "y": 500}, # Máy 4
+            {"x": 900, "y": 500}, # Máy 5
+        ]
+        my_hero_pos = hero_coords[self.device_index % 5]
         
         shared_battle_script = [
             {"action": "click_image", "target1": "images_boxphone/logo1.png", "target2": "images_boxphone/logo.png", "timeout": 50, "confidence": 0.7},
@@ -1020,7 +1053,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "target4": "images_boxphone/da_san_sang.png", "timeout": 60, "confidence": 0.7},
             
             {"action": "click_image_if", "target": "images_boxphone/open.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target1": t1, "target2": t2, "timeout": 10, "confidence": 0.7},
+            {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 2},
             {"action": "click_image_if", "target": "images_boxphone/ok1.png", "timeout": 20, "confidence": 0.7},
             
             {"action": "click_image_if", "target1": "images_boxphone/logo.png", "target2": "images_boxphone/logo1.png", "timeout": 60, "confidence": 0.7},
@@ -1222,12 +1255,12 @@ class MultiPremiumApp(ctk.CTk):
         
         self.mode_login = ctk.CTkCheckBox(self.mode_frame, text="LOGIN"); self.mode_login.grid(row=0, column=0, pady=10); self.mode_login.select()
         self.mode_tutorial = ctk.CTkCheckBox(self.mode_frame, text="TÂN THỦ"); self.mode_tutorial.grid(row=0, column=1); self.mode_tutorial.select()
-        self.mode_mua_exp = ctk.CTkCheckBox(self.mode_frame, text="MUA EXP"); self.mode_mua_exp.grid(row=0, column=2); self.mode_mua_exp.select()
+        self.mode_mua_exp = ctk.CTkCheckBox(self.mode_frame, text="MUA EXP"); self.mode_mua_exp.grid(row=0, column=2)
         self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME"); self.mode_dinh_game.grid(row=0, column=3); self.mode_dinh_game.select()
         self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI"); self.mode_teamup.grid(row=0, column=4); self.mode_teamup.select()
         
         self.battle_count_entry = ctk.CTkEntry(self.main_content, width=80, placeholder_text="Số trận Battle (3)")
-        self.battle_count_entry.pack(pady=5); self.battle_count_entry.insert(0, "3")
+        self.battle_count_entry.pack(pady=5); self.battle_count_entry.insert(0, "2")
 
         # Stats
         self.stats_container = ctk.CTkFrame(self.main_content, fg_color="transparent")

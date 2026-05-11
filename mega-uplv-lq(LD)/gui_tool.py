@@ -303,21 +303,37 @@ class AutoClickerInstance:
                 # Kiểm tra phản hồi shell thực tế (getprop hoặc wm size)
                 res_boot = self.call_adb(["shell", "getprop", "sys.boot_completed"])
                 if b"1" in res_boot.stdout:
-                    self.log("==> KẾT NỐI THÀNH CÔNG! Thiết bị đã sẵn sàng.")
-                    time.sleep(5) # Giảm thời gian chờ sau khi lên hẳn
-                    return True
+                        self.log("==> KẾT NỐI THÀNH CÔNG! Đợi thêm 60s để máy ổn định hoàn toàn...")
+                        time.sleep(120)
+                        return True
                 
                 # Dự phòng nếu boot_completed bị treo lâu nhưng shell đã chạy
                 if time.time() - start_wait > 45:
                     res_wm = self.call_adb(["shell", "wm", "size"])
                     if b"Physical size" in res_wm.stdout:
-                        self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)!")
-                        time.sleep(5)
+                        self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)! Đợi thêm 60s để máy ổn định...")
+                        time.sleep(60)
                         return True
 
             time.sleep(3) # Tần suất quét lại dầy hơn (mỗi 3s)
         
         return False
+
+    def force_stop_game(self, package=None):
+        self.log("-> Đang thực hiện đóng ứng dụng triệt để...")
+        # 1. Nhấn Home để thoát về launcher trước
+        self.call_adb(["shell", "input", "keyevent", "3"])
+        time.sleep(1)
+        # 2. Force stop các package liên quan
+        apps = ["com.garena.game.kgvn", "com.garena.game.kgvn64x", "com.garena.game.kgtw"]
+        if package and package not in apps:
+            apps.append(package)
+            
+        for app in apps:
+            self.call_adb(["shell", "am", "force-stop", app])
+            self.call_adb(["shell", "pkill", "-f", app])
+        time.sleep(2)
+
     def click_coords_logic(self, step):
         x, y = step.get("x"), step.get("y")
         if x is not None and y is not None:
@@ -389,15 +405,14 @@ class AutoClickerInstance:
             res = self.sync_autowin_logic(step)
         elif action == "restart_app":
             app = step.get("app", "com.garena.game.kgvn")
-            self.log(f"!! PHÁT HIỆN LỖI: Đóng game và khởi động lại {app}...")
-            self.call_adb(["shell", "am", "force-stop", app])
-            time.sleep(2)
+            self.log(f"!! YÊU CẦU: Khởi động lại ứng dụng {app}...")
+            self.force_stop_game(app)
             self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
             self.log("Đợi game khởi động lại (20s)...")
             start_wait = time.time()
             while time.time() - start_wait < 20 and self.running:
                 time.sleep(0.5)
-            res = False
+            res = True
         elif action == "loop":
             # Lặp lại một nhóm hành động N lần
             count = step.get("count", 1)
@@ -561,9 +576,9 @@ class AutoClickerInstance:
         screen = self.get_screenshot()
         if screen is not None:
             h, w = screen.shape[:2]
-            cx, cy = w // 2, h // 2
+            cx, cy = w // 2, int(h * 0.8)
             self.call_adb(["shell", "input", "tap", str(cx), str(cy)])
-            self.log(f"==> CLICK ANY (Center): ({cx}, {cy})")
+            self.log(f"==> CLICK ANY (80%): ({cx}, {cy})")
             return True
         
         self.log("!! LỖI: Không lấy được kích thước màn hình để click.")
@@ -935,7 +950,7 @@ class AutoClickerInstance:
                     {
                         "trigger": "images/maychubaotri.png", 
                         "script":  [
-                        {"action": "restart_app", "app": "com.garena.game.kgvn"}
+                        {"action": "restart_app", "app": "com.garena.game.kgvn"},
                         {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
                         {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
                         {"action": "click_image", "target": "images/vao_tran_button_1.png", "timeout": 20, "confidence": 0.9},
@@ -1212,7 +1227,15 @@ class AutoClickerInstance:
 
         # 5. CÁC HÀNH ĐỘNG LẶP LẠI SAU KHI VÀO PHÒNG (SHARED BATTLE LOGIC)
         # Thiết kế dạng list để bạn có thể gọi lại nhiều lần hoặc dùng trong action 'loop'
-        tuong_target = f"images/tuong{(self.worker_index % 5) + 2 }.png"
+        # Tọa độ chọn tướng cho 5 máy (Sửa tọa độ x, y tại đây)
+        hero_coords = [
+            {"x": 200, "y": 300}, # Máy 1
+            {"x": 300, "y": 300}, # Máy 2
+            {"x": 400, "y": 300}, # Máy 3
+            {"x": 500, "y": 300}, # Máy 4
+            {"x": 600, "y": 300}, # Máy 5
+        ]
+        my_hero_pos = hero_coords[self.worker_index % 5]
         shared_battle_script = [
             {"action": "click_image", "target": "images/logo1.png", "timeout": 50, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/off.png", "timeout": 3, "confidence": 0.9,"use_color": True},
@@ -1232,7 +1255,7 @@ class AutoClickerInstance:
                 "action": "loop",
                 "count": 2,
                 "steps": [
-                    {"action": "click_image_if", "target": tuong_target, "timeout": 5, "confidence": 0.7},
+                    {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 2},
                 ]
             },
             {"action": "click_coords", "x": 899, "y": 482, "timeout": 3},
@@ -1539,7 +1562,7 @@ class MultiPremiumApp(ctk.CTk):
         self.mode_tutorial.grid(row=0, column=1); self.mode_tutorial.select()
 
         self.mode_buy_exp = ctk.CTkCheckBox(self.mode_frame, text="OFF LÂU (LV8)", font=ctk.CTkFont(size=11), text_color="#EAB308")
-        self.mode_buy_exp.grid(row=0, column=2); self.mode_buy_exp.select()
+        self.mode_buy_exp.grid(row=0, column=2)
 
         self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME", font=ctk.CTkFont(size=11), text_color="#F59E0B")
         self.mode_dinh_game.grid(row=0, column=3); self.mode_dinh_game.select()
@@ -1565,7 +1588,7 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(self.stats_card, text="SỐ TRẬN BATTLE", font=ctk.CTkFont(size=10, weight="bold"), text_color="#888").pack(pady=(12, 0))
         self.battle_count_entry = ctk.CTkEntry(self.stats_card, placeholder_text="Mặc định: 5", height=28)
         self.battle_count_entry.pack(padx=15, pady=5, fill="x")
-        self.battle_count_entry.insert(0, "3")
+        self.battle_count_entry.insert(0, "2")
 
 
     def create_stat_item(self, parent, title, value, row, col, color):
