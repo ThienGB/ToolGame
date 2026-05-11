@@ -376,6 +376,14 @@ class AutoClickerInstance:
 
                 self.log("[THÀNH CÔNG] Đã xử lý xong acc đã nhập mã.")
                 self.current_account["success"] = True
+            elif getattr(self, 'is_login_phase', False):
+                self.log(f"!! LỖI TRONG KHI ĐĂNG NHẬP: Restart {app} và thử lại từ đầu...")
+                for p in potential_apps: self.call_adb(["shell", "am", "force-stop", p])
+                time.sleep(2)
+                self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+                self.skip_login_for_this_acc = False # Quan trọng: Không bỏ qua login
+                time.sleep(5)
+                return False
             else:
                 self.log(f"!! PHÁT HIỆN BẢO TRÌ/LỖI: Tiến hành Restart {app}...")
                 for p in potential_apps: self.call_adb(["shell", "am", "force-stop", p])
@@ -673,10 +681,10 @@ class AutoClickerInstance:
                         "script": [
                             {"action": "click_image", "target1": "images/su_kien.jpg","target2": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7},
                             {"action": "click_image_if", "target1": "images/su_kien.jpg", "target2": "images/su_kien2.jpg", "timeout": 2, "confidence": 0.8},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 3},
+                            {"action": "press_esc", "wait": 3},
+                            {"action": "press_esc", "wait": 3},
+                            {"action": "press_esc", "wait": 3},
                             {"action": "click_image", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 10, "confidence": 0.8},
                             {"action": "click_image_if", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 2, "confidence": 0.8},
                             {"action": "click_image_if", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 2, "confidence": 0.8},
@@ -833,6 +841,7 @@ class AutoClickerInstance:
                 # --- THỰC HIỆN ĐĂNG NHẬP TRƯỚC ---
                 # self.update_status("Đang Login...")
                 success_login = False
+                self.is_login_phase = True
                 for retry_login in range(3):
                     success_login = True
                     for step in login_script:
@@ -850,6 +859,8 @@ class AutoClickerInstance:
                     if not self.running: break
                     self.log(f"!! Lỗi đăng nhập, đang thử lại chính tài khoản: {self.current_account['tk']}")
                     continue
+                
+                self.is_login_phase = False
             
                 # --- QUYẾT ĐỊNH LOGIC: CHÉO CẶP HAY DÙNG FILE MÃ ---
                 with self.shared_data["ext_lock"]:

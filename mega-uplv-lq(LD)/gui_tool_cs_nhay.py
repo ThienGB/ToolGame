@@ -370,6 +370,13 @@ class AutoClickerInstance:
                     self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
                     time.sleep(5)
                 return False
+            elif getattr(self, 'is_login_phase', False):
+                self.log(f"!! LỖI TRONG KHI ĐĂNG NHẬP: Restart {app} và thử lại từ đầu...")
+                self.force_stop_game()
+                self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+                self.skip_login_for_this_acc = False # Quan trọng: Không bỏ qua login
+                time.sleep(5)
+                return False
             else:
                 self.log(f"!! PHÁT HIỆN BẢO TRÌ/LỖI: Tiến hành Restart {app}...")
                 self.force_stop_game()
@@ -691,14 +698,16 @@ class AutoClickerInstance:
                         self.update_ui_func(); break
             if not self.current_account: break
             self.log(f">> START: {self.current_account['tk']}")
+            self.skip_login_for_this_acc = False
+            self.chest_claimed = False
             
             while self.running:
-                self.skip_login_for_this_acc = False
                 self.skip_all_retries = False
                 success = False
                 
                 # --- 1. ĐĂNG NHẬP ---
                 success_login = False
+                self.is_login_phase = True
                 for retry_login in range(3):
                     success_login = True
                     for step in login_script:
@@ -715,6 +724,8 @@ class AutoClickerInstance:
                         break
                     if not self.running: break
                     continue
+                
+                self.is_login_phase = False
 
                 # --- 2. THỰC HIỆN NHÀY SCRIPT ---
                 success_nhay = True
@@ -752,6 +763,8 @@ class AutoClickerInstance:
                     elif success_nhay or self.chest_claimed:
                         self.current_account["success"] = True
                         self.report_stats_func(True, f"{self.current_account['tk']}|{self.current_account['mk']}")
+                        # Đảm bảo reset flag cho acc tiếp theo
+                        self.skip_login_for_this_acc = False
                         break # Thoát vòng lặp retry, chuyển sang acc tiếp theo
                     else:
                         self.log(f"!! Lỗi thực thi Script Nhảy, đang thử lại: {self.current_account['tk']}")
