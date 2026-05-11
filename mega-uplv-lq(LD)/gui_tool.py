@@ -1007,37 +1007,12 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 20},
             {"action": "click_image_if", "target": "images/victory.png", "timeout": 10, "confidence": 0.9},
             {"action": "wait", "timeout": 5},
-            {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.9},
-            {"action": "press_esc", "wait": 3} ,
-            {"action": "press_esc", "wait": 3} ,
-            {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","timeout": 7, "confidence": 0.9},
-            
-            {"action": "press_esc", "wait": 2} ,
-            {"action": "press_esc", "wait": 2} ,
-            {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
-            {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
-            {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
-            {"action": "click_any", "wait": 4},
-            {"action": "press_esc", "wait": 2} ,
-            {"action": "wait", "timeout": 5},
-            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 3, "confidence": 0.9},
-            {"action": "press_esc", "wait": 2} ,
-            
-            {"action": "press_esc", "wait": 2} ,
-            
-            {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 3, "confidence": 0.9},
-            {"action": "press_esc", "wait": 3} ,
-            {"action": "press_esc", "wait": 3} ,
-            {"action": "wait", "timeout": 5},
-            {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","target3": "images/dauhang1.png", "timeout": 20, "confidence": 0.9},
-            
-            {"action": "press_esc", "wait": 3} ,
-            {"action": "click_image_if", "target": "images/co.png", "timeout": 7, "confidence": 0.9},
-            {"action": "press_esc", "wait": 2} ,
-            
-            {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
+
+
+            # tí ghép lại
+            {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/home.png", "timeout": 20, "confidence": 0.9},
+             {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
             
             {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
             {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
@@ -1054,7 +1029,7 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 42, "y": 28, "timeout": 2},
             {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
-            {"action": "click_image", "target1": "images/vat_pham.png", "target2": "images/vat_pham1.png","target3": "images/vat_pham2.png","target4": "images/vat_pham3.png","target5": "images/vat_pham4.png","target6": "images/vat_pham5.png","timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 46, "y": 393, "timeout": 2},
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target1": "images/su_dung_button.png","target2": "images/su_dung.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
@@ -1065,16 +1040,122 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
             {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
             {"action": "click_image", "target": "images/shopruby.png", "timeout": 20, "confidence": 0.9},
-            {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
-            {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
+            {"action": "click_coords", "x": 425, "y": 508, "timeout": 2},
+            {"action": "click_coords", "x": 425, "y": 508, "timeout": 2},
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2} ,
+            
+            {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","timeout": 7, "confidence": 0.9},
+            
+            {"action": "press_esc", "wait": 2} ,
+            {"action": "click_coords", "x": 590, "y": 30, "timeout": 2},
+            {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
+            {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
+            {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
+            {"action": "press_esc", "wait": 1} ,
+            {"action": "press_esc", "wait": 1} ,
+            {"action": "press_esc", "wait": 1} ,
+            {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
             {"action": "press_esc", "wait": 2} ,
         ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            # từ đây
+        #     {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "press_esc", "wait": 3} ,
+        #     {"action": "press_esc", "wait": 3} ,
+        #     {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","timeout": 7, "confidence": 0.9},
+            
+        #     {"action": "press_esc", "wait": 2} ,
+        #     {"action": "press_esc", "wait": 2} ,
+        #     {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
+        #     {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
+        #     {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
+        #     {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
+        #     {"action": "click_any", "wait": 4},
+        #     {"action": "press_esc", "wait": 2} ,
+        #     {"action": "wait", "timeout": 5},
+        #     {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 3, "confidence": 0.9},
+        #     {"action": "press_esc", "wait": 2} ,
+            
+        #     {"action": "press_esc", "wait": 2} ,
+            
+        #     {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 3, "confidence": 0.9},
+        #     {"action": "press_esc", "wait": 3} ,
+        #     {"action": "press_esc", "wait": 3} ,
+        #     {"action": "wait", "timeout": 5},
+        #     {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","target3": "images/dauhang1.png", "timeout": 20, "confidence": 0.9},
+            
+        #     {"action": "press_esc", "wait": 3} ,
+        #     {"action": "click_image_if", "target": "images/co.png", "timeout": 7, "confidence": 0.9},
+        #     {"action": "press_esc", "wait": 2} ,
+            
+        #     {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
+            
+        #     {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
+        #     {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
+        #     {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
+        #     {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
+        #     {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
+        #     {"action": "wait", "timeout": 3},
+        #     {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.2, "duration": 600},
+        #     {"action": "click_coords", "x": 124, "y": 446, "timeout": 2},
+        #     {"action": "click_coords", "x": 124, "y": 446, "timeout": 2},
+        #     {"action": "click_image", "target": "images/nhan_ruby_button.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "click_image", "target": "images/any.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "wait", "timeout": 5},
+        #     {"action": "click_coords", "x": 42, "y": 28, "timeout": 2},
+        #     {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
+        #     {"action": "click_image", "target1": "images/vat_pham.png", "target2": "images/vat_pham1.png","target3": "images/vat_pham2.png","target4": "images/vat_pham3.png","target5": "images/vat_pham4.png","target6": "images/vat_pham5.png","timeout": 20, "confidence": 0.9},
+        #     {"action": "wait", "timeout": 2},
+        #     {"action": "click_image", "target1": "images/su_dung_button.png","target2": "images/su_dung.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "wait", "timeout": 2},
+        #     {"action": "click_image", "target": "images/ok.png","target2": "images/ok1.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "wait", "timeout": 3},
+        #     {"action": "press_esc", "wait": 2} ,
+        #     {"action": "click_image", "target1": "images/shop.png",  "target2": "images/shop1.png","timeout": 20, "confidence": 0.9},
+        #     {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
+        #     {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
+        #     {"action": "click_image", "target": "images/shopruby.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
+        #     {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
+        #     {"action": "wait", "timeout": 2},
+        #     {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
+        #     {"action": "wait", "timeout": 3},
+        #     {"action": "press_esc", "wait": 2} ,
+        #     {"action": "press_esc", "wait": 2} ,
+        # ]
 
         # 2.5 GIAI ĐOẠN MUA EXP
         mua_exp_script = [
