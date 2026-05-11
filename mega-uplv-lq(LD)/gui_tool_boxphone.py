@@ -846,7 +846,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             
-            {"action": "click_coords", "x": 1702, "y": 210, "timeout": 7},
+            {"action": "click_coords", "x": 1702, "y": 210, "timeout": 5},
             
             {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
             {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
