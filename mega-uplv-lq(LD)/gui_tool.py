@@ -1352,11 +1352,11 @@ class AutoClickerInstance:
         # Thiết kế dạng list để bạn có thể gọi lại nhiều lần hoặc dùng trong action 'loop'
         # Tọa độ chọn tướng cho 5 máy (Sửa tọa độ x, y tại đây)
         hero_coords = [
-            {"x": 200, "y": 300}, # Máy 1
-            {"x": 300, "y": 300}, # Máy 2
-            {"x": 400, "y": 300}, # Máy 3
-            {"x": 500, "y": 300}, # Máy 4
-            {"x": 600, "y": 300}, # Máy 5
+            {"x": 439, "y": 79}, # Máy 1
+            {"x": 116, "y": 75}, # Máy 2
+            {"x": 197, "y": 79}, # Máy 3
+            {"x": 280, "y": 79}, # Máy 4
+            {"x": 354, "y": 83}, # Máy 5
         ]
         my_hero_pos = hero_coords[self.worker_index % 5]
         shared_battle_script = [
@@ -1379,7 +1379,7 @@ class AutoClickerInstance:
                 "action": "loop",
                 "count": 2,
                 "steps": [
-                    {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 2},
+                    {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 5},
                 ]
             },
             {"action": "click_coords", "x": 899, "y": 482, "timeout": 3},
