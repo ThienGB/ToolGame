@@ -1063,6 +1063,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
             {"action": "press_esc", "wait": 2} ,
+            {"action": "wait", "timeout": 10},
         ]
 
 
