@@ -802,7 +802,8 @@ class AutoClickerInstance:
                         "script": [
                             {"action": "click_image_if", "target": "images_boxphone/okbaotri.png", "confidence": 0.7},
                             {"action": "click_image_if", "target": "images_boxphone/x_start1.png", "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images_boxphone/x_start1.png", "confidence": 0.7},]
+                            {"action": "click_image_if", "target": "images_boxphone/x_start1.png", "confidence": 0.7},
+                            ]
                     }
                 ]
             },
@@ -840,7 +841,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 20},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 10, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target": "images_boxphone/sanh.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images_boxphone/daulai.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
             {"action": "press_esc", "wait": 2},
             {
