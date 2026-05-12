@@ -1353,7 +1353,7 @@ class AutoClickerInstance:
         # Tọa độ chọn tướng cho 5 máy (Sửa tọa độ x, y tại đây)
         hero_coords = [
             {"x": 439, "y": 79}, # Máy 1
-            {"x": 116, "y": 75}, # Máy 2
+            {"x": 126, "y": 178}, # Máy 2
             {"x": 197, "y": 79}, # Máy 3
             {"x": 280, "y": 79}, # Máy 4
             {"x": 354, "y": 83}, # Máy 5
