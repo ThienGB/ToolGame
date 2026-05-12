@@ -261,14 +261,15 @@ class AutoClickerInstance:
         except: pass
         
         # 3. Chờ máy ảo lên và sẵn sàng
-        self.log(f"Đang đợi máy ảo (Index {index}) ổn định ADB (Tối đa 70s)...")
+        self.log(f"Đang đợi máy ảo (Index {index}) ổn định ADB...")
         start_wait = time.time()
         
         guest_port = 5554 + (index * 2)
         guest_serial = f"127.0.0.1:{guest_port}"
 
-        while time.time() - start_wait < 70: # Rút ngắn xuống còn khoảng 1 phút như yêu cầu
+        while True:
             if not self.running: return False
+            elapsed = time.time() - start_wait
             
             # Thử connect liên tục vào port tiêu chuẩn
             try:
@@ -315,16 +316,29 @@ class AutoClickerInstance:
                 res_boot = self.call_adb(["shell", "getprop", "sys.boot_completed"])
                 if b"1" in res_boot.stdout:
                         self.log("==> KẾT NỐI THÀNH CÔNG! Đợi thêm 60s để máy ổn định hoàn toàn...")
-                        time.sleep(120)
+                        time.sleep(60)
                         return True
                 
                 # Dự phòng nếu boot_completed bị treo lâu nhưng shell đã chạy
-                if time.time() - start_wait > 45:
+                if elapsed > 45:
                     res_wm = self.call_adb(["shell", "wm", "size"])
                     if b"Physical size" in res_wm.stdout:
                         self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)! Đợi thêm 60s để máy ổn định...")
                         time.sleep(60)
                         return True
+
+            # Sau 30s nếu chưa nhận thì log và quét tiếp cho tới khi nhận được
+            if elapsed > 30 and not is_connected:
+                self.log(f"Chưa nhận thiết bị (đã đợi {int(elapsed)}s). Đang quét lại...")
+                # Thử connect lại
+                try:
+                    subprocess.run([self.adb_path, "connect", guest_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                except: pass
+
+            # Giới hạn an toàn (ví dụ 10 phút) để tránh treo vĩnh viễn nếu máy ảo bị hỏng
+            if elapsed > 600:
+                self.log("!! LỖI: Không thể kết nối ADB sau 10 phút. Hủy bỏ restart.")
+                return False
 
             time.sleep(3) # Tần suất quét lại dầy hơn (mỗi 3s)
         
@@ -1864,65 +1878,38 @@ class MultiPremiumApp(ctk.CTk):
                     ldconsole_path = p
                     break
             
-            # 2. Lấy danh sách máy ảo đang chạy từ LDPlayer
-            running_indices = []
+            # 2. Lấy danh sách máy ảo đang chạy và connect ADB
             if ldconsole_path:
                 try:
                     res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                     for line in res_ld.stdout.splitlines():
                         parts = line.split(',')
-                        if len(parts) >= 5 and parts[4] == '1': # Status = 1 là đang mở
-                            running_indices.append(int(parts[0]))
+                        if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON (Status = 1)
+                            idx = parts[0]
+                            port = 5554 + (int(idx) * 2)
+                            try:
+                                subprocess.run([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                                             capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
+                            except: pass
                 except: pass
 
-            expected_count = len(running_indices)
-            self.add_log(f"Hệ thống LDPlayer báo có {expected_count} máy đang chạy. Bắt đầu quét ADB...")
+            # 3. Quét dự phòng các port phổ biến
+            for i in range(10): 
+                port = 5554 + (i * 2)
+                subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
+                               creationflags=subprocess.CREATE_NO_WINDOW)
             
-            start_scan_time = time.time()
-            device_serials = []
-            
-            while True:
-                # Thử connect tới tất cả các port của máy đang chạy
-                for idx in running_indices:
-                    port = 5554 + (idx * 2)
-                    subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
-                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
-                                   creationflags=subprocess.CREATE_NO_WINDOW)
-                
-                # Quét dự phòng 10 port đầu (dành cho máy clone/manual)
-                for i in range(10):
-                    port = 5554 + (i * 2)
-                    subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
-                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
-                                   creationflags=subprocess.CREATE_NO_WINDOW)
-                
-                time.sleep(3) # Đợi ADB nhận diện
-                
-                try:
-                    res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
-                    lines = res.stdout.strip().split('\n')[1:]
-                    # Lọc lấy danh sách thiết bị đang online thực sự
-                    device_serials = [line.split('\t')[0] for line in lines if "device" in line and "offline" not in line]
-                except:
-                    device_serials = []
-                
-                # Nếu đã đủ số máy hoặc đã quá 30s mà chưa đủ thì log và kiểm tra tiếp
-                if expected_count > 0:
-                    if len(device_serials) >= expected_count:
-                        self.add_log(f"Đã tìm thấy đủ {len(device_serials)}/{expected_count} máy.")
-                        break
-                    
-                    elapsed = time.time() - start_scan_time
-                    if elapsed > 30:
-                        self.add_log(f"CẢNH BÁO: Đã quá 30s, mới nhận {len(device_serials)}/{expected_count} máy. Tiếp tục quét cho tới khi nhận đủ...")
-                    else:
-                        self.add_log(f"Đang quét ADB... ({len(device_serials)}/{expected_count})")
-                else:
-                    # Nếu không có máy nào đang chạy theo LDPlayer, hoặc không lấy được thông tin
-                    if device_serials: break 
-                    if time.time() - start_scan_time > 10: break # Thoát sau 10s nếu chả thấy gì
-                
-                time.sleep(2)
+            # Đợi ADB cập nhật danh sách
+            time.sleep(3)
+
+            # 4. Lấy danh sách thiết bị cuối cùng
+            try:
+                res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+                lines = res.stdout.strip().split('\n')[1:]
+                device_serials = [line.split('\t')[0] for line in lines if "device" in line]
+            except:
+                device_serials = []
             
             # Cập nhật UI trên main thread
             self.after(0, lambda: self._update_device_ui(device_serials))
