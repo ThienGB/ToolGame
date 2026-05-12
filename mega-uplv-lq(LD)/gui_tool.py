@@ -845,7 +845,7 @@ class AutoClickerInstance:
                 return False
         
         self.log(f"==> Nhập xong mã phòng: {rid}")
-        time.sleep(0.5)
+        time.sleep(1.0)
         
         with self.shared_data["lock"]:
             if self.group_id not in self.shared_data["joined_counts"]:
