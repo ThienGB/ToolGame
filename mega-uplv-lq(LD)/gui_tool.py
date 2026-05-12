@@ -1366,11 +1366,11 @@ class AutoClickerInstance:
         # Thiết kế dạng list để bạn có thể gọi lại nhiều lần hoặc dùng trong action 'loop'
         # Tọa độ chọn tướng cho 5 máy (Sửa tọa độ x, y tại đây)
         hero_coords = [
-            {"x": 439, "y": 79}, # Máy 1
-            {"x": 126, "y": 178}, # Máy 2
-            {"x": 197, "y": 79}, # Máy 3
-            {"x": 280, "y": 79}, # Máy 4
-            {"x": 354, "y": 83}, # Máy 5
+            {"x1": 439, "y1": 79, "x2": 439, "y2": 79}, # Máy 1
+            {"x1": 126, "y1": 178, "x2": 126, "y2": 178}, # Máy 2
+            {"x1": 197, "y1": 79, "x2": 197, "y2": 79}, # Máy 3
+            {"x1": 280, "y1": 79, "x2": 280, "y2": 79}, # Máy 4
+            {"x1": 354, "y1": 83, "x2": 354, "y2": 83}, # Máy 5
         ]
         my_hero_pos = hero_coords[self.worker_index % 5]
         shared_battle_script = [
@@ -1391,9 +1391,11 @@ class AutoClickerInstance:
             # Ví dụ các hành động sau khi vào phòng thành công:
             {
                 "action": "loop",
-                "count": 2,
+                "count": 1,
                 "steps": [
-                    {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 5},
+                    {"action": "click_coords", "x": my_hero_pos["x1"], "y": my_hero_pos["y1"], "timeout": 0},
+                    {"action": "wait", "timeout": 1},
+                    {"action": "click_coords", "x": my_hero_pos["x2"], "y": my_hero_pos["y2"], "timeout": 0},
                 ]
             },
             {"action": "click_coords", "x": 899, "y": 482, "timeout": 3},
