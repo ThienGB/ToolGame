@@ -14,8 +14,6 @@ import hashlib
 import uuid
 import winreg
 from datetime import datetime
-import cv2
-import numpy as np
 import customtkinter as ctk
 from PIL import Image
 import sys
@@ -151,33 +149,6 @@ class AutoClickerInstance:
         # Thêm CREATE_NO_WINDOW để không bị hiện CMD khi chạy trên Win
         return subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
 
-    def get_screenshot(self):
-        try:
-            # Khôi phục lại lệnh shell truyền thống mà bạn đã dùng ổn định trước đó
-            cmd = [self.adb_path, "-s", self.device_id, "shell", "screencap", "-p"]
-            process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            if process.returncode != 0: return None
-            # Xử lý ký tự xuống dòng Windows cho dữ liệu ảnh sạch
-            image_bytes = process.stdout.replace(b"\r\n", b"\n")
-            image_array = np.frombuffer(image_bytes, dtype=np.uint8)
-            return cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-        except: return None
-
-    def force_stop_game(self, package=None):
-        self.log("-> Đang thực hiện đóng ứng dụng triệt để...")
-        # 1. Nhấn Home để thoát về launcher trước
-        self.call_adb(["shell", "input", "keyevent", "3"])
-        time.sleep(1)
-        # 2. Force stop các package liên quan
-        apps = ["com.garena.game.kgvn", "com.garena.game.kgvn64x", "com.garena.game.kgtw"]
-        if package and package not in apps:
-            apps.append(package)
-            
-        for app in apps:
-            self.call_adb(["shell", "am", "force-stop", app])
-            self.call_adb(["shell", "pkill", "-f", app])
-        time.sleep(2)
-
     def click_coords_logic(self, step):
         x, y = step.get("x"), step.get("y")
         if x is not None and y is not None:
@@ -197,15 +168,7 @@ class AutoClickerInstance:
         self.last_step_time = time.time()
         res = True
 
-        if action == "click_image":
-            res = self.click_image_logic(step)
-        elif action == "click_image_if":
-            # Chỉ click nếu thấy, không lỗi nếu không thấy
-            temp_step = step.copy()
-            temp_step["timeout"] = step.get("timeout", 5)
-            self.click_image_logic(temp_step)
-            res = True
-        elif action == "click_coords":
+        if action == "click_coords":
             res = self.click_coords_logic(step)
         elif action == "input_account":
             res = self.input_account_logic()
@@ -230,61 +193,6 @@ class AutoClickerInstance:
 
         return res
 
-    def click_image_logic(self, step):
-        targets = []
-        if step.get("target"): targets.append(step.get("target"))
-        i = 1
-        while f"target{i}" in step:
-            targets.append(step.get(f"target{i}"))
-            i += 1
-        
-        timeout = step.get("timeout", 10)
-        confidence = step.get("confidence", 0.8)
-        use_color = step.get("use_color", step.get("useColor", False))
-
-        # Ưu tiên chọn hình của mỗi worker để giảm chọn trùng cùng lúc
-        ordered_targets = list(targets)
-        if len(targets) > 1 and hasattr(self, 'worker_index'):
-            idx = self.worker_index % len(targets)
-            ordered_targets = targets[idx:] + targets[:idx]
-            self.log(f"[Worker {self.worker_index}] Ưu tiên chọn: {ordered_targets[0]}")
-
-        target_imgs = []
-        for t_path in ordered_targets:
-            real_path = resource_path(t_path)
-            if os.path.exists(real_path):
-                # Đọc ảnh ở dạng màu hoặc xám tùy cài đặt
-                read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
-                img = cv2.imread(real_path, read_mode)
-                if img is not None: target_imgs.append((t_path, img))
-            else:
-                self.log(f"LỖI: Không tìm thấy ảnh mẫu: {t_path}")
-
-        start = time.time()
-        last_log_time = 0
-        while time.time() - start < timeout and self.running:
-            if time.time() - last_log_time > 5:
-                self.log(f"Đang chờ ảnh (đã chờ {(time.time() - start):.1f}s/{timeout}s)...")
-                last_log_time = time.time()
-
-            screen = self.get_screenshot()
-            if screen is not None:
-                compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-                
-                for t_name, t_img in target_imgs:
-                    result = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
-                    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-                    
-                    if max_val >= confidence:
-                        h, w = t_img.shape[:2]
-                        center_x = max_loc[0] + w // 2
-                        center_y = max_loc[1] + h // 2
-                        self.call_adb(["shell", "input", "tap", str(center_x), str(center_y)])
-                        self.log(f"KHỚP ẢNH: {t_name} (Conf: {max_val:.2f}) -> CLICK: ({center_x}, {center_y})")
-                        time.sleep(1)
-                        return True
-            time.sleep(2)
-        return False
 
     def press_esc_logic(self, step):
         wait_time = step.get("wait") or 0
@@ -329,16 +237,14 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN (Đã tối giản)
         login_script = [
-            {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
-            {"action": "click_coords", "x": 173, "y": 442, "timeout": 3},
-            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg","timeout": 60, "confidence": 0.9},
+            {"action": "click_coords", "x": 193, "y": 444, "timeout": 10}, # garena
+            {"action": "click_coords", "x": 151, "y": 256, "timeout": 5}, # input_acc
             {"action": "input_account"},
-            {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "target3": "images/matkhau.jpg", "timeout": 60, "confidence": 0.9},
+            {"action": "click_coords", "x": 130, "y": 319, "timeout": 2}, # input_pass
             {"action": "input_password"},
-            {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dangnhap.jpg", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/ok2.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 10, "confidence": 0.9},
+            {"action": "click_coords", "x": 476, "y": 391, "timeout": 2}, # logic (login)
+            {"action": "click_coords", "x": 770, "y": 502, "timeout": 10}, # ok
+            {"action": "click_coords", "x": 476, "y": 494, "timeout": 10}, # bắt đầu
         ]
 
         while self.running:
