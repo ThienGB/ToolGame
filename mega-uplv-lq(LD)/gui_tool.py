@@ -931,7 +931,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 13, "confidence": 0.9},
             {"action": "click_image_if", "target1": "images/batdau.png","target2": "images/batdau1.png", "timeout": 6, "confidence": 0.9},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
 
