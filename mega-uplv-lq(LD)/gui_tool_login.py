@@ -26,36 +26,6 @@ try:
 except Exception:
     pass
 
-# --- Fix WinError 1114 & SSL for torch/easyocr ---
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-import ssl
-try:
-    ssl._create_default_https_context = ssl._create_unverified_context
-except: pass
-
-if getattr(sys, 'frozen', False):
-    _meipass = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
-    _internal = os.path.join(_meipass, '_internal')
-    # Add paths for DLL search
-    for dp in [_meipass, _internal, os.path.join(_internal, 'torch', 'lib'), os.path.join(_meipass, 'torch', 'lib')]:
-        if os.path.exists(dp):
-            if hasattr(os, 'add_dll_directory'):
-                try: os.add_dll_directory(dp)
-                except: pass
-            os.environ['PATH'] = dp + os.pathsep + os.environ.get('PATH', '')
-    
-    # Force load OpenMP to avoid 1114 conflict
-    try:
-        import ctypes
-        for dll_name in ['libiomp5md.dll', 'libiomp5.dll']:
-            for base in [_meipass, _internal]:
-                dp = os.path.join(base, 'torch', 'lib', dll_name)
-                if os.path.exists(dp):
-                    try: 
-                        ctypes.CDLL(dp)
-                        break
-                    except: pass
-    except: pass
 
 import tkinter.filedialog as fd
 
@@ -806,4 +776,4 @@ if __name__ == "__main__":
         app = MultiPremiumApp()
         app.mainloop()
 
-# pyinstaller --noconfirm --onefile --windowed --icon "logo.png" --name "AutoLoginLQ_Pro" --add-data "images;images" --add-data "logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool_login.py
+# pyinstaller --noconfirm --onefile --windowed --icon "logo.png" --name "AutoLoginLQ_Pro" --add-data "logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool_login.py
