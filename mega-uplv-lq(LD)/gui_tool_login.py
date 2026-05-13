@@ -185,14 +185,16 @@ class AutoClickerInstance:
     def input_account_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("tk", "")
-        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
+        # Xóa 30 lần trước khi nhập như yêu cầu
+        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 30)
         self.input_text_robust(content)
         return True
 
     def input_password_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("mk", "")
-        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
+        # Xóa 30 lần trước khi nhập như yêu cầu
+        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 30)
         self.input_text_robust(content)
         return True
 
@@ -281,6 +283,7 @@ class MultiPremiumApp(ctk.CTk):
         self.start_timestamp = None
         
         self.device_map = {} # serial -> absolute_index (0, 1, 2...)
+        self.team_frames = {}
 
         # Assets (Sử dụng resource_path để đóng gói)
         self.logo_img = ctk.CTkImage(Image.open(resource_path("logo.png")), size=(40, 40))
@@ -471,7 +474,7 @@ class MultiPremiumApp(ctk.CTk):
                     ldconsole_path = p
                     break
             
-            # 2. Lấy danh sách máy ảo đang chạy và connect ADB
+            # 2. Lấy danh sách máy ảo đang chạy và connect ADB (Dùng Popen để siêu nhanh)
             if ldconsole_path:
                 try:
                     res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
@@ -480,21 +483,20 @@ class MultiPremiumApp(ctk.CTk):
                         if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON (Status = 1)
                             idx = parts[0]
                             port = 5554 + (int(idx) * 2)
-                            try:
-                                subprocess.run([self.adb_path, "connect", f"127.0.0.1:{port}"], 
-                                             capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
-                            except: pass
+                            subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
+                                           creationflags=subprocess.CREATE_NO_WINDOW)
                 except: pass
 
-            # 3. Quét dự phòng các port phổ biến
-            for i in range(10): 
+            # 3. Quét dự phòng các port phổ biến (Tăng lên 50 để bao quát hết)
+            for i in range(50): 
                 port = 5554 + (i * 2)
                 subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
                                creationflags=subprocess.CREATE_NO_WINDOW)
             
             # Đợi ADB cập nhật danh sách
-            time.sleep(3)
+            time.sleep(2)
 
             # 4. Lấy danh sách thiết bị cuối cùng
             try:
@@ -512,10 +514,32 @@ class MultiPremiumApp(ctk.CTk):
     def _update_device_ui(self, device_serials):
         for w in self.device_list_frame.winfo_children(): w.destroy()
         self.device_cards = {}
+        self.team_frames = {}
+        self.device_map = {}
         
         try:
-            # Không dùng gom nhóm Team nữa, hiển thị danh sách dọc trực tiếp
-            for serial in sorted(device_serials):
+            # Lấy tất cả serials và gán index dựa trên port ADB để sắp xếp
+            serials_with_idx = []
+            for serial in device_serials:
+                abs_idx = self.get_absolute_index(serial)
+                serials_with_idx.append((serial, abs_idx))
+            
+            # Sắp xếp theo LD index tăng dần
+            serials_with_idx.sort(key=lambda x: x[1])
+            
+            # Gán worker_index (0, 1, 2...) theo thứ tự đã sắp xếp
+            for i, (serial, abs_idx) in enumerate(serials_with_idx):
+                self.device_map[serial] = i
+                machine_num = abs_idx + 1 if abs_idx != -1 else "?? "
+                self.add_log(f"Thiết bị: {serial} -> Index: {i} (LD Máy: {machine_num})")
+            
+            if not self.device_map:
+                self.add_log("CẢNH BÁO: Không tìm thấy thiết bị nào.")
+                self.update_stats_ui()
+                return
+
+            # Gom nhóm hiển thị cho đẹp giống gui_tool.py
+            for serial in sorted(self.device_map.keys(), key=lambda s: self.device_map[s]):
                 abs_idx = self.get_absolute_index(serial)
                 
                 card = ctk.CTkFrame(self.device_list_frame, fg_color="#222", corner_radius=4, height=24)
