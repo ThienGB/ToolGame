@@ -313,6 +313,7 @@ class MultiPremiumApp(ctk.CTk):
 
         self.success_count = 0
         self.failure_count = 0
+        self.start_timestamp = None
 
         self.setup_layout()
         self.load_config()
@@ -325,6 +326,23 @@ class MultiPremiumApp(ctk.CTk):
                 return p
             except: continue
         return "adb"
+        
+    def get_absolute_index(self, serial):
+        """Xác định số thứ tự máy (0, 1, 2...) dựa trên port ADB"""
+        port = None
+        if "emulator-" in serial:
+            try: port = int(serial.split("-")[1])
+            except: pass
+        elif ":" in serial:
+            try: port = int(serial.split(":")[1])
+            except: pass
+            
+        if port is not None:
+            # LDPlayer logic: port 5554/5555 là máy 0 (máy 1), 5556/5557 là máy 1...
+            if port >= 5554:
+                if port % 2 == 0: return (port - 5554) // 2
+                else: return (port - 5555) // 2
+        return -1
 
     def setup_layout(self):
         # Reset and create main container
@@ -436,12 +454,14 @@ class MultiPremiumApp(ctk.CTk):
                             if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON (Status = 1)
                                 idx = parts[0]
                                 port = 5554 + (int(idx) * 2)
-                                subprocess.run([self.adb_path, "connect", f"127.0.0.1:{port}"], 
-                                             capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
+                                try:
+                                    subprocess.run([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                                                 capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
+                                except: pass
                     except: pass
 
-                # 3. Quét dự phòng các port phổ biến nếu danh sách LD trống hoặc lỗi
-                for i in range(10): # Quét 10 máy đầu tiên nhanh
+                # 3. Quét dự phòng các port phổ biến
+                for i in range(10): 
                     port = 5554 + (i * 2)
                     subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
@@ -452,19 +472,20 @@ class MultiPremiumApp(ctk.CTk):
                 time.sleep(1)
                 subprocess.run([self.adb_path, "start-server"], creationflags=subprocess.CREATE_NO_WINDOW)
             
-            # Đợi ADB cập nhật danh sách (tăng thời gian lên 3s để ổn định hơn)
+            # Đợi ADB cập nhật danh sách
             time.sleep(3)
 
             # 4. Lấy danh sách thiết bị cuối cùng
-            res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
-            for line in res.stdout.strip().split('\n'):
-                if "\tdevice" in line:
-                    serial = line.split('\t')[0]
-                    if serial not in device_serials:
-                        device_serials.append(serial)
+            try:
+                res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+                for line in res.stdout.strip().split('\n')[1:]:
+                    if "\tdevice" in line:
+                        serial = line.split('\t')[0]
+                        if serial not in device_serials:
+                            device_serials.append(serial)
+            except: pass
         except Exception as e:
             print(f"SCAN ERROR: {e}")
-            pass
 
         # Cập nhật UI trên main thread
         self.after(0, lambda: self._update_device_ui(device_serials))
@@ -472,12 +493,31 @@ class MultiPremiumApp(ctk.CTk):
     def _update_device_ui(self, device_serials):
         for w in self.dev_frame.winfo_children(): w.destroy()
         self.device_cards = {}
-        for serial in device_serials:
-            card = ctk.CTkFrame(self.dev_frame, fg_color="#333", height=24)
-            card.pack(fill="x", pady=1, padx=2)
-            ctk.CTkLabel(card, text=serial.split(":")[-1], font=ctk.CTkFont(size=9), text_color="white").pack(side="left", padx=5)
-            lbl = ctk.CTkLabel(card, text="Ready", font=ctk.CTkFont(size=8), text_color="#AAA")
-            lbl.pack(side="right", padx=5); self.device_cards[serial] = {"status": lbl}
+        
+        try:
+            # Sắp xếp thiết bị dựa trên LD index để thứ tự ổn định
+            serials_with_idx = []
+            for serial in device_serials:
+                abs_idx = self.get_absolute_index(serial)
+                serials_with_idx.append((serial, abs_idx))
+            
+            # Sắp xếp theo index tăng dần
+            serials_with_idx.sort(key=lambda x: x[1])
+            
+            for serial, abs_idx in serials_with_idx:
+                card = ctk.CTkFrame(self.dev_frame, fg_color="#333", height=24)
+                card.pack(fill="x", pady=1, padx=2)
+                card.pack_propagate(False)
+                
+                display_name = f"[{abs_idx}] {serial.split(':')[-1]}" if abs_idx != -1 else serial
+                ctk.CTkLabel(card, text=display_name, font=ctk.CTkFont(size=9), text_color="white").pack(side="left", padx=5)
+                
+                lbl = ctk.CTkLabel(card, text="Ready", font=ctk.CTkFont(size=8), text_color="#AAA")
+                lbl.pack(side="right", padx=5)
+                self.device_cards[serial] = {"status": lbl}
+        except Exception as e:
+            print(f"UI UPDATE ERROR: {e}")
+            
         self.refresh_ui()
 
     def load_file(self):
