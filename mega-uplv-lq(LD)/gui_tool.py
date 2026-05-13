@@ -1021,6 +1021,7 @@ class AutoClickerInstance:
             
             {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/pve.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 595, "y": 429, "timeout": 2},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/on.png", "timeout": 20, "confidence": 0.9,"use_color": True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
