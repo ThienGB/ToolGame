@@ -80,20 +80,13 @@ class AutoClickerInstance:
         self.update_ui_func()
 
     def input_text_robust(self, text):
-        """Nhập text qua ADB, hỗ trợ mọi ký tự đặc biệt.
-        
-        Giải thích kỹ thuật:
-        - ADB shell chạy lệnh qua /bin/sh -c trên thiết bị, nên ký tự |&<>()[] đếu bị interpret.
-        - shlex.quote() tạo chuỗi single-quoted an toàn: 'abc|&<>' → Android shell giữ nguyên.
-        - Gửi qua một arg duy nhất sau 'shell' để ADB không join/split lại args.
-        """
+        """Nhập text qua ADB, hỗ trợ mọi ký tự đặc biệt."""
         if not text: return
         # Tách theo space vì space phải dùng %s trong adb input text
         parts = text.split(' ')
         for i, part in enumerate(parts):
             if part:
-                # shlex.quote tạo: 'kí tự đặc biệt' → Android shell không interpret
-                # Ví dụ: "KI&&|<[}=GZ3" → "'KI&&|<[}=GZ3'"
+                # shlex.quote tạo chuỗi an toàn cho shell
                 quoted = shlex.quote(part)
                 cmd = [self.adb_path, "-s", self.device_id, "shell", f"input text {quoted}"]
                 subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
@@ -465,6 +458,10 @@ class MultiPremiumApp(ctk.CTk):
         # Chạy quét máy ảo trong luồng riêng để tránh lag UI
         threading.Thread(target=self._perform_scan, daemon=True).start()
 
+    def scan_devices(self):
+        # Chạy quét máy ảo trong luồng riêng để tránh lag UI
+        threading.Thread(target=self._perform_scan, daemon=True).start()
+
     def _perform_scan(self):
         base_path = self.ld_path_entry.get().strip()
         self.adb_path = os.path.join(base_path, "adb.exe")
@@ -479,7 +476,7 @@ class MultiPremiumApp(ctk.CTk):
                     ldconsole_path = p
                     break
             
-            # 2. Lấy danh sách máy ảo đang chạy và connect ADB (Dùng Popen để siêu nhanh)
+            # 2. Lấy danh sách máy ảo đang chạy và connect ADB
             if ldconsole_path:
                 try:
                     res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
@@ -488,20 +485,21 @@ class MultiPremiumApp(ctk.CTk):
                         if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON (Status = 1)
                             idx = parts[0]
                             port = 5554 + (int(idx) * 2)
-                            subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
-                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
-                                           creationflags=subprocess.CREATE_NO_WINDOW)
+                            try:
+                                subprocess.run([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                                             capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
+                            except: pass
                 except: pass
 
-            # 3. Quét dự phòng các port phổ biến (Tăng lên 50 để bao quát hết)
-            for i in range(50): 
+            # 3. Quét dự phòng các port phổ biến
+            for i in range(10): 
                 port = 5554 + (i * 2)
                 subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
                                creationflags=subprocess.CREATE_NO_WINDOW)
             
             # Đợi ADB cập nhật danh sách
-            time.sleep(2)
+            time.sleep(3)
 
             # 4. Lấy danh sách thiết bị cuối cùng
             try:
@@ -543,7 +541,7 @@ class MultiPremiumApp(ctk.CTk):
                 self.update_stats_ui()
                 return
 
-            # Gom nhóm hiển thị cho đẹp giống gui_tool.py
+            # Hiển thị danh sách dọc đơn giản
             for serial in sorted(self.device_map.keys(), key=lambda s: self.device_map[s]):
                 abs_idx = self.get_absolute_index(serial)
                 
@@ -613,8 +611,9 @@ class MultiPremiumApp(ctk.CTk):
         self.update_stats_ui()
 
         # Start all devices
+        self.active_workers = [] 
         for serial in self.device_cards:
-            worker_index = self.get_absolute_index(serial)
+            worker_index = self.device_map.get(serial, 0)
             worker = AutoClickerInstance(serial, self.adb_path, self.add_log, self.update_all_ui, self.report_stats)
             
             base_ld_path = self.ld_path_entry.get().strip()
