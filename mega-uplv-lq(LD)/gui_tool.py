@@ -58,7 +58,16 @@ if getattr(sys, 'frozen', False):
                         break
                     except: pass
     except: pass
+import os
+import sys
 
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.dirname(__file__)
+
+os.environ['TCL_LIBRARY'] = os.path.join(base_path, '_tcl_data')
+os.environ['TK_LIBRARY'] = os.path.join(base_path, '_tk_data')
 import tkinter.filedialog as fd
 
 # --- Biến toàn cục để nạp OCR khi cần (Lazy Load) ---
