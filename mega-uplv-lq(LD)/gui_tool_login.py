@@ -198,11 +198,9 @@ class AutoClickerInstance:
 
         return True
 
-    def run(self, accounts, worker_index, shared_data):
+    def run(self, accounts, worker_index):
         self.accounts_list = accounts
         self.worker_index = worker_index
-        self.group_id = self.worker_index // 5
-        self.shared_data = shared_data
         self.running = True
         
         # 1. GIAI ĐOẠN LOGIN (Đã tối giản)
@@ -350,7 +348,6 @@ class MultiPremiumApp(ctk.CTk):
         self.device_list_frame.pack(fill="both", expand=True, padx=2, pady=2)
         
         self.device_cards = {}
-        self.team_frames = {}
 
 
 
@@ -570,8 +567,8 @@ class MultiPremiumApp(ctk.CTk):
             print(f"DEBUG: {text.encode('utf-8', errors='replace').decode('utf-8')}")
 
     def start_all(self):
-        if not self.team_frames:
-            self.add_log("LỖI: Không tìm thấy team nào. Hãy quét thiết bị trước.")
+        if not self.device_cards:
+            self.add_log("LỖI: Không tìm thấy thiết bị nào. Hãy quét thiết bị trước.")
             return
         if not self.accounts_data:
             self.add_log("LỖI: Danh sách tài khoản đang trống.")
@@ -595,25 +592,19 @@ class MultiPremiumApp(ctk.CTk):
             worker.ld_console_path = base_ld_path if base_ld_path.endswith(".exe") else os.path.join(base_ld_path, "ldconsole.exe")
                 
             self.active_workers.append(worker)
-            t = threading.Thread(target=worker.run, args=(self.accounts_data, worker_index, None), daemon=True)
+            t = threading.Thread(target=worker.run, args=(self.accounts_data, worker_index), daemon=True)
             t.start()
 
     def stop_all(self):
         self.btn_start.configure(state="normal", text=" CHẠY TẤT CẢ")
         self.btn_stop.configure(state="disabled", fg_color="#333")
         
-        # Stop all teams
-        for team_idx in self.team_frames:
-            self.stop_team(team_idx)
-        
+        # Dừng tất cả worker đang chạy
+        for worker in self.active_workers:
+            worker.running = False
+            
         self.add_log("!!! ĐANG DỪNG TẤT CẢ CÁC MÁY...")
 
-
-    def start_team(self, team_idx):
-        pass # Not used in micro UI
-
-    def stop_team(self, team_idx):
-        pass # Not used in micro UI
 
     def activate(self):
         key = self.key_input.get().strip()
