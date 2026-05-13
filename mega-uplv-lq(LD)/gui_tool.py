@@ -1307,7 +1307,7 @@ class AutoClickerInstance:
             {"x": 126, "y": 178}, # Máy 2
             {"x": 205, "y": 180}, # Máy 3
             {"x": 363, "y": 184}, # Máy 4
-            {"x": 354, "y": 87}, # Máy 5
+            {"x": 441, "y": 87}, # Máy 5
         ]
         my_hero_pos = hero_coords[self.worker_index % 5]
         shared_battle_script = [
@@ -1328,9 +1328,11 @@ class AutoClickerInstance:
             # Ví dụ các hành động sau khi vào phòng thành công:
             {
                 "action": "loop",
-                "count": 2,
+                "count": 1,
                 "steps": [
-                    {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 5},
+                    {"action": "click_coords", "x": my_hero_pos["x1"], "y": my_hero_pos["y1"], "timeout": 0},
+                    {"action": "wait", "timeout": 1},
+                    {"action": "click_coords", "x": my_hero_pos["x2"], "y": my_hero_pos["y2"], "timeout": 0},
                 ]
             },
             {"action": "click_coords", "x": 899, "y": 482, "timeout": 3},
