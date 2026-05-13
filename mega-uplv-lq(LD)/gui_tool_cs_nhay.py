@@ -392,11 +392,9 @@ class AutoClickerInstance:
                 self.log("Đợi game mở và nhấn Garena...")
                 self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
                 time.sleep(5)
-                # Kiểm tra nếu sau khi nhấn Garena mà hiện ô nhập liệu (chưa đăng nhập)
                 if self.search_logic({"target1": "images/account_input1.jpg", "target2": "images/account_input.png", "target3": "images/account.jpg", "timeout": 5}):
-                    self.log("!! PHÁT HIỆN CHƯA ĐĂNG NHẬP (THẤY INPUT): CHUYỂN QUA ACC KHÁC.")
-                    self.skip_all_retries = True
-                    self.force_stop_game()
+                    self.log("!! PHÁT HIỆN CHƯA ĐĂNG NHẬP (THẤY INPUT): TIẾN HÀNH ĐĂNG NHẬP LẠI.")
+                    self.skip_login_for_this_acc = False # Yêu cầu chạy kịch bản login
                 return False
         elif action == "long_click":
             duration = step.get("duration", 5000)
