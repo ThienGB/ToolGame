@@ -58,7 +58,16 @@ if getattr(sys, 'frozen', False):
                         break
                     except: pass
     except: pass
+import os
+import sys
 
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.dirname(__file__)
+
+os.environ['TCL_LIBRARY'] = os.path.join(base_path, '_tcl_data')
+os.environ['TK_LIBRARY'] = os.path.join(base_path, '_tk_data')
 import tkinter.filedialog as fd
 
 # --- Biến toàn cục để nạp OCR khi cần (Lazy Load) ---
@@ -931,8 +940,8 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 13, "confidence": 0.9},
+            {"action": "click_image_if", "target1": "images/batdau.png","target2": "images/batdau1.png", "timeout": 6, "confidence": 0.9},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
 
         ]
@@ -1021,6 +1030,7 @@ class AutoClickerInstance:
             
             {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_image", "target": "images/pve.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 595, "y": 429, "timeout": 2},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/on.png", "timeout": 20, "confidence": 0.9,"use_color": True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
@@ -1070,6 +1080,8 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_coords", "x": 46, "y": 393, "timeout": 2},
+            {"action": "click_coords", "x": 46, "y": 393, "timeout": 2},
+            {"action": "click_coords", "x": 46, "y": 393, "timeout": 2},
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target1": "images/su_dung_button.png","target2": "images/su_dung.png", "timeout": 20, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
@@ -1092,7 +1104,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","timeout": 7, "confidence": 0.9},
             
             {"action": "press_esc", "wait": 2} ,
-            {"action": "click_coords", "x": 590, "y": 30, "timeout": 2},
+            {"action": "click_coords", "x": 590, "y": 30, "timeout": 7},
             {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
@@ -1103,6 +1115,8 @@ class AutoClickerInstance:
             {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
             {"action": "press_esc", "wait": 2} ,
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
             {"action": "wait", "timeout": 10},
         ]
 
@@ -1128,75 +1142,7 @@ class AutoClickerInstance:
 
 
 
-            # từ đây
-        #     {"action": "click_image", "target": "images/lobby.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "press_esc", "wait": 3} ,
-        #     {"action": "press_esc", "wait": 3} ,
-        #     {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","timeout": 7, "confidence": 0.9},
-            
-        #     {"action": "press_esc", "wait": 2} ,
-        #     {"action": "press_esc", "wait": 2} ,
-        #     {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
-        #     {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
-        #     {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
-        #     {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
-        #     {"action": "click_any", "wait": 4},
-        #     {"action": "press_esc", "wait": 2} ,
-        #     {"action": "wait", "timeout": 5},
-        #     {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 3, "confidence": 0.9},
-        #     {"action": "press_esc", "wait": 2} ,
-            
-        #     {"action": "press_esc", "wait": 2} ,
-            
-        #     {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 3, "confidence": 0.9},
-        #     {"action": "press_esc", "wait": 3} ,
-        #     {"action": "press_esc", "wait": 3} ,
-        #     {"action": "wait", "timeout": 5},
-        #     {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","target3": "images/dauhang1.png", "timeout": 20, "confidence": 0.9},
-            
-        #     {"action": "press_esc", "wait": 3} ,
-        #     {"action": "click_image_if", "target": "images/co.png", "timeout": 7, "confidence": 0.9},
-        #     {"action": "press_esc", "wait": 2} ,
-            
-        #     {"action": "click_coords", "x": 841, "y": 97, "timeout": 3},
-            
-        #     {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
-        #     {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
-        #     {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
-        #     {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
-        #     {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
-        #     {"action": "wait", "timeout": 3},
-        #     {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.2, "duration": 600},
-        #     {"action": "click_coords", "x": 124, "y": 446, "timeout": 2},
-        #     {"action": "click_coords", "x": 124, "y": 446, "timeout": 2},
-        #     {"action": "click_image", "target": "images/nhan_ruby_button.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "click_image", "target": "images/any.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "wait", "timeout": 5},
-        #     {"action": "click_coords", "x": 42, "y": 28, "timeout": 2},
-        #     {"action": "click_image", "target": "images/tui_do_button.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
-        #     {"action": "click_image", "target1": "images/vat_pham.png", "target2": "images/vat_pham1.png","target3": "images/vat_pham2.png","target4": "images/vat_pham3.png","target5": "images/vat_pham4.png","target6": "images/vat_pham5.png","timeout": 20, "confidence": 0.9},
-        #     {"action": "wait", "timeout": 2},
-        #     {"action": "click_image", "target1": "images/su_dung_button.png","target2": "images/su_dung.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "wait", "timeout": 2},
-        #     {"action": "click_image", "target": "images/ok.png","target2": "images/ok1.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "wait", "timeout": 3},
-        #     {"action": "press_esc", "wait": 2} ,
-        #     {"action": "click_image", "target1": "images/shop.png",  "target2": "images/shop1.png","timeout": 20, "confidence": 0.9},
-        #     {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
-        #     {"action": "click_coords", "x": 80, "y": 256, "timeout": 2},
-        #     {"action": "click_image", "target": "images/shopruby.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
-        #     {"action": "click_coords", "x": 580, "y": 512, "timeout": 2},
-        #     {"action": "wait", "timeout": 2},
-        #     {"action": "click_image", "target": "images/200_ruby.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "click_image", "target": "images/buy_button.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "click_image", "target": "images/mo_button.png", "timeout": 20, "confidence": 0.9},
-        #     {"action": "wait", "timeout": 3},
-        #     {"action": "press_esc", "wait": 2} ,
-        #     {"action": "press_esc", "wait": 2} ,
-        # ]
+          
 
         # 2.5 GIAI ĐOẠN MUA EXP
         mua_exp_script = [
@@ -1272,6 +1218,7 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 22, "y": 133, "timeout": 2},
             {"action": "click_image_if", "target": "images/on.png", "timeout": 20, "confidence": 0.9,"use_color": True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "click_image", "target": "images/victory.png", "timeout": 120, "confidence": 0.9},
             {"action": "click_coords", "x": 463, "y": 492, "timeout": 20},
             {"action": "click_coords", "x": 463, "y": 492, "timeout": 20},
@@ -1366,11 +1313,11 @@ class AutoClickerInstance:
         # Thiết kế dạng list để bạn có thể gọi lại nhiều lần hoặc dùng trong action 'loop'
         # Tọa độ chọn tướng cho 5 máy (Sửa tọa độ x, y tại đây)
         hero_coords = [
-            {"x1": 439, "y1": 79, "x2": 439, "y2": 79}, # Máy 1
-            {"x1": 126, "y1": 178, "x2": 126, "y2": 178}, # Máy 2
-            {"x1": 197, "y1": 79, "x2": 197, "y2": 79}, # Máy 3
-            {"x1": 280, "y1": 79, "x2": 280, "y2": 79}, # Máy 4
-            {"x1": 354, "y1": 83, "x2": 354, "y2": 83}, # Máy 5
+           {"x1": 118, "y1": 83, "x2": 122, "y2": 173}, # Máy 1
+            {"x1": 205, "y1": 87, "x2": 197, "y2": 176}, # Máy 2
+            {"x1": 280, "y1": 87, "x2": 278, "y2": 176}, # Máy 3
+            {"x1": 356, "y1": 89, "x2": 352, "y2": 176}, # Máy 4
+            {"x1": 431, "y1": 83, "x2": 431, "y2": 171}, # Máy 5
         ]
         my_hero_pos = hero_coords[self.worker_index % 5]
         shared_battle_script = [
