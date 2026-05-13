@@ -64,10 +64,8 @@ import sys
 if getattr(sys, 'frozen', False):
     base_path = sys._MEIPASS
 else:
-    base_path = os.path.dirname(__file__)
+    base_path = os.path.dirname(os.path.abspath(__file__))
 
-os.environ['TCL_LIBRARY'] = os.path.join(base_path, '_tcl_data')
-os.environ['TK_LIBRARY'] = os.path.join(base_path, '_tk_data')
 import tkinter.filedialog as fd
 
 # --- Biến toàn cục để nạp OCR khi cần (Lazy Load) ---
@@ -103,11 +101,15 @@ def init_ocr_reader(log_func=None):
 
 # Hàm hỗ trợ tìm đường dẫn file khi đóng gói .exe
 def resource_path(relative_path):
+    """Lấy đường dẫn tài nguyên, hỗ trợ cả khi chạy script (.py) và khi đã đóng gói (.exe)"""
     try:
-        base_path = sys._MEIPASS
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(base_path, relative_path)
     except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+        return os.path.abspath(relative_path)
 
 # --- Theme Configuration ---
 ctk.set_appearance_mode("Dark")
