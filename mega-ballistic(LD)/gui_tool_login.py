@@ -253,6 +253,7 @@ class AutoClickerInstance:
         
         self.script = [
             {"action": "click_coords", "x": c["user_x"], "y": c["user_y"], "timeout": 2},
+            
             {"action": "input_account"},
             {"action": "click_coords", "x": c["pass_x"], "y": c["pass_y"], "timeout": 2},
             {"action": "input_password"},
