@@ -320,7 +320,7 @@ class MultiPremiumApp(ctk.CTk):
         self.scan_devices()
 
     def find_adb(self):
-        for p in ["adb", r"C:\LDPlayer\LDPlayer9\adb.exe", r"C:\LDPlayer\LDPlayer4\adb.exe"]:
+        for p in [r"C:\LDPlayer\LDPlayer9\adb.exe", r"C:\LDPlayer\LDPlayer4\adb.exe", "adb"]:
             try:
                 subprocess.run([p, "version"], capture_output=True, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
                 return p
@@ -428,9 +428,16 @@ class MultiPremiumApp(ctk.CTk):
         threading.Thread(target=self._perform_scan, daemon=True).start()
 
     def _perform_scan(self):
-        base_path = self.ld_path_entry.get().strip()
-        self.adb_path = os.path.join(base_path, "adb.exe")
-        if not os.path.exists(self.adb_path): self.adb_path = "adb"
+        p = self.ld_path_entry.get().strip()
+        if p.lower().endswith("adb.exe"):
+            self.adb_path = p
+            base_path = os.path.dirname(p)
+        else:
+            self.adb_path = os.path.join(p, "adb.exe")
+            base_path = p
+
+        if not os.path.exists(self.adb_path):
+            self.adb_path = "adb"
         
         device_serials = []
         try:
@@ -440,9 +447,9 @@ class MultiPremiumApp(ctk.CTk):
                 # 1. Tìm file console điều khiển
                 ldconsole_path = None
                 for exe in ["ldconsole.exe", "dnconsole.exe", "ld.exe"]:
-                    p = os.path.join(base_path, exe)
-                    if os.path.exists(p):
-                        ldconsole_path = p
+                    path = os.path.join(base_path, exe)
+                    if os.path.exists(path):
+                        ldconsole_path = path
                         break
                 
                 # 2. Lấy danh sách máy ảo đang chạy và connect ADB
@@ -451,7 +458,7 @@ class MultiPremiumApp(ctk.CTk):
                         res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                         for line in res_ld.stdout.splitlines():
                             parts = line.split(',')
-                            if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON (Status = 1)
+                            if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON
                                 idx = parts[0]
                                 port = 5554 + (int(idx) * 2)
                                 try:
@@ -473,7 +480,7 @@ class MultiPremiumApp(ctk.CTk):
                 subprocess.run([self.adb_path, "start-server"], creationflags=subprocess.CREATE_NO_WINDOW)
             
             # Đợi ADB cập nhật danh sách
-            time.sleep(3)
+            time.sleep(2)
 
             # 4. Lấy danh sách thiết bị cuối cùng
             try:
