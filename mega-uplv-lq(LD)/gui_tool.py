@@ -1061,7 +1061,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 5},
 
 
-            # tí ghép lại
+        #     # tí ghép lại
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/home.png", "timeout": 20, "confidence": 0.9},
              {"action": "click_coords", "x": 841, "y": 97, "timeout": 5},
@@ -1113,7 +1113,8 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
             {"action": "press_esc", "wait": 1} ,
             {"action": "press_esc", "wait": 1} ,
-            {"action": "click_image_if", "target": "images/lam_event.png", "timeout": 7, "confidence": 0.9},
+            {"action": "click_coords", "x": 802, "y": 486, "timeout": 2},
+            {"action": "click_coords", "x": 802, "y": 486, "timeout": 2},
             {"action": "press_esc", "wait": 1} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 4} ,
