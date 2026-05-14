@@ -243,25 +243,40 @@ class AutoClickerInstance:
         self.log(f"==> BẮT ĐẦU RESTART MÁY ẢO (Index {index})...")
         self.update_status(f"Restarting LD {index}")
 
-        # 0. Ngắt kết nối ADB hiện tại để tránh nhận nhầm session cũ
+        # 0. QUAN TRỌNG: Độ trễ ngẫu nhiên để tránh 10 máy cùng đè I/O ổ cứng một lúc
+        # Nếu không có cái này, ldconsole.exe sẽ bị treo khi nhận 10 lệnh cùng lúc
+        jitter = random.uniform(2, 15)
+        self.log(f"Đợi {jitter:.1f}s để tránh nghẽn hệ thống...")
+        time.sleep(jitter)
+
+        # 1. Ngắt kết nối ADB hiện tại
         try:
             subprocess.run([self.adb_path, "disconnect", self.device_id], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
         except: pass
         
-        # 1. Gửi lệnh tắt máy ảo
-        try:
-            subprocess.run([self.ld_console_path, "quit", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
-        except Exception as e:
-            self.log(f"Lỗi khi gửi lệnh quit: {e}")
+        # 2. Gửi lệnh tắt máy ảo
+        def send_quit():
+            try:
+                subprocess.run([self.ld_console_path, "quit", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
+            except: pass
+
+        send_quit()
         
         # Đợi tắt hẳn - QUAN TRỌNG: Phải thấy trạng thái về 0 mới được tiếp tục
         self.log(f"Đang đợi máy ảo {index} tắt hoàn toàn...")
         start_quit = time.time()
         is_actually_stopped = False
+        last_retry_quit = start_quit
         
-        while time.time() - start_quit < 45:
+        while time.time() - start_quit < 90: # Tăng lên 90s cho an toàn khi chạy nhiều máy
             if not self.running: return False
             time.sleep(3)
+            
+            # Nếu sau 20s chưa tắt, gửi lại lệnh quit lần nữa (đề phòng lệnh đầu bị hụt do nghẽn)
+            if time.time() - last_retry_quit > 20:
+                send_quit()
+                last_retry_quit = time.time()
+
             try:
                 res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 is_running = False
@@ -270,7 +285,7 @@ class AutoClickerInstance:
                     parts = line.split(',')
                     if len(parts) >= 5 and parts[0] == str(index):
                         found_index = True
-                        if parts[4] != '0': # Khác 0 nghĩa là vẫn đang chạy hoặc đang closing
+                        if parts[4] != '0': 
                             is_running = True
                         break
                 
@@ -278,15 +293,14 @@ class AutoClickerInstance:
                     is_actually_stopped = True
                     break
             except:
-                # Nếu list2 lỗi, không break mà tiếp tục đợi
                 continue
 
         if not is_actually_stopped:
-            self.log(f"CẢNH BÁO: Máy ảo {index} không phản hồi lệnh tắt sau 45s. Thử bật lại luôn...")
+            self.log(f"CẢNH BÁO: Máy ảo {index} vẫn chưa tắt sau 90s. Buộc phải gọi lệnh launch...")
 
         time.sleep(2)
         
-        # 2. Bật lại máy ảo
+        # 3. Bật lại máy ảo
         self.log(f"Đang gửi lệnh khởi động lại máy ảo {index}...")
         try:
             subprocess.run([self.ld_console_path, "launch", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)

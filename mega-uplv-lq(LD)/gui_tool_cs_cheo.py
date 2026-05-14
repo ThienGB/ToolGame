@@ -101,6 +101,8 @@ class AutoClickerInstance:
         self.skip_all_retries = False
         self.use_external_codes = False
         self.code_entered = False
+        self.chest_claimed = False
+        self.is_login_phase = False
 
     def log(self, msg, force_ui=False):
         # In trực tiếp ra console hệ thống (sys.__stdout__) để không bị Redirector đẩy lên UI
@@ -172,13 +174,15 @@ class AutoClickerInstance:
         self.call_adb(["shell", "input", "keyevent", "3"])
         time.sleep(1)
         # 2. Force stop các package liên quan
-        apps = ["com.garena.game.kgvn"]
-        for app in apps:
+        potential_apps = ["com.garena.game.kgvn64x", "com.garena.game.kgvn", "com.garena.game.kgtw"]
+        for app in potential_apps:
             self.call_adb(["shell", "am", "force-stop", app])
             self.call_adb(["shell", "pkill", "-f", app])
         time.sleep(2)
 
     def get_screenshot(self):
+        # Thêm jitter ngẫu nhiên để tránh nghẽn ADB khi chạy quá nhiều tab cùng lúc
+        time.sleep(random.uniform(0.1, 0.3))
         try:
             cmd = [self.adb_path, "-s", self.device_id, "exec-out", "screencap", "-p"]
             try:
@@ -380,9 +384,25 @@ class AutoClickerInstance:
                     app = p
                     break
             
-            if self.code_entered:
+            if getattr(self, 'chest_claimed', False):
+                self.log("!! Lỗi sau khi nhận rương: Chỉ thực hiện đăng xuất...")
+                for _ in range(2): self.call_adb(["shell", "input", "keyevent", "4"]); time.sleep(1)
+                self.execute_step({"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "skip_maintain": True})
+                time.sleep(2)
+                self.execute_step({"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 20, "skip_maintain": True})
+                time.sleep(2)
+                self.execute_step({"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
+                
+                # Fallback nếu UI logout thất bại
+                if not self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
+                    self.force_stop_game()
+                    self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+                    self.log("Đợi game mở và nhấn Garena...")
+                    self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
+                    time.sleep(5)
+                return False
+            elif getattr(self, 'code_entered', False):
                 self.log("!! PHÁT HIỆN LỖI (Đã nhập mã): Đang thực hiện đăng xuất...")
-                # Quy trình thoát ra Đăng nhập (như nhay script)
                 for _ in range(2): self.call_adb(["shell", "input", "keyevent", "4"]); time.sleep(1)
                 if self.execute_step({"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "skip_maintain": True}):
                     time.sleep(2)
@@ -392,33 +412,31 @@ class AutoClickerInstance:
                     time.sleep(5)
                 
                 if not self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
-                    for p in potential_apps: self.call_adb(["shell", "am", "force-stop", p])
-                    time.sleep(2)
+                    self.force_stop_game()
                     self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
                     self.log("Đợi game mở và nhấn Garena...")
                     self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
                     time.sleep(5)
-
-                self.log("[THÀNH CÔNG] Đã xử lý xong acc đã nhập mã.")
-                self.current_account["success"] = True
+                return False
             elif getattr(self, 'is_login_phase', False):
                 self.log(f"!! LỖI TRONG KHI ĐĂNG NHẬP: Restart {app} và thử lại từ đầu...")
-                for p in potential_apps: self.call_adb(["shell", "am", "force-stop", p])
-                time.sleep(2)
+                self.force_stop_game()
                 self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
                 self.skip_login_for_this_acc = False # Quan trọng: Không bỏ qua login
                 time.sleep(5)
                 return False
             else:
                 self.log(f"!! PHÁT HIỆN BẢO TRÌ/LỖI: Tiến hành Restart {app}...")
-                for p in potential_apps: self.call_adb(["shell", "am", "force-stop", p])
-                time.sleep(2)
+                self.force_stop_game()
                 self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
                 self.skip_login_for_this_acc = True
                 self.log("Đợi game mở và nhấn Garena...")
                 self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
                 time.sleep(5)
-            return False
+                if self.search_logic({"target1": "images/account_input1.jpg", "target2": "images/account_input.png", "target3": "images/account.jpg", "timeout": 5}):
+                    self.log("!! PHÁT HIỆN CHƯA ĐĂNG NHẬP (THẤY INPUT): TIẾN HÀNH ĐĂNG NHẬP LẠI.")
+                    self.skip_login_for_this_acc = False # Yêu cầu chạy kịch bản login
+                return False
         elif action == "loop":
             count = step.get("count", 1)
             sub_steps = step.get("steps", [])
@@ -442,51 +460,42 @@ class AutoClickerInstance:
             i += 1
         timeout = step.get("timeout", 10)
         confidence = step.get("confidence", 0.8)
-
-        target_imgs = []
         use_color = step.get("use_color", False)
 
+        # Sử dụng Cache để tránh đọc đĩa liên tục
+        target_imgs = []
         for t_path in targets:
-            real_path = resource_path(t_path)
-            if os.path.exists(real_path):
-                read_mode = cv2.IMREAD_COLOR if use_color else cv2.IMREAD_GRAYSCALE
-                img = cv2.imread(real_path, read_mode)
-                if img is not None: target_imgs.append((t_path, img))
+            img = get_cached_template(t_path, use_color)
+            if img is not None:
+                target_imgs.append((t_path, img))
 
         start = time.time()
         best_match = {"val": 0, "name": ""}
         while time.time() - start < timeout and self.running:
             screen = self.get_screenshot()
             if screen is not None:
-                if not use_color: compare_screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-                else: compare_screen = screen
+                compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
                 
                 for t_path, t_img in target_imgs:
-                    # Tỉ lệ 1:1, không scale
-                    t_scaled = t_img
-
-                    # Bỏ qua nếu template lớn hơn màn hình
-                    if t_scaled.shape[0] > compare_screen.shape[0] or t_scaled.shape[1] > compare_screen.shape[1]:
+                    if t_img.shape[0] > compare_screen.shape[0] or t_img.shape[1] > compare_screen.shape[1]:
                         continue
-                    res = cv2.matchTemplate(compare_screen, t_scaled, cv2.TM_CCOEFF_NORMED)
+                    res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
                     _, mv, _, ml = cv2.minMaxLoc(res)
                     
                     if mv > best_match["val"]:
                         best_match = {"val": mv, "name": os.path.basename(t_path)}
                         
                     if mv >= confidence:
-                        th_s, tw_s = t_scaled.shape[:2]
+                        th_s, tw_s = t_img.shape[:2]
                         self.call_adb(["shell", "input", "tap", str(ml[0]+tw_s//2), str(ml[1]+th_s//2)])
-                        self.log(f"-> CLICK: {os.path.basename(t_path)} ({mv:.2f})")
-                        del screen; del res
+                        del screen
                         if not use_color: del compare_screen
+                        del res
                         return t_path
                     del res
                 if not use_color: del compare_screen
             del screen
             time.sleep(1.5)
-        
-        self.log(f"!! Timeout: Không thấy ảnh. Cao nhất: {best_match['name']} ({best_match['val']:.2f})")
         return None
 
     def cases_logic(self, step):
@@ -791,8 +800,6 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 15},
         ]
 
-        # Script bổ sung để tách nhỏ navigation
-
         goto_input_code_only = [
             {
                 "action": "cases",
@@ -838,6 +845,22 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 5},
         ]
 
+        # --- TẢI KỊCH BẢN TỪ FILE NGOÀI NẾU CÓ ---
+        script_file = "script_cheo.json"
+        
+        if os.path.exists(script_file):
+            try:
+                with open(script_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if "login_script" in data: login_script = data["login_script"]
+                    if "copy_script" in data: copy_script = data["copy_script"]
+                    if "input_code_script" in data: input_code_script = data["input_code_script"]
+                    if "confirm_script" in data: confirm_script = data["confirm_script"]
+                    if "goto_input_code_only" in data: goto_input_code_only = data["goto_input_code_only"]
+                    self.log(f"==> ĐÃ TẢI KỊCH BẢN TỪ {script_file}")
+            except Exception as e:
+                self.log(f"!! LỖI khi tải {script_file}: {str(e)}")
+
         try:
             while self.running:
                 self.current_account = None
@@ -849,6 +872,7 @@ class AutoClickerInstance:
                 if not self.current_account: break
                 self.log(f">> START {self.role_name}: {self.current_account['tk']}")
                 self.skip_login_for_this_acc = False
+                self.chest_claimed = False
                 
                 # --- VÒNG LẶP RETRY CHO CHÍNH TÀI KHOẢN NÀY ---
                 while self.running:
