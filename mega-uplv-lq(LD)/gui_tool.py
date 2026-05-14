@@ -240,68 +240,38 @@ class AutoClickerInstance:
             self.log("LỖI: Không xác định được index máy ảo để restart.")
             return False
 
-        self.log(f"==> BẮT ĐẦU RESTART MÁY ẢO (Index {index})...")
+        self.log(f"==> ĐANG KHỞI ĐỘNG LẠI MÁY ẢO (Index {index})...")
         self.update_status(f"Restarting LD {index}")
-
-        # 0. QUAN TRỌNG: Độ trễ ngẫu nhiên để tránh 10 máy cùng đè I/O ổ cứng một lúc
-        # Nếu không có cái này, ldconsole.exe sẽ bị treo khi nhận 10 lệnh cùng lúc
-        jitter = random.uniform(2, 15)
-        self.log(f"Đợi {jitter:.1f}s để tránh nghẽn hệ thống...")
-        time.sleep(jitter)
-
-        # 1. Ngắt kết nối ADB hiện tại
+        
+        # 0. Ngắt kết nối cũ
         try:
             subprocess.run([self.adb_path, "disconnect", self.device_id], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
         except: pass
-        
-        # 2. Gửi lệnh tắt máy ảo
-        def send_quit():
-            try:
-                subprocess.run([self.ld_console_path, "quit", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
-            except: pass
 
-        send_quit()
+        # 1. Tắt máy ảo
+        try:
+            subprocess.run([self.ld_console_path, "quit", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
+        except: pass
         
-        # Đợi tắt hẳn - QUAN TRỌNG: Phải thấy trạng thái về 0 mới được tiếp tục
-        self.log(f"Đang đợi máy ảo {index} tắt hoàn toàn...")
+        # Đợi tắt hẳn (tránh lỗi launch khi instance đang closing)
         start_quit = time.time()
-        is_actually_stopped = False
-        last_retry_quit = start_quit
-        
-        while time.time() - start_quit < 90: # Tăng lên 90s cho an toàn khi chạy nhiều máy
+        while time.time() - start_quit < 45:
             if not self.running: return False
-            time.sleep(3)
-            
-            # Nếu sau 20s chưa tắt, gửi lại lệnh quit lần nữa (đề phòng lệnh đầu bị hụt do nghẽn)
-            if time.time() - last_retry_quit > 20:
-                send_quit()
-                last_retry_quit = time.time()
-
+            time.sleep(2)
             try:
                 res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 is_running = False
-                found_index = False
                 for line in res.stdout.splitlines():
                     parts = line.split(',')
                     if len(parts) >= 5 and parts[0] == str(index):
-                        found_index = True
-                        if parts[4] != '0': 
-                            is_running = True
+                        if parts[4] != '0': is_running = True
                         break
-                
-                if not is_running and found_index:
-                    is_actually_stopped = True
-                    break
-            except:
-                continue
+                if not is_running: break
+            except: break
 
-        if not is_actually_stopped:
-            self.log(f"CẢNH BÁO: Máy ảo {index} vẫn chưa tắt sau 90s. Buộc phải gọi lệnh launch...")
-
-        time.sleep(2)
+        time.sleep(3)
         
-        # 3. Bật lại máy ảo
-        self.log(f"Đang gửi lệnh khởi động lại máy ảo {index}...")
+        # 2. Bật lại máy ảo
         try:
             subprocess.run([self.ld_console_path, "launch", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
         except: pass
@@ -310,41 +280,43 @@ class AutoClickerInstance:
         self.log(f"Đang đợi máy ảo (Index {index}) ổn định ADB...")
         start_wait = time.time()
         
-        # Port mặc định dựa trên index
         guest_port = 5554 + (index * 2)
         guest_serial = f"127.0.0.1:{guest_port}"
 
-        while True:
+        while True: # Vòng lặp quét liên tục cho tới khi thấy máy
             if not self.running: return False
             elapsed = time.time() - start_wait
             
-            # Thử connect liên tục vào port tiêu chuẩn của index đó
+            # Thử connect liên tục vào port tiêu chuẩn
             try:
                 subprocess.run([self.adb_path, "connect", guest_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
             except: pass
 
-            # Cập nhật serial thực tế từ list2 (đề phòng LD đổi port/serial ngẫu nhiên)
+            # Cập nhật serial thực tế từ list2 (Quét mọi cột để tìm Serial/IP)
             current_ld_serial = None
             try:
                 res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 for line in res.stdout.splitlines():
                     parts = line.split(',')
                     if len(parts) >= 7 and parts[0] == str(index):
-                        # Cột 7 (index 6) là serial thực tế
-                        serial_val = parts[6].strip()
-                        if serial_val and serial_val != "null" and serial_val != "-1":
-                            current_ld_serial = serial_val
+                        for p in parts:
+                            p = p.strip()
+                            if (":" in p or p.startswith("emulator-")) and p != "null" and "." in p:
+                                current_ld_serial = p
+                                break
                         break
             except: pass
 
+            # Nếu tìm thấy serial mới, cập nhật và connect
             if current_ld_serial:
                 try:
                     subprocess.run([self.adb_path, "connect", current_ld_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 except: pass
                 if current_ld_serial != self.device_id:
+                    self.log(f"Quét lại phát hiện Serial mới: {current_ld_serial}")
                     self.device_id = current_ld_serial
             
-            # Kiểm tra trạng thái kết nối thực tế
+            # Kiểm tra xem device_id đã online chưa
             try:
                 res_adb = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 is_connected = False
@@ -356,31 +328,31 @@ class AutoClickerInstance:
                 is_connected = False
             
             if is_connected:
-                # Kiểm tra phản hồi shell thực tế
+                # Kiểm tra phản hồi shell thực tế (getprop hoặc wm size)
                 res_boot = self.call_adb(["shell", "getprop", "sys.boot_completed"])
                 if b"1" in res_boot.stdout:
-                    self.log(f"==> KẾT NỐI THÀNH CÔNG (Index {index})! Đợi 60s ổn định...")
-                    time.sleep(60)
-                    return True
+                        self.log("==> KẾT NỐI THÀNH CÔNG! Đợi thêm 60s để máy ổn định...")
+                        time.sleep(60)
+                        return True
                 
-                # Nếu chưa có boot_completed nhưng wm size đã chạy (máy đã lên màn hình)
-                if elapsed > 60:
+                # Dự phòng nếu boot_completed lâu nhưng shell đã chạy
+                if elapsed > 45:
                     res_wm = self.call_adb(["shell", "wm", "size"])
                     if b"Physical size" in res_wm.stdout:
-                        self.log(f"==> KẾT NỐI THÀNH CÔNG (Index {index} - wm size)! Đợi 60s...")
+                        self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)! Đợi thêm 60s để máy ổn định...")
                         time.sleep(60)
                         return True
 
-            # Mỗi 30s log một lần để người dùng biết máy vẫn đang được quét
+            # Mỗi 30s log một lần
             if int(elapsed) % 30 == 0 and int(elapsed) > 0:
-                 self.log(f"Đang quét máy ảo {index} (đã đợi {int(elapsed)}s)...")
+                self.log(f"Vẫn đang quét máy ảo {index} (đã đợi {int(elapsed)}s)...")
 
-            # Giới hạn 10 phút để tránh treo vĩnh viễn nếu máy ảo bị hỏng hoàn toàn
+            # Giới hạn an toàn 10 phút
             if elapsed > 600:
-                self.log(f"!! LỖI: Máy ảo {index} không online sau 10 phút. Hủy bỏ.")
+                self.log(f"!! LỖI: Không thể kết nối máy ảo {index} sau 10 phút.")
                 return False
 
-            time.sleep(5) # Quét lại mỗi 5 giây
+            time.sleep(3) # Tần suất quét dầy hơn (3s)
         
         return False
 
