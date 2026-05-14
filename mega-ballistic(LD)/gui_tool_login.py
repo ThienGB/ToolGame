@@ -27,13 +27,6 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-def resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
 SECRET_KEY = "RyoUTE_MegaUpLvCF_2026"
 LICENSE_FILE = "license.bin"
 NAV_COLOR = "#0F0F0F"
@@ -589,6 +582,9 @@ class MultiPremiumApp(ctk.CTk):
         if not success: 
             self.failure_count += 1
         self.after(0, self.refresh_ui)
+
+    def scan_devices(self, _=None):
+        threading.Thread(target=self._perform_scan, daemon=True).start()
 
     def start_all(self):
         if not self.accounts_data: return
