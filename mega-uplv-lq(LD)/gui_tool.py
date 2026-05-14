@@ -260,14 +260,20 @@ class AutoClickerInstance:
             time.sleep(2)
             try:
                 res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
-                is_running = False
+                is_running = True   # Mặc định coi là đang chạy cho đến khi có bằng chứng ngược lại
+                found_index = False
                 for line in res.stdout.splitlines():
                     parts = line.split(',')
-                    if len(parts) >= 5 and parts[0] == str(index):
-                        if parts[4] != '0': is_running = True
+                    if len(parts) >= 5 and parts[0].strip() == str(index):
+                        found_index = True
+                        is_running = (parts[4].strip() != '0')
                         break
-                if not is_running: break
-            except: break
+                # Chỉ thoát khi ĐÃ TÌM THẤY dòng của index đó VÀ trạng thái là 0 (tắt hẳn)
+                if found_index and not is_running:
+                    break
+            except:
+                pass  # Lỗi list2 thì tiếp tục đợi, không break
+
 
         time.sleep(3)
         
@@ -298,7 +304,7 @@ class AutoClickerInstance:
                 res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 for line in res.stdout.splitlines():
                     parts = line.split(',')
-                    if len(parts) >= 7 and parts[0] == str(index):
+                    if len(parts) >= 7 and parts[0].strip() == str(index):
                         for p in parts:
                             p = p.strip()
                             if (":" in p or p.startswith("emulator-")) and p != "null" and "." in p:
@@ -330,10 +336,10 @@ class AutoClickerInstance:
             if is_connected:
                 # Kiểm tra phản hồi shell thực tế (getprop hoặc wm size)
                 res_boot = self.call_adb(["shell", "getprop", "sys.boot_completed"])
-                if b"1" in res_boot.stdout:
-                        self.log("==> KẾT NỐI THÀNH CÔNG! Đợi thêm 60s để máy ổn định...")
-                        time.sleep(60)
-                        return True
+                if res_boot.stdout.strip() == b"1":
+                    self.log("==> KẾT NỐI THÀNH CÔNG! Đợi thêm 60s để máy ổn định...")
+                    time.sleep(60)
+                    return True
                 
                 # Dự phòng nếu boot_completed lâu nhưng shell đã chạy
                 if elapsed > 45:
