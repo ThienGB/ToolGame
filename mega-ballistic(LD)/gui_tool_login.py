@@ -436,9 +436,12 @@ class MultiPremiumApp(ctk.CTk):
                     self.device_type_var.set(config.get("device_type", "LD"))
             except: pass
 
-    def scan_devices(self, _=None):
-        # Chạy quét máy ảo trong luồng riêng để tránh lag UI
-        threading.Thread(target=self._perform_scan, daemon=True).start()
+    def try_connect_port(self, port):
+        try:
+            subprocess.run([self.adb_path, "connect", f"127.0.0.1:{port}"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=0.6, creationflags=subprocess.CREATE_NO_WINDOW)
+        except: pass
 
     def _perform_scan(self):
         p = self.ld_path_entry.get().strip()
