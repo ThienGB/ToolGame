@@ -90,6 +90,13 @@ class AutoClickerInstance:
         except Exception as e:
             return subprocess.CompletedProcess([], 1, b"", str(e).encode())
 
+    def try_connect_port(self, port):
+        try:
+            subprocess.run([self.adb_path, "connect", f"127.0.0.1:{port}"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=0.6, creationflags=subprocess.CREATE_NO_WINDOW)
+        except: pass
+
     def restart_emulator(self):
         self.status = "Đang Restart..."
         self.update_ui_func()
@@ -177,17 +184,23 @@ class AutoClickerInstance:
             if i < len(parts) - 1:
                 self.call_adb(["shell", "input", "text", "%s"])
 
+    def clear_input_field(self, delete_count=30):
+        # Di chuyển đến cuối và xóa delete_count kí tự trước khi nhập
+        self.call_adb(["shell", "input", "keyevent", "123"])
+        for _ in range(delete_count):
+            self.call_adb(["shell", "input", "keyevent", "67"])
+
     def input_account_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("tk", "")
-        self.call_adb(["shell", "input", "keyevent", "123"] + ["67"] * 30) # Di chuyển đến cuối và xóa 30 kí tự
+        self.clear_input_field()
         self.input_text_robust(content)
         return True
 
     def input_password_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("mk", "")
-        self.call_adb(["shell", "input", "keyevent", "123"] + ["67"] * 30)
+        self.clear_input_field()
         self.input_text_robust(content)
         return True
 
@@ -460,30 +473,37 @@ class MultiPremiumApp(ctk.CTk):
                                 except: pass
                     except: pass
 
-                # 3. Quét dự phòng các port phổ biến
-                for i in range(10): 
-                    port = 5554 + (i * 2)
-                    subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
-                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
-                                   creationflags=subprocess.CREATE_NO_WINDOW)
+                # 3. Quét dự phòng các port phổ biến bằng connect nhanh
+                scan_ports = [5554 + (i * 2) for i in range(40)]
+                threads = []
+                for port in scan_ports:
+                    t = threading.Thread(target=self.try_connect_port, args=(port,), daemon=True)
+                    t.start()
+                    threads.append(t)
+                for t in threads:
+                    t.join(timeout=1.0)
             else:
                 # BoxPhone mode: Làm mới kết nối
                 subprocess.run([self.adb_path, "kill-server"], creationflags=subprocess.CREATE_NO_WINDOW)
-                time.sleep(1)
                 subprocess.run([self.adb_path, "start-server"], creationflags=subprocess.CREATE_NO_WINDOW)
-            
-            # Đợi ADB cập nhật danh sách
-            time.sleep(3)
 
-            # 4. Lấy danh sách thiết bị cuối cùng
-            try:
-                res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
-                for line in res.stdout.strip().split('\n')[1:]:
-                    if "\tdevice" in line:
-                        serial = line.split('\t')[0]
-                        if serial not in device_serials:
-                            device_serials.append(serial)
-            except: pass
+            # Đợi ADB cập nhật danh sách trong khoảng rất ngắn
+            time.sleep(0.5)
+
+            # 4. Lấy danh sách thiết bị cuối cùng, polling nhanh nếu cần
+            for _ in range(3):
+                try:
+                    res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+                    device_serials = []
+                    for line in res.stdout.strip().split('\n')[1:]:
+                        if "\tdevice" in line:
+                            serial = line.split('\t')[0]
+                            if serial not in device_serials:
+                                device_serials.append(serial)
+                    if device_serials:
+                        break
+                except: pass
+                time.sleep(0.5)
         except Exception as e:
             print(f"SCAN ERROR: {e}")
 
