@@ -1127,6 +1127,8 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 4} ,
             {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
+            {"action": "click_coords", "x": 802, "y": 486, "timeout": 2},
+            {"action": "click_coords", "x": 802, "y": 486, "timeout": 2},
             {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
