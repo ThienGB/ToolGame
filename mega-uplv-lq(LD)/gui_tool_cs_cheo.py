@@ -504,7 +504,7 @@ class AutoClickerInstance:
         timeout = step.get("timeout", 10)
         confidence = step.get("confidence", 0.8)
         
-        # Cache templates để tăng tốc độ xử lý
+        # Sử dụng global cache để tránh đọc đĩa liên tục
         case_templates = []
         for case in cases:
             triggers = []
@@ -515,11 +515,9 @@ class AutoClickerInstance:
             
             loaded_triggers = []
             for t_path in triggers:
-                real_path = resource_path(t_path)
-                if os.path.exists(real_path):
-                    t_img = cv2.imread(real_path, cv2.IMREAD_GRAYSCALE)
-                    if t_img is not None:
-                        loaded_triggers.append((t_path, t_img))
+                t_img = get_cached_template(t_path, use_color=False)
+                if t_img is not None:
+                    loaded_triggers.append((t_path, t_img))
             
             if loaded_triggers:
                 case_templates.append({
@@ -535,23 +533,28 @@ class AutoClickerInstance:
                 time.sleep(1); continue
             
             scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+            del screen
             
+            matched_item = None
             for item in case_templates:
                 for t_path, t_img in item["triggers"]:
-                    # Tỉ lệ 1:1
                     if t_img.shape[0] > scr_gray.shape[0] or t_img.shape[1] > scr_gray.shape[1]:
                         continue
-                        
                     res = cv2.matchTemplate(scr_gray, t_img, cv2.TM_CCOEFF_NORMED)
                     _, mv, _, _ = cv2.minMaxLoc(res)
-                    
+                    del res
                     if mv >= item["confidence"]:
-                        # self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({mv:.2f})")
-                        for s_step in item["script"]:
-                            if not self.running: break
-                            if not self.execute_step(s_step):
-                                return False 
-                        return True 
+                        matched_item = item
+                        break
+                if matched_item: break
+            del scr_gray
+            
+            if matched_item:
+                for s_step in matched_item["script"]:
+                    if not self.running: return False
+                    if not self.execute_step(s_step):
+                        return False
+                return True
             time.sleep(1)
         return False
 
@@ -580,12 +583,19 @@ class AutoClickerInstance:
             screen = self.get_screenshot()
             if screen is not None:
                 compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                found = False
                 for t_img in target_imgs:
                     if t_img.shape[0] > compare_screen.shape[0] or t_img.shape[1] > compare_screen.shape[1]:
                         continue
                     res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
                     _, mv, _, _ = cv2.minMaxLoc(res)
-                    if mv >= conf: return True
+                    del res
+                    if mv >= conf:
+                        found = True
+                        break
+                if not use_color: del compare_screen
+                del screen
+                if found: return True
             time.sleep(1)
         return False
 
@@ -1319,12 +1329,10 @@ class MultiPremiumApp(ctk.CTk):
             self.add_log("Vui lòng nạp file tài khoản trước.")
             return
             
-        # Lấy số lượng tài khoản và mã mời để tính toán giới hạn tab
         total_accounts = len(self.accounts_data)
         with self.shared_data["ext_lock"]:
             total_codes = sum(item["count"] for item in self.shared_data.get("external_codes", []))
             
-        # Xác định giới hạn tab (máy) chạy đồng thời theo yêu cầu: cái nào ít hơn thì chạy cái đó
         if total_codes > 0:
             limit = min(total_accounts, total_codes)
             self.add_log(f"CHẠY TẤT CẢ: Giới hạn {limit} tab (Min: {total_accounts} acc, {total_codes} mã)")
@@ -1333,13 +1341,13 @@ class MultiPremiumApp(ctk.CTk):
             self.add_log(f"CHẠY TẤT CẢ: Giới hạn {limit} tab theo số tài khoản ({total_accounts} acc)")
 
         count = 0
-        # Sắp xếp danh sách serial để khởi động thiết bị theo thứ tự ổn định
         serials = sorted(self.device_map.keys())
         for s in serials:
             if count >= limit:
                 break
             self.start_single_device(s)
             count += 1
+        self._schedule_gc()
 
     def stop_all(self):
         for w in self.active_workers:
@@ -1347,6 +1355,12 @@ class MultiPremiumApp(ctk.CTk):
         for s in self.device_cards:
             self.device_cards[s]["status"].configure(text="Stopping...", text_color="#F87171")
         self.add_log("Đã gửi lệnh dừng tới tất cả thiết bị.")
+
+    def _schedule_gc(self):
+        """Cleanup zombie workers và giải phóng bộ nhớ định kỳ mỗi 30 giây."""
+        self.active_workers = [w for w in self.active_workers if w.running]
+        gc.collect()
+        self._gc_timer = self.after(30000, self._schedule_gc)
 
     def start_single_device(self, serial):
         # Dọn dẹp các worker cũ đã chết
@@ -1431,7 +1445,6 @@ class MultiPremiumApp(ctk.CTk):
             self.save_input_files()
 
         self.after(0, self.update_all_ui)
-        gc.collect() # Giải phóng bộ nhớ sau mỗi lần báo cáo
 
     def update_all_ui(self):
         self.success_val.configure(text=str(self.success_count))

@@ -499,23 +499,28 @@ class AutoClickerInstance:
                 time.sleep(1); continue
             
             scr_gray = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+            del screen
             
+            matched_item = None
             for item in case_templates:
                 for t_path, t_img in item["triggers"]:
-                    # Tỉ lệ 1:1
                     if t_img.shape[0] > scr_gray.shape[0] or t_img.shape[1] > scr_gray.shape[1]:
                         continue
-                        
                     res = cv2.matchTemplate(scr_gray, t_img, cv2.TM_CCOEFF_NORMED)
                     _, mv, _, _ = cv2.minMaxLoc(res)
-                    
+                    del res
                     if mv >= item["confidence"]:
-                        # self.log(f"-> PHÁT HIỆN: {os.path.basename(t_path)} ({mv:.2f})")
-                        for s_step in item["script"]:
-                            if not self.running: break
-                            if not self.execute_step(s_step):
-                                return False 
-                        return True 
+                        matched_item = item
+                        break
+                if matched_item: break
+            del scr_gray
+            
+            if matched_item:
+                for s_step in matched_item["script"]:
+                    if not self.running: return False
+                    if not self.execute_step(s_step):
+                        return False
+                return True
             time.sleep(1)
         return False
     def search_logic(self, step):
@@ -543,12 +548,19 @@ class AutoClickerInstance:
             screen = self.get_screenshot()
             if screen is not None:
                 compare_screen = screen if use_color else cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+                found = False
                 for t_img in target_imgs:
                     if t_img.shape[0] > compare_screen.shape[0] or t_img.shape[1] > compare_screen.shape[1]:
                         continue
                     res = cv2.matchTemplate(compare_screen, t_img, cv2.TM_CCOEFF_NORMED)
                     _, mv, _, _ = cv2.minMaxLoc(res)
-                    if mv >= conf: return True
+                    del res
+                    if mv >= conf:
+                        found = True
+                        break
+                if not use_color: del compare_screen
+                del screen
+                if found: return True
             time.sleep(1)
         return False
 
@@ -1033,10 +1045,10 @@ class MultiPremiumApp(ctk.CTk):
             self.add_log("Vui lòng nạp file tài khoản trước.")
             return
         
-        limit = len(self.accounts_data)
         serials = sorted(self.device_map.keys())
         for s in serials:
             self.start_single_device(s)
+        self._schedule_gc()
 
     def stop_all(self):
         for w in self.active_workers:
@@ -1074,6 +1086,12 @@ class MultiPremiumApp(ctk.CTk):
         if serial in self.device_cards:
             self.device_cards[serial]["status"].configure(text="Stopping...", text_color="#F87171")
 
+    def _schedule_gc(self):
+        """Cleanup zombie workers và giải phóng bộ nhớ định kỳ mỗi 30 giây."""
+        self.active_workers = [w for w in self.active_workers if w.running]
+        gc.collect()
+        self._gc_timer = self.after(30000, self._schedule_gc)
+
     def report_stats(self, success, info):
         if success: self.success_count += 1
         else: self.failure_count += 1
@@ -1085,7 +1103,6 @@ class MultiPremiumApp(ctk.CTk):
             with open(fn, "a", encoding="utf-8") as f: f.write(f"{info}\n")
 
         self.after(0, self.update_all_ui)
-        gc.collect() 
 
     def update_all_ui(self):
         self.success_val.configure(text=str(self.success_count))

@@ -337,16 +337,16 @@ class AutoClickerInstance:
                 # Kiểm tra phản hồi shell thực tế (getprop hoặc wm size)
                 res_boot = self.call_adb(["shell", "getprop", "sys.boot_completed"])
                 if res_boot.stdout.strip() == b"1":
-                    self.log("==> KẾT NỐI THÀNH CÔNG! Đợi thêm 60s để máy ổn định...")
-                    time.sleep(60)
+                    self.log("==> KẾT NỐI THÀNH CÔNG! Đợi thêm 15s để máy ổn định...")
+                    time.sleep(15)
                     return True
                 
                 # Dự phòng nếu boot_completed lâu nhưng shell đã chạy
                 if elapsed > 45:
                     res_wm = self.call_adb(["shell", "wm", "size"])
                     if b"Physical size" in res_wm.stdout:
-                        self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)! Đợi thêm 60s để máy ổn định...")
-                        time.sleep(60)
+                        self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)! Đợi thêm 15s để máy ổn định...")
+                        time.sleep(15)
                         return True
 
             # Mỗi 30s log một lần
@@ -1842,40 +1842,46 @@ class MultiPremiumApp(ctk.CTk):
                     ldconsole_path = p
                     break
             
-            # 2. Lấy danh sách máy ảo đang chạy và connect ADB
+            # 2. Thu thập danh sách port/serial từ LDPlayer
+            targets = set()
             if ldconsole_path:
                 try:
                     res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                     for line in res_ld.stdout.splitlines():
                         parts = line.split(',')
-                        if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON (Status = 1)
+                        if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON
                             idx = parts[0]
-                            port = 5554 + (int(idx) * 2)
-                            try:
-                                subprocess.run([self.adb_path, "connect", f"127.0.0.1:{port}"], 
-                                             capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
-                            except: pass
+                            # Port mặc định của LD
+                            targets.add(f"127.0.0.1:{5554 + int(idx) * 2}")
+                            # Thử lấy serial từ list2 (thường ở cột 7 hoặc các cột sau)
+                            for p in parts[5:]:
+                                p = p.strip()
+                                if (":" in p or p.startswith("emulator-")) and p != "null":
+                                    targets.add(p)
                 except: pass
 
-            # 3. Quét dự phòng các port phổ biến
+            # 3. Quét dự phòng thêm 10 port đầu
             for i in range(10): 
-                port = 5554 + (i * 2)
-                subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{port}"], 
+                targets.add(f"127.0.0.1:{5554 + (i * 2)}")
+            
+            # 4. Connect đồng loạt (Parallel) - Không block
+            for target in targets:
+                subprocess.Popen([self.adb_path, "connect", target], 
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
                                creationflags=subprocess.CREATE_NO_WINDOW)
             
-            # Đợi ADB cập nhật danh sách
-            time.sleep(3)
+            # Đợi ngắn để ADB nhận diện (2s là đủ cho parallel connect)
+            time.sleep(2)
 
-            # 4. Lấy danh sách thiết bị cuối cùng
+            # 5. Lấy danh sách thiết bị cuối cùng
             try:
                 res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
                 lines = res.stdout.strip().split('\n')[1:]
-                device_serials = [line.split('\t')[0] for line in lines if "device" in line]
+                device_serials = [line.split('\t')[0] for line in lines if "device" in line and "offline" not in line]
             except:
                 device_serials = []
             
-            # Cập nhật UI trên main thread
+            # Cập nhật UI
             self.after(0, lambda: self._update_device_ui(device_serials))
         except Exception as e:
             self.add_log(f"LỖI QUÉT: {e}")
@@ -1887,12 +1893,27 @@ class MultiPremiumApp(ctk.CTk):
         self.device_map = {}
         
         try:
-            # Lấy tất cả serials và gán index dựa trên port ADB để sắp xếp
-            # Việc sắp xếp giúp thứ tự máy ổn định (máy index thấp luôn đứng trước)
-            serials_with_idx = []
+            # 1. Khử trùng thiết bị (Trường hợp 1 máy hiện cả 127.0.0.1 và emulator-xxxx)
+            unique_map = {} # abs_idx -> serial
+            unidentified = []
+            
             for serial in device_serials:
                 abs_idx = self.get_absolute_index(serial)
-                serials_with_idx.append((serial, abs_idx))
+                if abs_idx == -1:
+                    unidentified.append(serial)
+                    continue
+                
+                if abs_idx not in unique_map:
+                    unique_map[abs_idx] = serial
+                else:
+                    # Ưu tiên giữ lại địa chỉ 127.0.0.1 vì nó ổn định hơn cho LDPlayer
+                    if serial.startswith("127.0.0.1"):
+                        unique_map[abs_idx] = serial
+            
+            # 2. Tạo danh sách đã sắp xếp
+            serials_with_idx = [(s, idx) for idx, s in unique_map.items()]
+            for s in unidentified:
+                serials_with_idx.append((s, -1))
             
             # Sắp xếp theo LD index tăng dần
             serials_with_idx.sort(key=lambda x: x[1])
