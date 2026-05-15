@@ -941,27 +941,27 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN
         login_script = [
-                        {"action": "wait", "timeout": 5},
+                        
 
 
-            # {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
-            # {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
-            # {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "click_coords", "x": 173, "y": 442, "timeout": 3},
-            # {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg","timeout": 60, "confidence": 0.9},
-            # {"action": "input_account"},
-            # {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "target3": "images/matkhau.jpg", "timeout": 60, "confidence": 0.9},
-            # {"action": "input_password"},
-            # {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dangnhap.jpg", "timeout": 30, "confidence": 0.9},
-            # {"action": "wait", "timeout": 5},
-            # {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 5, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/ok2.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "wait", "timeout": 7},
-            # {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
-            # {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
-            # {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 13, "confidence": 0.9},
-            # {"action": "click_image_if", "target1": "images/batdau.png","target2": "images/batdau1.png", "timeout": 6, "confidence": 0.9},
-            # {"action": "clear_android_data", "package": "com.garena.gaslite"},
+            {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_coords", "x": 173, "y": 442, "timeout": 3},
+            {"action": "click_image", "target1": "images/username.png","target2": "images/account_input.png", "target3": "images/account.jpg","timeout": 60, "confidence": 0.9},
+            {"action": "input_account"},
+            {"action": "click_image", "target1": "images/password.png","target2": "images/input_password.png", "target3": "images/matkhau.jpg", "timeout": 60, "confidence": 0.9},
+            {"action": "input_password"},
+            {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dangnhap.jpg", "timeout": 30, "confidence": 0.9},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 5, "confidence": 0.9},
+            {"action": "click_image", "target": "images/ok2.png", "timeout": 30, "confidence": 0.9},
+            {"action": "wait", "timeout": 7},
+            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 13, "confidence": 0.9},
+            {"action": "click_image_if", "target1": "images/batdau.png","target2": "images/batdau1.png", "timeout": 6, "confidence": 0.9},
+            {"action": "clear_android_data", "package": "com.garena.gaslite"},
 
         ]
 
@@ -1408,11 +1408,12 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
             {"action": "wait", "timeout": 3},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
             {"action": "click_coords", "x": 476, "y": 498, "timeout": 3},
             {"action": "click_coords", "x": 459, "y": 36, "timeout": 3},
           
 
-            {"action": "wait", "timeout": 3},
+            {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
             
             # {"action": "press_esc", "wait": 5} ,
@@ -1428,19 +1429,19 @@ class AutoClickerInstance:
         
         # GIAI ĐĂNG XUẤT - XUẤT FILE
         uplevel_script = [
-            # {"action": "click_image_if", "target": "images/close.png", "timeout": 10, "confidence": 0.9},
-            # {"action": "wait", "timeout": 2},
-            # {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
-            # {"action": "wait", "timeout": 2},
-            # {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/off.png", "timeout": 30, "confidence": 0.9,"use_color": True},
-            # {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
-            # {"action": "wait", "timeout": 15},    
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 10, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/off.png", "timeout": 30, "confidence": 0.9,"use_color": True},
+            {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
+            {"action": "wait", "timeout": 15},    
         ]
 
         while self.running:
