@@ -1132,6 +1132,8 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 2} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
             {"action": "wait", "timeout": 10},
         ]
 
