@@ -145,6 +145,8 @@ class AutoClickerInstance:
         self.accounts_processed = 0 # Bộ đếm số acc đã chạy
         self.restart_threshold = 1 # Sau N lượt chạy sẽ khởi động lại LDPlayer 1 lần
         self.ld_console_path = None # Sẽ được gán từ App
+        self.is_resetting = False
+        self.current_stage_name = "đang chờ"
 
     def log(self, msg):
         self.log_func(f"[{self.device_id}] {msg}")
@@ -399,13 +401,27 @@ class AutoClickerInstance:
     def execute_step(self, step):
         if not self.running: return False
         
+        # Kiểm tra lỗi đội (Team Error) - Dừng ngay nếu có máy khác trong đội bị lỗi
+        if not getattr(self, "is_resetting", False):
+            with self.shared_data["lock"]:
+                if self.shared_data.get("team_error_triggered", {}).get(self.group_id):
+                    self.log("!!! NHẬN TÍN HIỆU LỖI TỪ ĐỒNG ĐỘI. DỪNG BƯỚC HIỆN TẠI.")
+                    return False
+
+        if not self.running: return False
+        
         # Nếu có flag only_host=True thì chỉ máy chủ phòng (worker_index % 5 == 0) mới thực hiện
         if step.get("only_host") and getattr(self, "worker_index", 0) % 5 != 0:
             return True
 
         action = step.get("action")
         target_info = step.get("target") or step.get("target1", "")
-        self.log(f"==> Bước: {action} {f'({target_info})' if target_info else ''}")
+        
+        # Cập nhật tên giai đoạn nếu có
+        if step.get("stage"):
+            self.current_stage_name = step.get("stage")
+
+        self.log(f"==> Bước: {action} {f'({target_info})' if target_info else ''} [{self.current_stage_name}]")
         self.last_step_time = time.time()
         res = True
         if action == "click_image":
@@ -519,6 +535,13 @@ class AutoClickerInstance:
         start = time.time()
         last_log_time = 0
         while time.time() - start < timeout and self.running:
+            # Kiểm tra lỗi đội (Team Error) trong khi đang chờ ảnh
+            if not getattr(self, "is_resetting", False):
+                with self.shared_data["lock"]:
+                    if self.shared_data.get("team_error_triggered", {}).get(self.group_id):
+                        self.log("!!! LỖI ĐỘI TRONG KHI CHỜ ẢNH. THOÁT.")
+                        return False
+
             # Log mỗi 5s để biết là vẫn đang tìm
             if time.time() - last_log_time > 5:
                 self.log(f"Đang chờ ảnh (đã chờ {(time.time() - start):.1f}s/{timeout}s)...")
@@ -815,6 +838,9 @@ class AutoClickerInstance:
             with self.shared_data["lock"]:
                 if self.shared_data.get("room_ids", {}).get(self.group_id):
                     return True
+                if self.shared_data.get("team_error_triggered", {}).get(self.group_id):
+                    self.log("!!! LỖI ĐỘI KHI ĐANG ĐỢI PHÒNG. THOÁT.")
+                    return False
             time.sleep(2)
         return False
 
@@ -887,6 +913,9 @@ class AutoClickerInstance:
         while time.time() - start < timeout and self.running:
             with self.shared_data["lock"]:
                 current = self.shared_data.get("joined_counts", {}).get(self.group_id, 0)
+                if self.shared_data.get("team_error_triggered", {}).get(self.group_id):
+                    self.log("!!! LỖI ĐỘI KHI ĐANG ĐỢI NGƯỜI CHƠI. THOÁT.")
+                    return False
             if current >= target_count:
                 self.log(f"ĐỦ ĐỘI ({current}/{target_count}). BẮT ĐẦU!")
                 return True
@@ -910,6 +939,9 @@ class AutoClickerInstance:
         while time.time() - start < timeout and self.running:
             with self.shared_data["lock"]:
                 current = self.shared_data.get("autowin_barrier", {}).get(self.group_id, 0)
+                if self.shared_data.get("team_error_triggered", {}).get(self.group_id):
+                    self.log("!!! LỖI ĐỘI KHI ĐANG ĐỢI AUTO WIN. THOÁT.")
+                    return False
             if current >= 5:
                 break
             time.sleep(0.5)
@@ -1442,6 +1474,25 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 15},    
         ]
 
+        def tag_script(script_list, stage_name):
+            for s in script_list:
+                s["stage"] = stage_name
+
+        new_circle_script = [
+            {"action": "restart_app", "app": "com.garena.game.kgvn"},
+            {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/off.png", "timeout": 30, "confidence": 0.9,"use_color": True},
+            {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
+            {"action": "wait", "timeout": 15},    
+        ]
+
         while self.running:
             self.modes = self.modes_func() if callable(self.modes_func) else self.modes_func
 
@@ -1459,22 +1510,34 @@ class AutoClickerInstance:
             # 4. GIAI ĐOẠN GHÉP ĐỘI & ĐÁNH TRẬN
             if self.modes.get("teamup"):
                 if self.worker_index % 5 == 0:
+                    tag_script(teamup_host_script, "ghép đội")
                     self.script += teamup_host_script
                 else:
+                    tag_script(teamup_guest_script, "ghép đội")
                     self.script += teamup_guest_script
                     
-                wait_step = {"action": "wait_for_players", "count": 4, "timeout": 300}
+                wait_step = {"action": "wait_for_players", "count": 4, "timeout": 300, "stage": "ghép đội"}
                 self.script.append(wait_step)
                 
-                battle_loop = {
-                    "action": "loop", 
-                    "count": self.modes.get("battle_count", 3),
-                    "steps": shared_battle_script
-                }
-                self.script.append(battle_loop)
+                # BẮT ĐẦU ĐÁNH CÁC TRẬN (Có đánh số để báo cáo lỗi chính xác)
+                b_count = self.modes.get("battle_count", 3)
+                for i in range(b_count):
+                    stage_name = f"đánh trận {i+1}"
+                    for s in shared_battle_script:
+                        s_copy = s.copy()
+                        s_copy["stage"] = stage_name
+                        self.script.append(s_copy)
 
             # LUÔN CHẠY CUỐI CÙNG SAU KHI XONG HẾT
-            self.script += uplevel_script
+                self.script += uplevel_script
+            
+            # Gán nhãn giai đoạn cho các phần còn lại
+            tag_script(login_script, "login")
+            tag_script(tutorial_script, "tân thủ")
+            tag_script(mua_exp_script, "off lâu")
+            tag_script(dinh_game_script, "dính game")
+            tag_script(uplevel_script, "đăng xuất")
+
             # Tìm tài khoản chưa dùng
             self.current_account = None
             with FILE_LOCK:
@@ -1503,18 +1566,76 @@ class AutoClickerInstance:
             success = True
             for step in self.script:
                 if not self.running: break
+                
+                # Check team error before each step
+                with self.shared_data["lock"]:
+                    if self.shared_data.get("team_error_triggered", {}).get(self.group_id):
+                        success = False
+                        break
+
                 if not self.execute_step(step):
-                    self.log("THẤT BẠI: Quá thời gian. Đang thử lại...")
+                    self.log("THẤT BẠI: Lỗi xử lý bước. Kích hoạt reset cả đội...")
+                    with self.shared_data["lock"]:
+                        if "team_error_triggered" not in self.shared_data:
+                            self.shared_data["team_error_triggered"] = {}
+                        if "team_error_stage" not in self.shared_data:
+                            self.shared_data["team_error_stage"] = {}
+                        
+                        self.shared_data["team_error_triggered"][self.group_id] = True
+                        self.shared_data["team_error_stage"][self.group_id] = self.current_stage_name
+                    
                     success = False
                     break
+            
+            if not success and self.running:
+                # Lấy tên giai đoạn bị lỗi từ shared_data (để đồng bộ cả 5 máy cùng note 1 lỗi)
+                with self.shared_data["lock"]:
+                    error_stage = self.shared_data.get("team_error_stage", {}).get(self.group_id, self.current_stage_name)
+                
+                self.log(f"!!! THỰC HIỆN RESET CẢ ĐỘI (5 MÁY) DO LỖI Ở: {error_stage}...")
+                self.is_resetting = True
+                # Thực hiện kịch bản thoát/đăng xuất mà user cung cấp
+                for reset_step in new_circle_script:
+                    if not self.running: break
+                    self.execute_step(reset_step)
+                
+                # Báo cáo thất bại cho acc hiện tại (xuất file FAILED_ACC.txt kèm note giai đoạn)
+                self.accounts_processed += 1
+                self.report_stats_func(False, self.current_account, error_stage)
+                
+                # Barrier: Đợi cả 5 máy trong team xong reset mới đi tiếp batch mới
+                with self.shared_data["lock"]:
+                    if "team_reset_barrier" not in self.shared_data:
+                        self.shared_data["team_reset_barrier"] = {}
+                    self.shared_data["team_reset_barrier"][self.group_id] = self.shared_data["team_reset_barrier"].get(self.group_id, 0) + 1
+                
+                self.log(f"Đã xong reset. Đợi đồng đội... ({self.shared_data['team_reset_barrier'].get(self.group_id, 0)}/5)")
+                start_barrier = time.time()
+                while time.time() - start_barrier < 180 and self.running:
+                    with self.shared_data["lock"]:
+                        if self.shared_data["team_reset_barrier"].get(self.group_id, 0) >= 5:
+                            break
+                    time.sleep(2)
+                
+                # Host dọn dẹp cờ lỗi cho lượt sau
+                if self.worker_index % 5 == 0:
+                    time.sleep(2)
+                    with self.shared_data["lock"]:
+                        self.shared_data["team_reset_barrier"][self.group_id] = 0
+                        self.shared_data["team_error_triggered"][self.group_id] = False
+                        if "team_error_stage" in self.shared_data:
+                            self.shared_data["team_error_stage"][self.group_id] = ""
+                
+                self.is_resetting = False
+                self.log("==> ĐỘI ĐÃ RESET XONG. CHUẨN BỊ VÀO VÒNG MỚI.")
             
             if success and self.running:
                 self.update_ui_func()
                 self.accounts_processed += 1
                 self.report_stats_func(True, self.current_account) # Report Success
             elif not success and self.running:
-                self.accounts_processed += 1
-                self.report_stats_func(False, self.current_account) # Report Failure
+                # Trường hợp không thành công đã xử lý reset ở trên, dòng này chỉ báo cáo nếu còn lỗi
+                pass
             
             # Tự động Restart sau N lượt chạy
             if self.accounts_processed >= self.restart_threshold:
@@ -1566,7 +1687,9 @@ class MultiPremiumApp(ctk.CTk):
             "room_ids": {},
             "joined_counts": {},
             "lock": threading.Lock(),
-            "restart_lock": threading.Lock()
+            "restart_lock": threading.Lock(),
+            "team_error_triggered": {},
+            "team_reset_barrier": {}
         }
         self.device_map = {} # serial -> absolute_index (0, 1, 2...)
 
@@ -1722,14 +1845,14 @@ class MultiPremiumApp(ctk.CTk):
         val_label.pack(side="right", padx=10)
         return val_label
 
-    def report_stats(self, success=True, account=None):
+    def report_stats(self, success=True, account=None, note=""):
         def _update():
             if success:
                 self.success_count += 1
                 if account: self.export_account(account, "SUCCESS_ACC.txt")
             else:
                 self.failure_count += 1
-                if account: self.export_account(account, "FAILED_ACC.txt")
+                if account: self.export_account(account, "FAILED_ACC.txt", note)
             
             # Xóa tài khoản khỏi file nguồn khi hoàn thành (Dù thành công hay thất bại)
             if account:
@@ -1758,11 +1881,12 @@ class MultiPremiumApp(ctk.CTk):
             except Exception as e:
                 self.add_log(f"LỖI XÓA ACC TRONG FILE: {e}")
 
-    def export_account(self, account, filename):
+    def export_account(self, account, filename, note=""):
         try:
             with FILE_LOCK:
                 with open(filename, "a", encoding="utf-8") as f:
-                    f.write(f"{account['tk']}|{account['mk']}\n")
+                    note_str = f" ({note})" if note else ""
+                    f.write(f"{account['tk']}|{account['mk']}{note_str}\n")
         except Exception as e:
             self.add_log(f"LỖI XUẤT FILE: {e}")
 
