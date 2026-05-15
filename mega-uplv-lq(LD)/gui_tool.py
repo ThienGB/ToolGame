@@ -240,13 +240,22 @@ class AutoClickerInstance:
             self.log("LỖI: Không xác định được index máy ảo để restart.")
             return False
 
-        self.log(f"==> ĐANG KHỞI ĐỘNG LẠI MÁY ẢO (Index {index})...")
-        self.update_status(f"Restarting LD {index}")
-        
-        # 0. Ngắt kết nối cũ
-        try:
-            subprocess.run([self.adb_path, "disconnect", self.device_id], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
-        except: pass
+        # --- CHIẾN LƯỢC RESTART LẦN LƯỢT ---
+        # 1. Thêm Jitter để tránh các tab cùng lúc nhảy vào lock
+        jitter = random.uniform(5, 45)
+        self.log(f"Đang chờ {jitter:.1f}s jitter trước khi xếp hàng restart...")
+        time.sleep(jitter)
+
+        # 2. Sử dụng Lock toàn cục để chỉ 1 máy restart tại một thời điểm
+        lock = getattr(self, "shared_data", {}).get("restart_lock", threading.Lock())
+        with lock:
+            self.log(f"==> ĐÃ ĐẾN LƯỢT RESTART MÁY ẢO (Index {index})...")
+            self.update_status(f"Restarting LD {index}")
+            
+            # 0. Ngắt kết nối cũ
+            try:
+                subprocess.run([self.adb_path, "disconnect", self.device_id], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+            except: pass
 
         # 1. Tắt máy ảo
         try:
@@ -1557,7 +1566,8 @@ class MultiPremiumApp(ctk.CTk):
             "joined_count": 0,
             "room_ids": {},
             "joined_counts": {},
-            "lock": threading.Lock()
+            "lock": threading.Lock(),
+            "restart_lock": threading.Lock()
         }
         self.device_map = {} # serial -> absolute_index (0, 1, 2...)
 
