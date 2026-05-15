@@ -1035,6 +1035,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "click_image", "target": "images/pvp.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_coords", "x": 595, "y": 464, "timeout": 2},
             {"action": "click_image", "target": "images/1v1.png", "timeout": 20, "confidence": 0.9},
             
             {"action": "click_image_if", "target": "images/close.png", "timeout": 5, "confidence": 0.9},
