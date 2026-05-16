@@ -343,7 +343,17 @@ class MultiPremiumApp(ctk.CTk):
         right_block = ctk.CTkFrame(self.main_frame, fg_color=CARD_COLOR, corner_radius=10)
         right_block.pack(side="left", fill="both", expand=True, padx=5, pady=5)
         
-        ctk.CTkLabel(right_block, text="TRẠNG THÁI THIẾT BỊ", font=ctk.CTkFont(size=10, weight="bold"), text_color="#888").pack(pady=5)
+        # Header cho danh sách thiết bị
+        device_header = ctk.CTkFrame(right_block, fg_color="transparent")
+        device_header.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(device_header, text="TRẠNG THÁI THIẾT BỊ", font=ctk.CTkFont(size=10, weight="bold"), text_color="#888").pack(side="left")
+        
+        # Nút Làm mới quét ADB
+        self.btn_refresh = ctk.CTkButton(device_header, text="LÀM MỚI", command=self.scan_devices, 
+                                          width=70, height=20, font=ctk.CTkFont(size=9, weight="bold"),
+                                          fg_color="#333", hover_color="#444")
+        self.btn_refresh.pack(side="right")
         
         self.device_list_frame = ctk.CTkScrollableFrame(right_block, fg_color="transparent", corner_radius=0)
         self.device_list_frame.pack(fill="both", expand=True, padx=2, pady=2)
@@ -453,10 +463,6 @@ class MultiPremiumApp(ctk.CTk):
                 if port % 2 == 0: return (port - 5554) // 2
                 else: return (port - 5555) // 2
         return -1
-
-    def scan_devices(self):
-        # Chạy quét máy ảo trong luồng riêng để tránh lag UI
-        threading.Thread(target=self._perform_scan, daemon=True).start()
 
     def scan_devices(self):
         # Chạy quét máy ảo trong luồng riêng để tránh lag UI

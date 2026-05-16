@@ -1595,10 +1595,16 @@ class AutoClickerInstance:
                 
                 self.log(f"!!! THỰC HIỆN RESET CẢ ĐỘI (5 MÁY) DO LỖI Ở: {error_stage}...")
                 self.is_resetting = True
-                # Thực hiện kịch bản thoát/đăng xuất mà user cung cấp
-                for reset_step in new_circle_script:
-                    if not self.running: break
-                    self.execute_step(reset_step)
+                # Thực hiện kịch bản thoát/đăng xuất (Lặp lại cho đến khi thành công các bước bắt buộc)
+                while self.running:
+                    reset_success = True
+                    for reset_step in new_circle_script:
+                        if not self.running: break
+                        if not self.execute_step(reset_step):
+                            self.log("!!! BƯỚC TRONG KỊCH BẢN RESET THẤT BẠI. THỰC HIỆN LẠI TỪ ĐẦU...")
+                            reset_success = False
+                            break
+                    if reset_success: break
                 
                 # Báo cáo thất bại cho acc hiện tại (xuất file FAILED_ACC.txt kèm note giai đoạn)
                 self.accounts_processed += 1
