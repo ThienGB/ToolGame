@@ -1157,7 +1157,7 @@ class AutoClickerInstance:
             
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_coords", "x": 590, "y": 30, "timeout": 7},
-            {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","timeout": 7, "confidence": 0.9},
+             {"action": "click_coords", "x": 847, "y": 462, "timeout": 10},
             
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
