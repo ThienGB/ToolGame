@@ -1485,14 +1485,44 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
             {"action": "wait", "timeout": 30},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2} ,
+            {
+                "action": "cases",
+                "timeout" : 120,
+                "cases": [
+                    {
+                        "trigger": "images/event_default.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
+                            {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                        ]
+                    },
+                    {
+                        "trigger1": "images/x3.png", "trigger2": "images/x5.png", 
+                        "confidence": 0.7,
+                        "script": [
+                        {"action": "press_esc", "wait": 2},
+                        {"action": "press_esc", "wait": 2},
+                        ]
+                        
+                    },
+                    
+                ]
+              } ,     
+            {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
+            {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/off.png", "timeout": 30, "confidence": 0.9,"use_color": True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
+            
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
             {"action": "wait", "timeout": 15},    
