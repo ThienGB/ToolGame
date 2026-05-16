@@ -889,7 +889,7 @@ class AutoClickerInstance:
                         self.call_adb(["shell", "input", "tap", str(cx), str(cy)])
                         self.log(f"  Click số '{digit}' tại ({cx}, {cy})")
                         found = True
-                        time.sleep(1.0)  # Đợi 1.0s giữa 2 lần click để game nhận phím
+                        time.sleep(1.5)  # Đợi 1.5s giữa 2 lần click để game nhận phím
                         break
                 time.sleep(0.5)
             
