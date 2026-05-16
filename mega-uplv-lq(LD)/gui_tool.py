@@ -1520,9 +1520,7 @@ class AutoClickerInstance:
               } ,     
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
-            {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/off.png", "timeout": 5, "confidence": 0.9,"use_color": True},
-            {"action": "click_image", "target": "images/minimize.png", "timeout": 20, "confidence": 0.9},
+            
             
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
