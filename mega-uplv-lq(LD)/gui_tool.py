@@ -987,7 +987,7 @@ class AutoClickerInstance:
             {"action": "click_image", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dangnhap.jpg", "timeout": 30, "confidence": 0.9},
             {"action": "wait", "timeout": 5},
             {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "timeout": 5, "confidence": 0.9},
-            {"action": "click_image", "target": "images/ok2.png", "timeout": 30, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/ok2.png", "timeout": 30, "confidence": 0.9},
             {"action": "wait", "timeout": 7},
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/ok2.png", "timeout": 4, "confidence": 0.9},
