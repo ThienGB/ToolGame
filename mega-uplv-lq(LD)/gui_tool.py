@@ -1457,7 +1457,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9,"only_host": True},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9,"only_host": True},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 6, "confidence": 0.9,"only_host": True},
             {"action": "wait", "timeout": 3},
             
         ]
@@ -1468,7 +1468,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 6, "confidence": 0.9},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/off.png", "timeout": 5, "confidence": 0.9,"use_color": True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
