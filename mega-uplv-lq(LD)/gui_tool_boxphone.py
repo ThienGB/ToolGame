@@ -737,7 +737,8 @@ class AutoClickerInstance:
         login_script = [
             {"action": "click_image_if", "target": "xacnhan.png", "timeout": 8, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 30, "confidence": 0.7},
-           
+            {"action": "click_coords", "x": 387, "y": 888, "timeout": 2},
+            {"action": "click_coords", "x": 387, "y": 888, "timeout": 2},
             {"action": "wait", "timeout": 5},
             
             {"action": "input_account"},
