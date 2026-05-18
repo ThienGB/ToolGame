@@ -735,6 +735,7 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN (Đã được tối ưu cho BoxPhone)
         login_script = [
+            {"action": "click_image_if", "target": "xacnhan.png", "timeout": 8, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 30, "confidence": 0.7},
            
             {"action": "wait", "timeout": 5},
@@ -750,6 +751,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/batdau.png", "target2": "images_boxphone/batdau1.png",  "timeout": 7, "confidence": 0.7},
+            {"action": "click_coords", "x": 951, "y": 977,  "timeout": 3},
 
             
 
@@ -910,7 +912,7 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 951, "y": 1001, "timeout": 3},
             {"action": "click_image", "target": "images_boxphone/backsk.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/tui_do.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x_tuido.png","target3": "images_boxphone/xtuido.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x_tuido.png","target3": "images_boxphone/xtuido.png","target4": "images_boxphone/xtuido1.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/vatpham_tuido.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target1": "images_boxphone/sudung.png","target2": "images_boxphone/sudung1.png","target3": "images_boxphone/sudung2.png", "timeout": 20, "confidence": 0.7},
