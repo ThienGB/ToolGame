@@ -1098,8 +1098,8 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 5, "confidence": 0.7},
             
             {"action": "click_any", "wait": 2},
-            {"action": "click_coords", "x": 976, "y": 989, "timeout": 3},
-            {"action": "click_coords", "x": 976, "y": 989, "timeout": 3},
+            {"action": "click_coords", "x": 976, "y": 989, "timeout": 5},
+            {"action": "click_coords", "x": 976, "y": 989, "timeout": 8},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
@@ -1168,7 +1168,7 @@ class AutoClickerInstance:
         # 5. CÁC HÀNH ĐỘNG LẶP LẠI (SHARED BATTLE LOGIC)
         # Tọa độ chọn tướng cho 5 máy trên BoxPhone (Sửa tọa độ x, y tại đây)
         hero_coords = [
-            {"x": 245, "y": 162}, # Máy 1
+            {"x": 1331, "y": 166}, # Máy 1
             {"x": 229, "y": 343}, # Máy 2
             {"x": 395, "y": 170}, # Máy 3
             {"x": 403, "y": 360}, # Máy 4
@@ -1203,7 +1203,7 @@ class AutoClickerInstance:
             {"action": "sync_autowin", "timeout": 120},
             {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2": "images_boxphone/minimize1.png", "target3": "images_boxphone/minimize2.png", "target4": "images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 600, "confidence": 0.7},
-            {"action": "wait", "timeout": 7},
+            {"action": "wait", "timeout": 15},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
