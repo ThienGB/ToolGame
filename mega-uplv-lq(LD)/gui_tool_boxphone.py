@@ -735,7 +735,7 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN (Đã được tối ưu cho BoxPhone)
         login_script = [
-            {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png","timeout": 30, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 30, "confidence": 0.7},
            
             {"action": "wait", "timeout": 5},
             
