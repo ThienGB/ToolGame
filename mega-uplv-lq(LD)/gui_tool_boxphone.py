@@ -520,9 +520,9 @@ class AutoClickerInstance:
         screen = self.get_screenshot()
         if screen is not None:
             h, w = screen.shape[:2]
-            cx, cy = w // 2, int(h * 0.8)
+            cx, cy = w // 2, int(h * 0.91)
             self.call_adb(["shell", "input", "tap", str(cx), str(cy)])
-            self.log(f"==> CLICK ANY (80%): ({cx}, {cy})")
+            self.log(f"==> CLICK ANY (91%): ({cx}, {cy})")
             return True
         return False
 
@@ -746,7 +746,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target1": "images_boxphone/xong.png", "target2": "images_boxphone/xong1.png","target3": "images_boxphone/done.png","timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
-            {"action": "click_image_if", "target1": "images_boxphone/dangnhap2.png", "target2": "images_boxphone/login.png","timeout": 3, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/dangnhap2.png", "target2": "images_boxphone/login.png","target3": "images_boxphone/login1.png","timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png","target3": "images_boxphone/okdangnhap2.png", "timeout": 10, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png", "timeout": 3, "confidence": 0.7},
@@ -1098,9 +1098,11 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 5, "confidence": 0.7},
             
             {"action": "click_any", "wait": 2},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
+            {"action": "click_coords", "x": 976, "y": 989, "timeout": 3},
+            {"action": "click_coords", "x": 976, "y": 989, "timeout": 3},
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
             {
                 "action": "cases",
                 "timeout" : 120,
