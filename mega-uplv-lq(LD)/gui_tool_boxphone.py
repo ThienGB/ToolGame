@@ -920,7 +920,7 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 261, "y": 900, "timeout": 2},
             {"action": "click_image", "target": "images_boxphone/ruby.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_coords", "x": 951, "y": 1001, "timeout": 3},
-            {"action": "click_image", "target": "images_boxphone/backsk.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_coords", "x": 80, "y": 81, "timeout": 4},
             {"action": "click_image", "target": "images_boxphone/tui_do.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x_tuido.png","target3": "images_boxphone/xtuido.png","target4": "images_boxphone/xtuido1.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/vatpham_tuido.png", "timeout": 20, "confidence": 0.7},
