@@ -1198,25 +1198,17 @@ class AutoClickerInstance:
         if self.modes.get("mua_exp"): self.script += mua_exp_script
         if self.modes.get("dinh_game"): self.script += dinh_game_script
         if self.modes.get("teamup"):
-            loop_steps = []
             if self.is_host:
-                # Host: tạo phòng và đợi đủ 5 người (4 khách + 1 host)
-                loop_steps += teamup_host_script
-                # Chèn thêm một bước đợi người nữa trước khi vào trận để đảm bảo ván 2, 3 luôn đủ người
-                loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
-                loop_steps += shared_battle_script
-                # Quan trọng: Reset đếm người ở CUỐI mỗi ván để ván sau Guest báo danh lại từ đầu
-                loop_steps.append({"action": "clear_room_id"})
+                self.script += teamup_host_script
             else:
-                # Guest: vào phòng và đợi host bắt đầu
-                loop_steps += teamup_guest_script
-                loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
-                loop_steps += shared_battle_script
+                self.script += teamup_guest_script
+                
+            self.script.append({"action": "wait_for_players", "count": 4, "timeout": 300})
             
             battle_loop = {
                 "action": "loop", 
                 "count": self.modes.get("battle_count", 3), 
-                "steps": loop_steps
+                "steps": shared_battle_script
             }
             self.script.append(battle_loop)
         
