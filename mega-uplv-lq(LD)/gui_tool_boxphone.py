@@ -759,14 +759,14 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/batdau.png", "target2": "images_boxphone/batdau1.png",  "timeout": 7, "confidence": 0.7},
-            {"action": "click_coords", "x": 951, "y": 977,  "timeout": 3},
+            
 
             
 
-            # {"action": "click_image_if", "target": "images_boxphone/okdangnhap.png",  "timeout": 4, "confidence": 0.7},
-            # {"action": "click_coords", "x": 1407, "y": 1005, "timeout": 2},
-            {"action": "click_image_if", "target1": "images_boxphone/batdau.png", "target2": "images_boxphone/batdau1.png",  "timeout": 7, "confidence": 0.7},
-        
+           
+            {"action": "click_image_if", "target1": "images_boxphone/batdau.png", "target2": "images_boxphone/batdau1.png",  "timeout": 15, "confidence": 0.7},
+            {"action": "click_coords", "x": 976, "y": 985,  "timeout": 3},
+            {"action": "click_coords", "x": 976, "y": 985,  "timeout": 3},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
         # 2. GIAI ĐOẠN VƯỢT TÂN THỦ (Full chi tiết từ LD)
@@ -920,7 +920,7 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 261, "y": 900, "timeout": 2},
             {"action": "click_image", "target": "images_boxphone/ruby.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_coords", "x": 951, "y": 1001, "timeout": 3},
-            {"action": "click_image", "target": "images_boxphone/backsk.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_coords", "x": 80, "y": 81, "timeout": 4},
             {"action": "click_image", "target": "images_boxphone/tui_do.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x_tuido.png","target3": "images_boxphone/xtuido.png","target4": "images_boxphone/xtuido1.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/vatpham_tuido.png", "timeout": 20, "confidence": 0.7},
@@ -960,22 +960,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "wait", "timeout": 10},
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            
-             ]
+]
 
         # 2.5 GIAI ĐOẠN MUA EXP
         mua_exp_script = [
@@ -1079,7 +1064,7 @@ class AutoClickerInstance:
         
         # 4. GIAI ĐOẠN GHÉP ĐỘI (TEAM UP)        
         teamup_host_script = [
-            {"action": "press_esc", "wait": 2},
+            
             {"action": "click_image", "target": "images_boxphone/dau_thuong1.png", "timeout": 60, "confidence": 0.7},
             
             {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 5, "confidence": 0.7},
@@ -1088,7 +1073,7 @@ class AutoClickerInstance:
             {"action": "get_room_id", "timeout": 30, "roi": [0.50, 0.0, 0.30, 0.10]},
             {"action": "wait_for_players", "count": 4, "timeout": 300},
             
-            {"action": "click_image_if", "target": "images_boxphone/da_ro.png", "timeout": 5, "confidence": 0.75},
+            {"action": "click_image_if", "target1": "images_boxphone/da_ro.png", "target2": "images_boxphone/daro1.png", "timeout": 5, "confidence": 0.75},
             
             {"action": "click_image", "target": "images_boxphone/pve.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
@@ -1158,16 +1143,33 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png", "timeout": 5, "confidence": 0.7},
             
             {"action": "click_coords", "x": 1161, "y": 981, "timeout": 3},
+            {"action": "click_coords", "x": 1161, "y": 981, "timeout": 3},
+            {"action": "click_coords", "x": 1161, "y": 981, "timeout": 1},
+            {"action": "click_coords", "x": 1161, "y": 981, "timeout": 1},
+            {"action": "click_coords", "x": 1161, "y": 981, "timeout": 1},
+            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png","timeout": 10, "confidence": 0.9,"only_host": True},
            
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png","timeout": 10, "confidence": 0.9,"only_host": True},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images_boxphone/huy.png", "timeout": 6, "confidence": 0.9,"only_host": True},
+            {"action": "wait", "timeout": 3},
             {"action": "wait", "timeout": 5},      
         ]
 
         # 6. GIAI ĐOẠN ĐĂNG XUẤT
         uplevel_script = [
+            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png","timeout": 10, "confidence": 0.9},
+           
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png","timeout": 10, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target": "images_boxphone/huy.png", "timeout": 6, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
             {"action": "click_image", "target": "images_boxphone/logo.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/off.png", "timeout": 5, "confidence": 0.75, "use_color": True},
             {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2": "images_boxphone/minimize1.png", "target3": "images_boxphone/minimize2.png", "target4": "images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.7},
-             {"action": "click_image", "target": "images_boxphone/home1.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images_boxphone/home1.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/cai_dat_button.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/dangxuat.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/ok1.png", "timeout": 30, "confidence": 0.7},
@@ -1181,25 +1183,17 @@ class AutoClickerInstance:
         if self.modes.get("mua_exp"): self.script += mua_exp_script
         if self.modes.get("dinh_game"): self.script += dinh_game_script
         if self.modes.get("teamup"):
-            loop_steps = []
             if self.is_host:
-                # Host: tạo phòng và đợi đủ 5 người (4 khách + 1 host)
-                loop_steps += teamup_host_script
-                # Chèn thêm một bước đợi người nữa trước khi vào trận để đảm bảo ván 2, 3 luôn đủ người
-                loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
-                loop_steps += shared_battle_script
-                # Quan trọng: Reset đếm người ở CUỐI mỗi ván để ván sau Guest báo danh lại từ đầu
-                loop_steps.append({"action": "clear_room_id"})
+                self.script += teamup_host_script
             else:
-                # Guest: vào phòng và đợi host bắt đầu
-                loop_steps += teamup_guest_script
-                loop_steps.append({"action": "wait_for_players", "count": 4, "timeout": 300})
-                loop_steps += shared_battle_script
+                self.script += teamup_guest_script
+                
+            self.script.append({"action": "wait_for_players", "count": 4, "timeout": 300})
             
             battle_loop = {
                 "action": "loop", 
                 "count": self.modes.get("battle_count", 3), 
-                "steps": loop_steps
+                "steps": shared_battle_script
             }
             self.script.append(battle_loop)
         

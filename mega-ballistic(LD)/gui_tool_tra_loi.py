@@ -78,7 +78,8 @@ def init_ocr_reader(log_func=None):
         import easyocr as ocr_lib
         try:
             import torch
-            torch.set_num_threads(1)  # Limit threads to avoid high CPU spikes
+            torch.set_num_threads(1)        # Limit threads to avoid high CPU spikes
+            torch.set_num_interop_threads(1) # Prevent background thread contention
         except:
             pass
         easyocr = ocr_lib
@@ -295,6 +296,7 @@ class MultiPremiumApp(ctk.CTk):
         self.devices = []
         self.is_running = False
         self.engine_thread = None
+        self.answer_file_path = "dapan.txt"
         
         # Load ROI coordinates
         self.coords = {
@@ -348,6 +350,16 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(cfg_card, text="QUẢN LÝ CẤU HÌNH", font=ctk.CTkFont(size=11, weight="bold"), text_color=TEXT_MUTED).pack(pady=(8, 2))
         
         ctk.CTkButton(cfg_card, text="Lưu Tọa Độ", command=self.save_coords_config, height=28, fg_color=BORDER_COLOR).pack(padx=10, pady=10, fill="x")
+
+        # Answer File Card (New custom premium file selection logic)
+        ans_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
+        ans_card.pack(padx=15, pady=5, fill="x")
+        ctk.CTkLabel(ans_card, text="FILE CƠ SỞ ĐÁP ÁN", font=ctk.CTkFont(size=11, weight="bold"), text_color=TEXT_MUTED).pack(pady=(8, 2))
+        
+        self.lbl_ans_path = ctk.CTkLabel(ans_card, text=os.path.basename(self.answer_file_path), font=ctk.CTkFont(size=11, weight="bold"), text_color=ACCENT_CYAN, wraplength=200)
+        self.lbl_ans_path.pack(padx=10, pady=2)
+        
+        ctk.CTkButton(ans_card, text="Chọn File Đáp Án", command=self.choose_answer_file, height=28, fg_color=BORDER_COLOR).pack(padx=10, pady=(5, 10), fill="x")
 
         # Bottom Controls
         self.btn_stop = ctk.CTkButton(self.sidebar, text="DỪNG QUÉT (F2)", command=self.stop_ocr_engine, fg_color="#333", text_color="#aaa", height=40, corner_radius=10, font=ctk.CTkFont(weight="bold"), state="disabled")
@@ -500,6 +512,18 @@ class MultiPremiumApp(ctk.CTk):
         self.log_textbox.delete("1.0", "end")
         self.log_textbox.configure(state="disabled")
 
+    # --- Choice of answer file selector ---
+    def choose_answer_file(self):
+        file_path = fd.askopenfilename(
+            title="Chọn File Đáp Án (định dạng dòng nối dòng)",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+        )
+        if file_path:
+            self.answer_file_path = file_path
+            self.lbl_ans_path.configure(text=os.path.basename(file_path))
+            self.add_log(f"HỆ THỐNG: Đã đổi file cơ sở đáp án sang: {file_path}")
+            self.save_coords_config()
+
     # --- Coordinates Persistency Configs ---
     def save_coords_config(self):
         coords_to_save = {}
@@ -510,10 +534,14 @@ class MultiPremiumApp(ctk.CTk):
                 self.add_log("LỖI: Tọa độ nhập không hợp lệ, không thể lưu cấu hình config.json.")
                 return
         self.coords = coords_to_save
+        
+        config_data = dict(self.coords)
+        config_data["answer_file_path"] = self.answer_file_path
+        
         try:
             with open("config.json", "w") as f:
-                json.dump(coords_to_save, f, indent=4)
-            self.add_log("HỆ THỐNG: Đã lưu tọa độ 5 khung ROI vào file config.json.")
+                json.dump(config_data, f, indent=4)
+            self.add_log("HỆ THỐNG: Đã lưu tọa độ và file đáp án vào file config.json.")
         except Exception as e:
             self.add_log(f"LỖI: Không thể ghi file config.json! {e}")
 
@@ -522,9 +550,14 @@ class MultiPremiumApp(ctk.CTk):
             try:
                 with open("config.json", "r") as f:
                     saved = json.load(f)
-                for k in self.coords.keys():
-                    if k in saved and len(saved[k]) == 4:
-                        self.coords[k] = saved[k]
+                if isinstance(saved, dict):
+                    # Coords
+                    for k in self.coords.keys():
+                        if k in saved and len(saved[k]) == 4:
+                            self.coords[k] = saved[k]
+                    # Custom answer path
+                    if "answer_file_path" in saved:
+                        self.answer_file_path = saved["answer_file_path"]
             except Exception as e:
                 print(f"Error loading config.json: {e}")
 
@@ -589,8 +622,13 @@ class MultiPremiumApp(ctk.CTk):
         if x2 <= x1 or y2 <= y1:
             return None
         crop = screen[y1:y2, x1:x2]
-        # Resize 2x and convert to grayscale to maximize OCR quality
-        crop = cv2.resize(crop, (crop.shape[1] * 2, crop.shape[0] * 2), interpolation=cv2.INTER_CUBIC)
+        
+        # Adaptive Resize: only double size if the cropped region is very small (height < 45px)
+        # Standard question boxes (~80px) and standard options (~50px) are large enough.
+        # This saves HUGE CPU processing power by bypassing the 4x pixel scaling.
+        if crop.shape[0] < 45:
+            crop = cv2.resize(crop, (crop.shape[1] * 2, crop.shape[0] * 2), interpolation=cv2.INTER_CUBIC)
+            
         return cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
     def ocr_read_text(self, crop_gray):
@@ -598,10 +636,8 @@ class MultiPremiumApp(ctk.CTk):
         if crop_gray is None or _ocr_reader is None:
             return ""
         try:
-            # Read single line bounding box using lazy-loaded easyocr reader
             results = _ocr_reader.readtext(crop_gray, detail=0)
             if results:
-                # Merge paragraphs into unified sentence
                 return " ".join(results).strip()
         except Exception as e:
             print(f"OCR Reader Failure: {e}")
@@ -614,11 +650,9 @@ class MultiPremiumApp(ctk.CTk):
             self.add_log("LỖI: Vui lòng kết nối và chọn thiết bị giả lập ở sidebar trước.")
             return
         
-        # Open tab logs so the user immediately sees the output
         self.tabview.set("Nhật Ký Quét")
         self.add_log("=== BẮT ĐẦU TEST OCR CẢ 5 KHUNG TỌA ĐỘ ===")
         
-        # Load reader
         reader = init_ocr_reader(self.add_log)
         if reader is None:
             self.add_log("LỖI: Chưa thể nạp module OCR Reader.")
@@ -649,7 +683,7 @@ class MultiPremiumApp(ctk.CTk):
         self.add_log(f"  ├─ OCR Đáp án D: \"{texts['opt_d']}\"")
 
         # Fuzzy lookup test
-        db = load_answers()
+        db = load_answers(self.answer_file_path)
         best_q, ratio = find_best_match(texts['question'], db.keys())
         
         if best_q:
@@ -681,7 +715,7 @@ class MultiPremiumApp(ctk.CTk):
             else:
                 self.add_log("❌ THẤT BẠI: Không so khớp được đáp án đúng với 4 Option chữ OCR.")
         else:
-            self.add_log("❓ KHÔNG TÌM THẤY: Câu hỏi này chưa có trong file dapan.txt.")
+            self.add_log("❓ KHÔNG TÌM THẤY: Câu hỏi này chưa có trong file cơ sở đáp án.")
         self.add_log("=== HOÀN TẤT THỬ NGHIỆM ===")
 
     # --- Background loop auto answer runner ---
@@ -746,7 +780,7 @@ class MultiPremiumApp(ctk.CTk):
             q_text = self.ocr_read_text(crop_q)
 
             if not q_text or len(q_text) < 4:
-                # No question detected yet
+                # No question detected yet. Sleep to avoid hammering the CPU.
                 time.sleep(1.5)
                 continue
 
@@ -756,14 +790,14 @@ class MultiPremiumApp(ctk.CTk):
             
             # Use fuzzy ratio to check if it's the exact same active question
             if norm_new == norm_old or (norm_old and difflib.SequenceMatcher(None, norm_new, norm_old).ratio() > 0.85):
-                # Still showing the same question, avoid double clicks
-                time.sleep(1.5)
+                # Still showing the same question, avoid double clicks. Sleep longer.
+                time.sleep(1.8)
                 continue
 
             self.add_log(f"🔍 PHÁT HIỆN CÂU HỎI MỚI: \"{q_text}\"")
             last_processed_question = q_text
 
-            db = load_answers()
+            db = load_answers(self.answer_file_path)
             best_q, ratio = find_best_match(q_text, db.keys())
 
             if best_q and ratio >= 0.6:
@@ -811,7 +845,7 @@ class MultiPremiumApp(ctk.CTk):
                 else:
                     self.add_log("❌ LỖI: Không khớp được đáp án đúng với 4 Option chữ OCR trên màn hình.")
             else:
-                self.add_log(f"❓ THẤT BẠI: Không có câu hỏi nào khớp trong dapan.txt (Khớp tốt nhất: {ratio*100:.1f}%)")
+                self.add_log(f"❓ THẤT BẠI: Không có câu hỏi nào khớp trong cơ sở đáp án (Khớp tốt nhất: {ratio*100:.1f}%)")
 
             time.sleep(2)
             gc.collect()
