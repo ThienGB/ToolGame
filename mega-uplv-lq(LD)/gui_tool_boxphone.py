@@ -947,7 +947,9 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3},
             {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/sukien.png", "timeout": 3, "confidence": 0.7},
-            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
             {"action": "click_image_if", "target1": "images_boxphone/dauhang.png", "target2": "images_boxphone/dau_hang1.jpg", "timeout": 15, "confidence": 0.7},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
@@ -1073,12 +1075,10 @@ class AutoClickerInstance:
         teamup_host_script = [
             {"action": "press_esc", "wait": 2},
             {"action": "click_image", "target": "images_boxphone/dau_thuong1.png", "timeout": 60, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/x_dinh_game.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/x_dinh_game.jpg", "timeout": 2, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/huy.png", "timeout": 3, "confidence": 0.7},
+            
+            {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images_boxphone/x1.png", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images_boxphone/huy.png", "timeout": 5, "confidence": 0.7},
             {"action": "get_room_id", "timeout": 30, "roi": [0.50, 0.0, 0.30, 0.10]},
             {"action": "wait_for_players", "count": 4, "timeout": 300},
             
@@ -1086,17 +1086,12 @@ class AutoClickerInstance:
             
             {"action": "click_image", "target": "images_boxphone/pve.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
-             {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 3},
+            {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 3},
             {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 1},
         ]
         
         teamup_guest_script = [
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target": "images_boxphone/dau_thuong1.png", "timeout": 60, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/x_dinh_game.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/x_dinh_game.jpg", "timeout": 2, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
+            
             {"action": "click_image", "target": "images_boxphone/tuy_chon.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/idphong.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait_for_room", "timeout": 300},
@@ -1149,31 +1144,15 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 30},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 5, "confidence": 0.7},
-            {"action": "click_coords", "x": 959, "y": 995, "timeout": 3},
-            {"action": "click_coords", "x": 959, "y": 995, "timeout": 4},
-            {"action": "click_coords", "x": 959, "y": 995, "timeout": 5},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 3},
-            {"action": "click_coords", "x": 959, "y": 500, "timeout": 3},
-            {
-                "action": "cases",
-                "timeout" : 120,
-                "cases": [
-                    {
-                        "trigger": "images_boxphone/sukien.png",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 20, "confidence": 0.9},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},                 
-                        ]
-                    },
-                    {
-                        "trigger": "images_boxphone/tuy_chon.png", 
-                        "confidence": 0.7,  
-                    }
-                ]
-            },
+            {"action": "click_coords", "x": 1161, "y": 981, "timeout": 3},
+            {"action": "click_coords", "x": 1161, "y": 981, "timeout": 3},
+            {"action": "click_coords", "x": 1161, "y": 981, "timeout": 3},
+            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png", "timeout": 5, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png", "timeout": 5, "confidence": 0.7},
+            
+            {"action": "click_coords", "x": 1161, "y": 981, "timeout": 3},
+           
             {"action": "wait", "timeout": 5},      
         ]
 
