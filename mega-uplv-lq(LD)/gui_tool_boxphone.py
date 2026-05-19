@@ -720,14 +720,47 @@ class AutoClickerInstance:
 
     def sync_autowin_logic(self, step):
         start = time.time()
+        group_id = self.group_id
+        
+        # 1. Khai báo và tăng biến đếm người đã đến rào chắn (Arrival Barrier)
         with self.shared_data["lock"]:
-            self.shared_data["autowin_barrier"][self.group_id] = self.shared_data["autowin_barrier"].get(self.group_id, 0) + 1
+            if "autowin_barrier" not in self.shared_data:
+                self.shared_data["autowin_barrier"] = {}
+            if "autowin_released" not in self.shared_data:
+                self.shared_data["autowin_released"] = {}
+            if "autowin_left" not in self.shared_data:
+                self.shared_data["autowin_left"] = {}
+                
+            self.shared_data["autowin_barrier"][group_id] = self.shared_data["autowin_barrier"].get(group_id, 0) + 1
+            arrived = self.shared_data["autowin_barrier"][group_id]
+            self.log(f"--> Chờ đồng bộ auto_win. Đã đến: {arrived}/5 thiết bị.")
+            
+            # Khi đủ 5 thiết bị, kích hoạt phát hành rào chắn
+            if arrived >= 5:
+                self.shared_data["autowin_released"][group_id] = True
+
+        # 2. Vòng lặp chờ đồng bộ (tất cả cùng chờ cho đến khi được giải phóng)
         while time.time() - start < 120 and self.running:
             with self.shared_data["lock"]:
-                if self.shared_data["autowin_barrier"].get(self.group_id, 0) >= 5: break
-            time.sleep(0.5)
-        self.click_image_logic({"action": "click_image_if",  "target": "images_boxphone/on.png", "timeout": 20, "confidence": 0.8, "use_color": True})
-        with self.shared_data["lock"]: self.shared_data["autowin_barrier"][self.group_id] = 0
+                if self.shared_data["autowin_released"].get(group_id, False):
+                    break
+            time.sleep(0.1)  # Giảm thời gian nghỉ xuống 100ms để 5 máy phản hồi đồng thời siêu nhạy!
+
+        # 3. Thực hiện hành động click đồng bộ cùng lúc
+        self.click_image_logic({"action": "click_image_if", "target": "images_boxphone/on.png", "timeout": 20, "confidence": 0.8, "use_color": True})
+
+        # 4. Quản lý dọn dẹp rào chắn khi thoát (Exit Barrier)
+        with self.shared_data["lock"]:
+            self.shared_data["autowin_left"][group_id] = self.shared_data["autowin_left"].get(group_id, 0) + 1
+            left = self.shared_data["autowin_left"][group_id]
+            
+            # Thiết bị cuối cùng rời đi sẽ reset toàn bộ rào chắn để sẵn sàng cho lần đồng bộ sau
+            if left >= 5:
+                self.shared_data["autowin_barrier"][group_id] = 0
+                self.shared_data["autowin_released"][group_id] = False
+                self.shared_data["autowin_left"][group_id] = 0
+                self.log("--> Đã giải phóng hoàn toàn và thiết lập lại rào cản sync auto_win cho ván tiếp theo!")
+                
         return True
 
     def run(self, accounts, modes, shared_data):
