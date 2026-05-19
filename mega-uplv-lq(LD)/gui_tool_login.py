@@ -213,6 +213,7 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 770, "y": 502, "timeout": 4}, # ok
             {"action": "click_coords", "x": 476, "y": 494, "timeout": 10}, # bắt đầu
             {"action": "click_coords", "x": 193, "y": 444, "timeout": 10},
+            {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
 
         while self.running:

@@ -1157,6 +1157,9 @@ class AutoClickerInstance:
             
             {"action": "press_esc", "wait": 2} ,
             {"action": "click_coords", "x": 590, "y": 30, "timeout": 7},
+             {"action": "click_coords", "x": 847, "y": 462, "timeout": 10},
+            
+            {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_coords", "x": 774, "y": 246, "timeout": 2},
@@ -1454,7 +1457,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9,"only_host": True},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9,"only_host": True},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 6, "confidence": 0.9,"only_host": True},
             {"action": "wait", "timeout": 3},
             
         ]
@@ -1465,9 +1468,9 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 2},
             {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/huy.png", "timeout": 6, "confidence": 0.9},
             {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/off.png", "timeout": 30, "confidence": 0.9,"use_color": True},
+            {"action": "click_image", "target": "images/off.png", "timeout": 5, "confidence": 0.9,"use_color": True},
             {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/home.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/cai_dat_button.png", "timeout": 30, "confidence": 0.9},
@@ -1484,7 +1487,8 @@ class AutoClickerInstance:
             {"action": "restart_app", "app": "com.garena.game.kgvn"},
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
-            {"action": "wait", "timeout": 30},
+            {"action": "wait", "timeout": 25},
+            {"action": "click_image_if", "target1": "images/batdau.png","target2": "images/batdau1.png", "timeout": 6, "confidence": 0.9},
             {"action": "press_esc", "wait": 2} ,
             {
                 "action": "cases",
@@ -1519,9 +1523,7 @@ class AutoClickerInstance:
               } ,     
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
-            {"action": "click_image", "target": "images/logo1.png", "timeout": 30, "confidence": 0.9},
-            {"action": "click_image", "target": "images/off.png", "timeout": 30, "confidence": 0.9,"use_color": True},
-            {"action": "click_image", "target": "images/minimize.png", "timeout": 30, "confidence": 0.9},
+            
             
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
