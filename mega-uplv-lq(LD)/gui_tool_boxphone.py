@@ -759,13 +759,13 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png", "timeout": 3, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/batdau.png", "target2": "images_boxphone/batdau1.png",  "timeout": 7, "confidence": 0.7},
-            {"action": "click_coords", "x": 951, "y": 977,  "timeout": 3},
+            
 
             
 
            
             {"action": "click_image_if", "target1": "images_boxphone/batdau.png", "target2": "images_boxphone/batdau1.png",  "timeout": 15, "confidence": 0.7},
-        
+            {"action": "click_coords", "x": 976, "y": 985,  "timeout": 3},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
         # 2. GIAI ĐOẠN VƯỢT TÂN THỦ (Full chi tiết từ LD)
