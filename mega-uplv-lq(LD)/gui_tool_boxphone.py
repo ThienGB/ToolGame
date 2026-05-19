@@ -279,6 +279,12 @@ class AutoClickerInstance:
     def execute_step(self, step):
         if not self.running: return False
         action = step.get("action")
+        
+        # Nếu có flag only_host/host_only thì chỉ Host mới thực hiện (các máy GUEST sẽ bỏ qua)
+        if (step.get("only_host") or step.get("host_only")) and not getattr(self, "is_host", False):
+            self.log(f"Bỏ qua bước '{action}' vì chỉ dành cho HOST.")
+            return True
+
         target_info = step.get("target") or step.get("target1", "")
         self.log(f"==> Bước: {action} {f'({target_info})' if target_info else ''}")
         self.last_step_time = time.time()
