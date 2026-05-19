@@ -960,22 +960,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "wait", "timeout": 10},
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            
-             ]
+]
 
         # 2.5 GIAI ĐOẠN MUA EXP
         mua_exp_script = [
