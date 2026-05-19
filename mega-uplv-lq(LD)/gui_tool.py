@@ -1450,16 +1450,6 @@ class AutoClickerInstance:
 
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
-            
-            # {"action": "press_esc", "wait": 5} ,
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 10, "confidence": 0.9,"only_host": True},
-           
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 3, "confidence": 0.9,"only_host": True},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target": "images/huy.png", "timeout": 6, "confidence": 0.9,"only_host": True},
-            {"action": "wait", "timeout": 3},
-            
         ]
         
         # GIAI ĐĂNG XUẤT - XUẤT FILE
