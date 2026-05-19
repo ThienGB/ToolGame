@@ -1087,7 +1087,7 @@ class AutoClickerInstance:
             {"action": "get_room_id", "timeout": 30, "roi": [0.50, 0.0, 0.30, 0.10]},
             {"action": "wait_for_players", "count": 4, "timeout": 300},
             
-            {"action": "click_image_if", "target": "images_boxphone/da_ro.png", "timeout": 5, "confidence": 0.75},
+            {"action": "click_image_if", "target1": "images_boxphone/da_ro.png", "target2": "images_boxphone/daro1.png", "timeout": 5, "confidence": 0.75},
             
             {"action": "click_image", "target": "images_boxphone/pve.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
