@@ -29,6 +29,17 @@ excluded_modules = [
     'torch.distributions', 'torch.testing', 'torch.utils.benchmark'
 ]
 
+# Tự động quét và thêm thư mục Tcl/Tk để tránh lỗi 'Tcl data directory not found' trên máy khách
+import os
+import sys
+tcl_root = os.path.join(sys.base_prefix, 'tcl')
+if os.path.exists(tcl_root):
+    for f in os.listdir(tcl_root):
+        f_path = os.path.join(tcl_root, f)
+        if os.path.isdir(f_path):
+            if f.startswith('tcl') or f.startswith('tk'):
+                datas.append((f_path, os.path.join('_tcl_data', f)))
+
 a = Analysis(
     ['gui_tool_cs_cheo.py'],
     pathex=[],
