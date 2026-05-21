@@ -926,4 +926,3 @@ if __name__ == "__main__":
     else:
         app = MultiPremiumApp()
         app.mainloop()
-#  PyInstaller --noconfirm --onefile --windowed --name MegaOCRTool gui_tool_tra_loi.py
