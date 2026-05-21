@@ -300,11 +300,11 @@ class MultiPremiumApp(ctk.CTk):
         
         # Load ROI coordinates
         self.coords = {
-            "question": [150, 80, 660, 80],
-            "opt_a": [170, 200, 620, 50],
-            "opt_b": [170, 260, 620, 50],
-            "opt_c": [170, 320, 620, 50],
-            "opt_d": [170, 380, 620, 50]
+            "question": [150, 80, 810, 160],
+            "opt_a": [170, 200, 790, 250],
+            "opt_b": [170, 260, 790, 310],
+            "opt_c": [170, 320, 790, 370],
+            "opt_d": [170, 380, 790, 430]
         }
         self.load_coords_config()
 
@@ -413,24 +413,24 @@ class MultiPremiumApp(ctk.CTk):
             inputs_frame.pack(side="left", fill="x", expand=True)
             
             val = self.coords[reg_key]
-            e_x = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="X", fg_color=BG_COLOR, border_color=BORDER_COLOR)
-            e_x.insert(0, str(val[0]))
-            e_x.pack(side="left", padx=5)
+            e_x1 = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="X1", fg_color=BG_COLOR, border_color=BORDER_COLOR)
+            e_x1.insert(0, str(val[0]))
+            e_x1.pack(side="left", padx=5)
 
-            e_y = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="Y", fg_color=BG_COLOR, border_color=BORDER_COLOR)
-            e_y.insert(0, str(val[1]))
-            e_y.pack(side="left", padx=5)
+            e_y1 = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="Y1", fg_color=BG_COLOR, border_color=BORDER_COLOR)
+            e_y1.insert(0, str(val[1]))
+            e_y1.pack(side="left", padx=5)
 
-            e_w = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="W", fg_color=BG_COLOR, border_color=BORDER_COLOR)
-            e_w.insert(0, str(val[2]))
-            e_w.pack(side="left", padx=5)
+            e_x2 = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="X2", fg_color=BG_COLOR, border_color=BORDER_COLOR)
+            e_x2.insert(0, str(val[2]))
+            e_x2.pack(side="left", padx=5)
 
-            e_h = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="H", fg_color=BG_COLOR, border_color=BORDER_COLOR)
-            e_h.insert(0, str(val[3]))
-            e_h.pack(side="left", padx=5)
+            e_y2 = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="Y2", fg_color=BG_COLOR, border_color=BORDER_COLOR)
+            e_y2.insert(0, str(val[3]))
+            e_y2.pack(side="left", padx=5)
 
             # Store references
-            self.roi_entries[reg_key] = (e_x, e_y, e_w, e_h)
+            self.roi_entries[reg_key] = (e_x1, e_y1, e_x2, e_y2)
 
             # Test preview Button
             btn_test = ctk.CTkButton(row_frame, text="XEM TRƯỚC", width=100, font=ctk.CTkFont(size=11, weight="bold"), fg_color=NAV_COLOR, border_width=1, border_color=BORDER_COLOR, command=lambda k=reg_key: self.test_roi_crop(k))
@@ -447,8 +447,8 @@ class MultiPremiumApp(ctk.CTk):
             return
         
         try:
-            ex, ey, ew, eh = self.roi_entries[key]
-            x, y, w, h = int(ex.get()), int(ey.get()), int(ew.get()), int(eh.get())
+            ex1, ey1, ex2, ey2 = self.roi_entries[key]
+            x1, y1, x2, y2 = int(ex1.get()), int(ey1.get()), int(ex2.get()), int(ey2.get())
         except Exception:
             self.add_log("LỖI: Định dạng tọa độ nhập vào phải là số nguyên!")
             return
@@ -459,31 +459,36 @@ class MultiPremiumApp(ctk.CTk):
             return
 
         h_full, w_full = screen.shape[:2]
-        x1, y1 = max(0, x), max(0, y)
-        x2, y2 = min(w_full, x1 + w), min(h_full, y1 + h)
+        xa = max(0, min(x1, x2))
+        ya = max(0, min(y1, y2))
+        xb = min(w_full, max(x1, x2))
+        yb = min(h_full, max(y1, y2))
 
-        if x2 <= x1 or y2 <= y1:
+        if xb <= xa or yb <= ya:
             self.add_log("LỖI: Vùng tọa độ cắt không hợp lệ!")
             return
 
-        crop = screen[y1:y2, x1:x2]
+        crop = screen[ya:yb, xa:xb]
         crop_rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
         img_pil = Image.fromarray(crop_rgb)
+        
+        w_crop = xb - xa
+        h_crop = yb - ya
 
         # Premium Toplevel crop visualizer
         pop = ctk.CTkToplevel(self)
         pop.title(f"Xem trước vùng cắt - {key.upper()}")
-        pop.geometry(f"{max(350, w + 40)}x{max(150, h + 80)}")
+        pop.geometry(f"{max(350, w_crop + 40)}x{max(150, h_crop + 80)}")
         pop.configure(fg_color=BG_COLOR)
         pop.resizable(True, True)
         pop.lift()
         pop.attributes("-topmost", True)
 
-        img_ctk = ctk.CTkImage(light_image=img_pil, dark_image=img_pil, size=(w, h))
+        img_ctk = ctk.CTkImage(light_image=img_pil, dark_image=img_pil, size=(w_crop, h_crop))
         lbl = ctk.CTkLabel(pop, image=img_ctk, text="")
         lbl.pack(pady=15, padx=15, expand=True)
 
-        ctk.CTkLabel(pop, text=f"Tọa độ: X={x}, Y={y}, W={w}, H={h}", font=ctk.CTkFont(size=10), text_color=TEXT_MUTED).pack(pady=(0, 10))
+        ctk.CTkLabel(pop, text=f"Tọa độ: X1={x1}, Y1={y1}, X2={x2}, Y2={y2}", font=ctk.CTkFont(size=10), text_color=TEXT_MUTED).pack(pady=(0, 10))
 
     # --- TAB 2: Live Log Terminal ---
     def setup_logs_tab(self):
@@ -615,13 +620,15 @@ class MultiPremiumApp(ctk.CTk):
             print(f"Screenshot Error: {e}")
             return None
 
-    def crop_region(self, screen, x, y, w, h):
+    def crop_region(self, screen, x1, y1, x2, y2):
         h_full, w_full = screen.shape[:2]
-        x1, y1 = max(0, x), max(0, y)
-        x2, y2 = min(w_full, x1 + w), min(h_full, y1 + h)
-        if x2 <= x1 or y2 <= y1:
+        xa = max(0, min(x1, x2))
+        ya = max(0, min(y1, y2))
+        xb = min(w_full, max(x1, x2))
+        yb = min(h_full, max(y1, y2))
+        if xb <= xa or yb <= ya:
             return None
-        crop = screen[y1:y2, x1:x2]
+        crop = screen[ya:yb, xa:xb]
         
         # Adaptive Resize: only double size if the cropped region is very small (height < 45px)
         # Standard question boxes (~80px) and standard options (~50px) are large enough.
@@ -672,8 +679,8 @@ class MultiPremiumApp(ctk.CTk):
         # Perform crops & reads
         crops = {}
         texts = {}
-        for key, (x, y, w, h) in rois.items():
-            crops[key] = self.crop_region(screen, x, y, w, h)
+        for key, (x1, y1, x2, y2) in rois.items():
+            crops[key] = self.crop_region(screen, x1, y1, x2, y2)
             texts[key] = self.ocr_read_text(crops[key])
 
         self.add_log(f"🔍 [TEST] Chữ quét Câu hỏi: \"{texts['question']}\"")
@@ -708,8 +715,8 @@ class MultiPremiumApp(ctk.CTk):
 
             if best_opt and best_opt_ratio >= 0.4:
                 _, coords = options[best_opt]
-                cx = coords[0] + coords[2] // 2
-                cy = coords[1] + coords[3] // 2
+                cx = (coords[0] + coords[2]) // 2
+                cy = (coords[1] + coords[3]) // 2
                 self.add_log(f"🎯 XÁC ĐỊNH CLICK ĐÁP ÁN: Chọn {best_opt} (Độ khớp chữ: {best_opt_ratio*100:.1f}%)")
                 self.add_log(f"👉 TỌA ĐỘ CLICK: ({cx}, {cy})")
             else:
@@ -775,8 +782,8 @@ class MultiPremiumApp(ctk.CTk):
                 continue
 
             # Read Question ROI
-            xq, yq, wq, hq = rois['question']
-            crop_q = self.crop_region(screen, xq, yq, wq, hq)
+            xq1, yq1, xq2, yq2 = rois['question']
+            crop_q = self.crop_region(screen, xq1, yq1, xq2, yq2)
             q_text = self.ocr_read_text(crop_q)
 
             if not q_text or len(q_text) < 4:
@@ -809,8 +816,8 @@ class MultiPremiumApp(ctk.CTk):
                 crops = {}
                 texts = {}
                 for key in ['opt_a', 'opt_b', 'opt_c', 'opt_d']:
-                    x, y, w, h = rois[key]
-                    crops[key] = self.crop_region(screen, x, y, w, h)
+                    x1, y1, x2, y2 = rois[key]
+                    crops[key] = self.crop_region(screen, x1, y1, x2, y2)
                     texts[key] = self.ocr_read_text(crops[key])
 
                 self.add_log(f"  ├─ Option A OCR: \"{texts['opt_a']}\"")
@@ -835,8 +842,8 @@ class MultiPremiumApp(ctk.CTk):
 
                 if best_opt and best_opt_ratio >= 0.4:
                     _, coords = options[best_opt]
-                    cx = coords[0] + coords[2] // 2
-                    cy = coords[1] + coords[3] // 2
+                    cx = (coords[0] + coords[2]) // 2
+                    cy = (coords[1] + coords[3]) // 2
                     self.add_log(f"🎯 XÁC ĐỊNH CHỌN: {best_opt} ({best_opt_ratio*100:.1f}%)")
                     
                     # Tap center
