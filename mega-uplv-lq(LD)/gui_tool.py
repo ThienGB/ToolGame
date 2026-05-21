@@ -1405,7 +1405,7 @@ class AutoClickerInstance:
                 "count": 1,
                 "steps": [
                     {"action": "click_coords", "x": my_hero_pos["x1"], "y": my_hero_pos["y1"], "timeout": 0},
-                    {"action": "wait", "timeout": 1},
+                    {"action": "wait", "timeout": 2},
                     {"action": "click_coords", "x": my_hero_pos["x2"], "y": my_hero_pos["y2"], "timeout": 0},
                 ]
             },
@@ -1451,6 +1451,15 @@ class AutoClickerInstance:
 
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
+             {"action": "click_image_if", "target1": "images/x1.png", "target2": "images/x3.png","timeout": 10, "confidence": 0.9,"only_host": True},
+           
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target1": "images/x1.png", "target2": "images/x3.png","timeout": 10, "confidence": 0.9,"only_host": True},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target1": "images/huy.png","target2": "images/huy1.png", "timeout": 6, "confidence": 0.9,"only_host": True},
+            {"action": "wait", "timeout": 3},
+            {"action": "wait", "timeout": 5},      
+        ]
         ]
         
         # GIAI ĐĂNG XUẤT - XUẤT FILE
