@@ -973,10 +973,9 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN
         login_script = [
-                        
-
-
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_coords", "x": 173, "y": 442, "timeout": 3},
@@ -999,8 +998,8 @@ class AutoClickerInstance:
 
         # 2. GIAI ĐOẠN VƯỢT TÂN THỦ
         tutorial_script = [
-            {"action": "click_coords", "x": 867, "y": 492, "timeout": 8},
-            {"action": "click_coords", "x": 867, "y": 492, "timeout": 2},
+            {"action": "click_coords", "x": 867, "y": 492, "timeout": 10},
+            {"action": "click_coords", "x": 867, "y": 492, "timeout": 5},
         {
 
 
@@ -1010,7 +1009,10 @@ class AutoClickerInstance:
                 "timeout" : 120,
                 "cases": [
                     {
-                        "trigger": "images/vao_tran_button_2.png",
+                        "trigger1": "images/vao_tran_button_2.png",
+                        "trigger2": "images/vao_tran_button_2.jpg",
+                        "trigger3": "images/vao_tran_button_3.png",
+                        "trigger4": "images/vao_tran_button_3.jpg",
                         "confidence": 0.7,
                         "script": [
                             {"action": "click_coords", "x": 867, "y": 492, "timeout": 3},
@@ -1072,6 +1074,7 @@ class AutoClickerInstance:
               } ,     
             
             {"action": "wait", "timeout": 5},
+            {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
@@ -1404,7 +1407,7 @@ class AutoClickerInstance:
                 "count": 1,
                 "steps": [
                     {"action": "click_coords", "x": my_hero_pos["x1"], "y": my_hero_pos["y1"], "timeout": 0},
-                    {"action": "wait", "timeout": 1},
+                    {"action": "wait", "timeout": 2},
                     {"action": "click_coords", "x": my_hero_pos["x2"], "y": my_hero_pos["y2"], "timeout": 0},
                 ]
             },
@@ -1450,7 +1453,16 @@ class AutoClickerInstance:
 
             {"action": "wait", "timeout": 2},
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
+             {"action": "click_image_if", "target1": "images/x1.png", "target2": "images/x3.png","timeout": 10, "confidence": 0.9,"only_host": True},
+           
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target1": "images/x1.png", "target2": "images/x3.png","timeout": 10, "confidence": 0.9,"only_host": True},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target1": "images/huy.png","target2": "images/huy1.png", "timeout": 6, "confidence": 0.9,"only_host": True},
+            {"action": "wait", "timeout": 3},
+            {"action": "wait", "timeout": 5},      
         ]
+        
         
         # GIAI ĐĂNG XUẤT - XUẤT FILE
         uplevel_script = [
@@ -1476,6 +1488,7 @@ class AutoClickerInstance:
         new_circle_script = [
             {"action": "restart_app", "app": "com.garena.game.kgvn"},
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 120, "confidence": 0.7},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
             {"action": "wait", "timeout": 25},
             {"action": "click_image_if", "target1": "images/batdau.png","target2": "images/batdau1.png", "timeout": 6, "confidence": 0.9},
@@ -1500,15 +1513,40 @@ class AutoClickerInstance:
                         ]
                     },
                     {
-                        "trigger1": "images/x3.png", "trigger2": "images/x5.png", 
+                        "trigger1": "images/vao_tran_button_2.png",
                         "confidence": 0.7,
                         "script": [
-                        {"action": "press_esc", "wait": 2},
-                        {"action": "press_esc", "wait": 2},
+                        {"action": "click_coords", "x": 867, "y": 492, "timeout": 3},
+                            {"action": "click_coords", "x": 867, "y": 492, "timeout": 3},
+                            {"action": "click_coords", "x": 867, "y": 492, "timeout": 3},
+                            {"action": "wait", "timeout": 3},
+                            {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "press_esc", "wait": 10},
                         ]
-                        
                     },
-                    
+                    {
+                        "trigger1": "images/any2.png" ,
+                        "confidence": 0.7,
+                         "script": [
+                            {"action": "click_image_if", "target": "images/any2.png", "timeout": 10, "confidence": 0.9},
+                            {"action": "click_image", "target1": "images/vao.png","target2": "images/vao_button.png","target3": "images/vaoo.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "click_image_if", "target1": "images/vao.png","target2": "images/vao_button.png","target3": "images/vaoo.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images/logo.png", "timeout": 10, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images/logo.png", "timeout": 10, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images/on.png", "timeout": 10, "confidence": 0.9,"use_color": True},
+                            {"action": "click_image_if", "target": "images/minimize.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images/victory.png", "timeout": 200, "confidence": 0.9},
+                            {"action": "wait", "timeout": 10},
+                            {"action": "click_image_if", "target": "images/victory.png", "timeout": 200, "confidence": 0.9},
+                            {"action": "click_coords", "x": 463, "y": 492, "timeout": 20},
+                            
+
+                            
+                            
+                        ]
+                    },
                 ]
               } ,     
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
@@ -1518,6 +1556,9 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
             {"action": "wait", "timeout": 15},    
+            {"action": "press_esc", "wait": 1} ,
+            {"action": "press_esc", "wait": 1} ,
+            {"action": "press_esc", "wait": 1} ,
         ]
 
         while self.running:
