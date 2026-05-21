@@ -997,8 +997,8 @@ class AutoClickerInstance:
 
         # 2. GIAI ĐOẠN VƯỢT TÂN THỦ
         tutorial_script = [
-            {"action": "click_coords", "x": 867, "y": 492, "timeout": 8},
-            {"action": "click_coords", "x": 867, "y": 492, "timeout": 2},
+            {"action": "click_coords", "x": 867, "y": 492, "timeout": 10},
+            {"action": "click_coords", "x": 867, "y": 492, "timeout": 5},
         {
 
 
@@ -1008,7 +1008,10 @@ class AutoClickerInstance:
                 "timeout" : 120,
                 "cases": [
                     {
-                        "trigger": "images/vao_tran_button_2.png",
+                        "trigger1": "images/vao_tran_button_2.png",
+                        "trigger2": "images/vao_tran_button_2.jpg",
+                        "trigger3": "images/vao_tran_button_3.png",
+                        "trigger4": "images/vao_tran_button_3.jpg",
                         "confidence": 0.7,
                         "script": [
                             {"action": "click_coords", "x": 867, "y": 492, "timeout": 3},
