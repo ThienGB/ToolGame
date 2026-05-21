@@ -1461,7 +1461,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 3},
             {"action": "wait", "timeout": 5},      
         ]
-        ]
+        
         
         # GIAI ĐĂNG XUẤT - XUẤT FILE
         uplevel_script = [
@@ -1555,6 +1555,9 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
             {"action": "wait", "timeout": 15},    
+            {"action": "press_esc", "wait": 1} ,
+            {"action": "press_esc", "wait": 1} ,
+            {"action": "press_esc", "wait": 1} ,
         ]
 
         while self.running:
