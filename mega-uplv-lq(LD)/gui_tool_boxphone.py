@@ -904,6 +904,9 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 6},
             {"action": "press_esc", "wait": 6},
             {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
+            
         
             
         
