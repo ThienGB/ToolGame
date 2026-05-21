@@ -1460,7 +1460,7 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 3},
             {"action": "wait", "timeout": 5},      
         ]
-        ]
+        
         
         # GIAI ĐĂNG XUẤT - XUẤT FILE
         uplevel_script = [
