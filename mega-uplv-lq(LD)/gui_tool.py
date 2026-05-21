@@ -1000,8 +1000,8 @@ class AutoClickerInstance:
 
         # 2. GIAI ĐOẠN VƯỢT TÂN THỦ
         tutorial_script = [
-            {"action": "click_coords", "x": 867, "y": 492, "timeout": 8},
-            {"action": "click_coords", "x": 867, "y": 492, "timeout": 2},
+            {"action": "click_coords", "x": 867, "y": 492, "timeout": 10},
+            {"action": "click_coords", "x": 867, "y": 492, "timeout": 5},
         {
 
 
