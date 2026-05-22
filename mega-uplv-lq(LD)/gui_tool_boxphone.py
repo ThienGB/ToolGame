@@ -1015,17 +1015,18 @@ class AutoClickerInstance:
                         ]
                     },
                     {
-                        "trigger": "images_boxphone/sukien.png", 
+                        "trigger": "images_boxphone/tanthu.png", 
                        
                         "confidence": 0.7,
                         "script": [
+                            {"action": "click_image", "target1": "images_boxphone/sukien.png", "target2": "images_boxphone/sukien1.png", "timeout": 20, "confidence": 0.6},
                             {"action": "press_esc", "wait": 3},
                             {"action": "press_esc", "wait": 3},
                         ]
                         },
                         {
-                        "trigger1": "images_boxphone/dauhang.png", 
-                        "trigger2": "images_boxphone/dau_hang1.jpg",
+                        "trigger1": "images_boxphone/nhanxem.png", 
+                        
                        
                         "confidence": 0.7,
                         "script": [
