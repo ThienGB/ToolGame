@@ -1049,7 +1049,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images_boxphone/tuong2.png", "timeout": 15, "confidence": 0.7},
             
             {"action": "click_image_if", "target": "images_boxphone/ok1.png", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/logo.png", "target2": "images_boxphone/logo1.png", "target3": "images_boxphone/logo2.png", "timeout": 60, "confidence": 0.7},
+            
             {"action": "click_image_if", "target": "images_boxphone/menu.png", "timeout": 200, "confidence": 0.7},
 
              {"action": "loop",
