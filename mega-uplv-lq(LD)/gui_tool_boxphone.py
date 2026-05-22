@@ -992,7 +992,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/dauhang.png", "target2": "images_boxphone/dau_hang1.jpg", "timeout": 7, "confidence": 0.7},
             {"action": "press_esc", "wait": 2},
             {"action": "click_coords", "x": 1186, "y": 57, "timeout": 5},
-            {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 60, "confidence": 0.7},
+            {"action": "click_coords", "x": 1399, "y": 473, "timeout": 2},
             
             {"action": "click_coords", "x": 1606, "y": 544, "timeout": 2},
             {"action": "press_esc", "wait": 3},
@@ -1201,7 +1201,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images_boxphone/ok1.png", "timeout": 20, "confidence": 0.7},
             
             
-            {"action": "click_image_if", "target1": "images_boxphone/menu.png","target2": "images_boxphone/menu1.jpg", "timeout": 200, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/menu.png","target2": "images_boxphone/menu1.jpg", "timeout": 600, "confidence": 0.7},
             {
                 "action": "loop",
                 "count": 12,
