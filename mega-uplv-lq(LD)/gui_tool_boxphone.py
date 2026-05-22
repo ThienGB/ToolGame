@@ -983,6 +983,8 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images_boxphone/mua.png","timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/mo.png","timeout": 20, "confidence": 0.7},
             {"action": "press_esc", "wait": 3},
+            {"action": "click_coords", "x": 1403, "y": 473, "timeout": 3},
+            {"action": "press_esc", "wait": 3},
             {"action": "click_image_if", "target1": "images_boxphone/dauhang.png", "target2": "images_boxphone/dau_hang1.jpg", "timeout": 7, "confidence": 0.7},
             {"action": "press_esc", "wait": 2},
             {"action": "click_coords", "x": 1186, "y": 57, "timeout": 5},
@@ -990,6 +992,9 @@ class AutoClickerInstance:
             
             {"action": "click_coords", "x": 1606, "y": 544, "timeout": 2},
             {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
+            {"action": "click_image_if", "target1": "images_boxphone/lam.png",  "target2": "images_boxphone/lam1.png","timeout": 7, "confidence": 0.7},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "click_image", "target": "images_boxphone/sukien.png", "timeout": 60, "confidence": 0.7},
@@ -1139,9 +1144,9 @@ class AutoClickerInstance:
         # Tọa độ chọn tướng cho 5 máy trên BoxPhone (Sửa tọa độ x, y tại đây)
         hero_coords = [
             {"x": 1331, "y": 166}, # Máy 1
-            {"x": 229, "y": 343}, # Máy 2
-            {"x": 395, "y": 170}, # Máy 3
-            {"x": 403, "y": 360}, # Máy 4
+            {"x": 96, "y": 339}, # Máy 2
+            {"x": 245, "y": 351}, # Máy 3
+            {"x": 399, "y": 351}, # Máy 4
             {"x": 556, "y": 347}, # Máy 5
         ]
         my_hero_pos = hero_coords[self.device_index % 5]
@@ -1160,7 +1165,7 @@ class AutoClickerInstance:
             {"action": "click_coords", "x": 1819, "y": 1021, "timeout": 3},
             {"action": "click_image_if", "target": "images_boxphone/ok1.png", "timeout": 20, "confidence": 0.7},
             
-            {"action": "click_image_if", "target1": "images_boxphone/logo.png", "target2": "images_boxphone/logo1.png", "timeout": 60, "confidence": 0.7},
+            
             {"action": "click_image_if", "target1": "images_boxphone/menu.png","target2": "images_boxphone/menu1.jpg", "timeout": 200, "confidence": 0.7},
             {
                 "action": "loop",
