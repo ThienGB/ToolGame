@@ -1204,14 +1204,14 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/menu.png","target2": "images_boxphone/menu1.jpg", "timeout": 600, "confidence": 0.7},
             {
                 "action": "loop",
-                "count": 12,
+                "count": 13,
                 "steps": [
                     {"action": "click_coords", "x": 903, "y": 945},
                     {"action": "wait", "timeout": 15}
                 ]
             },
 
-            {"action": "click_coords", "x": 31, "y": 166, },
+            {"action": "click_coords", "x": 31, "y": 166, "timeout": 3 },
             {"action": "sync_autowin", "timeout": 120},
             {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2": "images_boxphone/minimize1.png", "target3": "images_boxphone/minimize2.png", "target4": "images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 600, "confidence": 0.7},
