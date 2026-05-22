@@ -1,1 +1,1 @@
-C:\LDPlayer\LDPlayer9\adb.exe
+C:\Program Files (x86)\xiaowei_android\tools\adb.exe
