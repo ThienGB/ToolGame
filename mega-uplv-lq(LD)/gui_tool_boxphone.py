@@ -1204,9 +1204,9 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/menu.png","target2": "images_boxphone/menu1.jpg", "timeout": 600, "confidence": 0.7},
             {
                 "action": "loop",
-                "count": 13,
+                "count": 12,
                 "steps": [
-                    {"action": "click_coords", "x": 903, "y": 945},
+                    {"action": "click_image_if", "target1": "images_boxphone/bienve.png","target2": "images_boxphone/bienve.jpg", "timeout": 600, "confidence": 0.7},
                     {"action": "wait", "timeout": 15}
                 ]
             },
