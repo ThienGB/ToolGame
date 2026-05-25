@@ -78,7 +78,7 @@ def init_ocr_reader(log_func=None):
         import easyocr as ocr_lib
         try:
             import torch
-            torch.set_num_threads(1)        # Limit threads to avoid high CPU spikes
+            torch.set_num_threads(4)        # Use 4 threads for faster CPU inference
             torch.set_num_interop_threads(1) # Prevent background thread contention
         except:
             pass
@@ -601,11 +601,17 @@ class MultiPremiumApp(ctk.CTk):
 
     def get_screenshot(self, device_id):
         try:
-            cmd = [self.adb_path, "-s", device_id, "shell", "screencap", "-p"]
+            cmd = [self.adb_path, "-s", device_id, "exec-out", "screencap", "-p"]
             process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
             if process.returncode != 0:
-                return None
-            image_bytes = process.stdout.replace(b"\r\n", b"\n")
+                cmd = [self.adb_path, "-s", device_id, "shell", "screencap", "-p"]
+                process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                if process.returncode != 0:
+                    return None
+                image_bytes = process.stdout.replace(b"\r\n", b"\n")
+            else:
+                image_bytes = process.stdout
+                
             image_array = np.frombuffer(image_bytes, dtype=np.uint8)
             return cv2.imdecode(image_array, cv2.IMREAD_COLOR)
         except Exception as e:
@@ -793,12 +799,12 @@ class MultiPremiumApp(ctk.CTk):
         while self.is_running:
             device_id = self.selected_device.get()
             if not device_id or device_id == "Chưa chọn thiết bị":
-                time.sleep(2)
+                time.sleep(1)
                 continue
 
             screen = self.get_screenshot(device_id)
             if screen is None:
-                time.sleep(1.5)
+                time.sleep(0.3)
                 continue
 
             try:
@@ -806,7 +812,7 @@ class MultiPremiumApp(ctk.CTk):
                 x1, y1, x2, y2 = rois['main_roi']
             except:
                 self.add_log("LỖI: Sai định dạng tọa độ. Vui lòng sửa lại.")
-                time.sleep(3)
+                time.sleep(2)
                 continue
 
             xa = max(0, min(x1, x2))
@@ -816,7 +822,7 @@ class MultiPremiumApp(ctk.CTk):
             results = self.ocr_read_text_with_boxes(crop_main)
 
             if not results:
-                time.sleep(1.5)
+                time.sleep(0.3)
                 continue
 
             # Split Question & Answers
@@ -834,7 +840,7 @@ class MultiPremiumApp(ctk.CTk):
             q_text = " ".join([r[1] for r in q_lines]).strip()
             
             if not q_text or len(q_text) < 4:
-                time.sleep(1.5)
+                time.sleep(0.3)
                 continue
 
             # Check if this is a newly detected question
@@ -844,7 +850,7 @@ class MultiPremiumApp(ctk.CTk):
             # Use fuzzy ratio to check if it's the exact same active question
             if norm_new == norm_old or (norm_old and difflib.SequenceMatcher(None, norm_new, norm_old).ratio() > 0.85):
                 # Still showing the same question, avoid double clicks. Sleep longer.
-                time.sleep(1.8)
+                time.sleep(0.5)
                 continue
 
             self.add_log(f"🔍 PHÁT HIỆN CÂU HỎI MỚI: \"{q_text}\"")
@@ -904,7 +910,7 @@ class MultiPremiumApp(ctk.CTk):
             else:
                 self.add_log(f"❓ THẤT BẠI: Không có câu hỏi nào khớp trong cơ sở đáp án (Khớp tốt nhất: {ratio*100:.1f}%)")
 
-            time.sleep(2)
+            time.sleep(0.2)
             gc.collect()
 
         self.after(0, self.stop_ocr_engine)
