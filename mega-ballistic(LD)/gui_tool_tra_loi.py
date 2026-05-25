@@ -300,11 +300,7 @@ class MultiPremiumApp(ctk.CTk):
         
         # Load ROI coordinates
         self.coords = {
-            "question": [150, 80, 660, 80],
-            "opt_a": [170, 200, 620, 50],
-            "opt_b": [170, 260, 620, 50],
-            "opt_c": [170, 320, 620, 50],
-            "opt_d": [170, 380, 620, 50]
+            "main_roi": [150, 80, 810, 430]
         }
         self.load_coords_config()
 
@@ -376,7 +372,7 @@ class MultiPremiumApp(ctk.CTk):
         self.main_content = ctk.CTkFrame(self, fg_color="transparent")
         self.main_content.pack(side="right", fill="both", expand=True, padx=20, pady=20)
 
-        # Tabview Setup (Clean 2-tab layout with standard kwargs to prevent ValueError on segmented_button_selected_text_color)
+        # Tabview Setup (Clean 2-tab layout)
         self.tabview = ctk.CTkTabview(self.main_content, fg_color=CARD_COLOR, border_width=1, border_color=BORDER_COLOR)
         self.tabview.pack(fill="both", expand=True)
         
@@ -388,16 +384,12 @@ class MultiPremiumApp(ctk.CTk):
 
     # --- TAB 1: Coordinates Alignment Setup ---
     def setup_coords_tab(self):
-        instruction = ctk.CTkLabel(self.tab_coords, text="CẤU HÌNH CÁC KHUNG ROI TRÊN GIẢ LẬP (ĐỘ PHÂN GIẢI MẶC ĐỊNH SỬ DỤNG LÀ PIXEL)", font=ctk.CTkFont(size=12, weight="bold"), text_color=ACCENT_CYAN)
+        instruction = ctk.CTkLabel(self.tab_coords, text="CẤU HÌNH VÙNG ROI BAO TRỌN CÂU HỎI VÀ CÂU TRẢ LỜI", font=ctk.CTkFont(size=12, weight="bold"), text_color=ACCENT_CYAN)
         instruction.pack(pady=15)
 
         self.roi_entries = {}
         regions_list = [
-            ("question", "Vùng Câu Hỏi:"),
-            ("opt_a", "Vùng Đáp Án A:"),
-            ("opt_b", "Vùng Đáp Án B:"),
-            ("opt_c", "Vùng Đáp Án C:"),
-            ("opt_d", "Vùng Đáp Án D:")
+            ("main_roi", "Vùng quét ROI:")
         ]
 
         for reg_key, reg_name in regions_list:
@@ -413,31 +405,31 @@ class MultiPremiumApp(ctk.CTk):
             inputs_frame.pack(side="left", fill="x", expand=True)
             
             val = self.coords[reg_key]
-            e_x = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="X", fg_color=BG_COLOR, border_color=BORDER_COLOR)
-            e_x.insert(0, str(val[0]))
-            e_x.pack(side="left", padx=5)
+            e_x1 = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="X1", fg_color=BG_COLOR, border_color=BORDER_COLOR)
+            e_x1.insert(0, str(val[0]))
+            e_x1.pack(side="left", padx=5)
 
-            e_y = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="Y", fg_color=BG_COLOR, border_color=BORDER_COLOR)
-            e_y.insert(0, str(val[1]))
-            e_y.pack(side="left", padx=5)
+            e_y1 = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="Y1", fg_color=BG_COLOR, border_color=BORDER_COLOR)
+            e_y1.insert(0, str(val[1]))
+            e_y1.pack(side="left", padx=5)
 
-            e_w = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="W", fg_color=BG_COLOR, border_color=BORDER_COLOR)
-            e_w.insert(0, str(val[2]))
-            e_w.pack(side="left", padx=5)
+            e_x2 = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="X2", fg_color=BG_COLOR, border_color=BORDER_COLOR)
+            e_x2.insert(0, str(val[2]))
+            e_x2.pack(side="left", padx=5)
 
-            e_h = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="H", fg_color=BG_COLOR, border_color=BORDER_COLOR)
-            e_h.insert(0, str(val[3]))
-            e_h.pack(side="left", padx=5)
+            e_y2 = ctk.CTkEntry(inputs_frame, width=70, placeholder_text="Y2", fg_color=BG_COLOR, border_color=BORDER_COLOR)
+            e_y2.insert(0, str(val[3]))
+            e_y2.pack(side="left", padx=5)
 
             # Store references
-            self.roi_entries[reg_key] = (e_x, e_y, e_w, e_h)
+            self.roi_entries[reg_key] = (e_x1, e_y1, e_x2, e_y2)
 
             # Test preview Button
             btn_test = ctk.CTkButton(row_frame, text="XEM TRƯỚC", width=100, font=ctk.CTkFont(size=11, weight="bold"), fg_color=NAV_COLOR, border_width=1, border_color=BORDER_COLOR, command=lambda k=reg_key: self.test_roi_crop(k))
             btn_test.pack(side="right", padx=10)
 
         # Quick Test All Button
-        btn_full_ocr_test = ctk.CTkButton(self.tab_coords, text="TEST OCR CẢ 5 KHUNG NGAY LẬP TỨC", height=38, font=ctk.CTkFont(size=12, weight="bold"), fg_color=ACCENT_CYAN, text_color=BG_COLOR, hover_color="#00B8E6", command=self.trigger_instant_ocr_test)
+        btn_full_ocr_test = ctk.CTkButton(self.tab_coords, text="TEST THỬ NGHIỆM OCR VÙNG ROI", height=38, font=ctk.CTkFont(size=12, weight="bold"), fg_color=ACCENT_CYAN, text_color=BG_COLOR, hover_color="#00B8E6", command=self.trigger_instant_ocr_test)
         btn_full_ocr_test.pack(pady=35)
 
     def test_roi_crop(self, key):
@@ -447,8 +439,8 @@ class MultiPremiumApp(ctk.CTk):
             return
         
         try:
-            ex, ey, ew, eh = self.roi_entries[key]
-            x, y, w, h = int(ex.get()), int(ey.get()), int(ew.get()), int(eh.get())
+            ex1, ey1, ex2, ey2 = self.roi_entries[key]
+            x1, y1, x2, y2 = int(ex1.get()), int(ey1.get()), int(ex2.get()), int(ey2.get())
         except Exception:
             self.add_log("LỖI: Định dạng tọa độ nhập vào phải là số nguyên!")
             return
@@ -459,31 +451,36 @@ class MultiPremiumApp(ctk.CTk):
             return
 
         h_full, w_full = screen.shape[:2]
-        x1, y1 = max(0, x), max(0, y)
-        x2, y2 = min(w_full, x1 + w), min(h_full, y1 + h)
+        xa = max(0, min(x1, x2))
+        ya = max(0, min(y1, y2))
+        xb = min(w_full, max(x1, x2))
+        yb = min(h_full, max(y1, y2))
 
-        if x2 <= x1 or y2 <= y1:
+        if xb <= xa or yb <= ya:
             self.add_log("LỖI: Vùng tọa độ cắt không hợp lệ!")
             return
 
-        crop = screen[y1:y2, x1:x2]
+        crop = screen[ya:yb, xa:xb]
         crop_rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
         img_pil = Image.fromarray(crop_rgb)
+        
+        w_crop = xb - xa
+        h_crop = yb - ya
 
         # Premium Toplevel crop visualizer
         pop = ctk.CTkToplevel(self)
         pop.title(f"Xem trước vùng cắt - {key.upper()}")
-        pop.geometry(f"{max(350, w + 40)}x{max(150, h + 80)}")
+        pop.geometry(f"{max(350, w_crop + 40)}x{max(150, h_crop + 80)}")
         pop.configure(fg_color=BG_COLOR)
         pop.resizable(True, True)
         pop.lift()
         pop.attributes("-topmost", True)
 
-        img_ctk = ctk.CTkImage(light_image=img_pil, dark_image=img_pil, size=(w, h))
+        img_ctk = ctk.CTkImage(light_image=img_pil, dark_image=img_pil, size=(w_crop, h_crop))
         lbl = ctk.CTkLabel(pop, image=img_ctk, text="")
         lbl.pack(pady=15, padx=15, expand=True)
 
-        ctk.CTkLabel(pop, text=f"Tọa độ: X={x}, Y={y}, W={w}, H={h}", font=ctk.CTkFont(size=10), text_color=TEXT_MUTED).pack(pady=(0, 10))
+        ctk.CTkLabel(pop, text=f"Tọa độ: X1={x1}, Y1={y1}, X2={x2}, Y2={y2}", font=ctk.CTkFont(size=10), text_color=TEXT_MUTED).pack(pady=(0, 10))
 
     # --- TAB 2: Live Log Terminal ---
     def setup_logs_tab(self):
@@ -615,13 +612,15 @@ class MultiPremiumApp(ctk.CTk):
             print(f"Screenshot Error: {e}")
             return None
 
-    def crop_region(self, screen, x, y, w, h):
+    def crop_region(self, screen, x1, y1, x2, y2):
         h_full, w_full = screen.shape[:2]
-        x1, y1 = max(0, x), max(0, y)
-        x2, y2 = min(w_full, x1 + w), min(h_full, y1 + h)
-        if x2 <= x1 or y2 <= y1:
+        xa = max(0, min(x1, x2))
+        ya = max(0, min(y1, y2))
+        xb = min(w_full, max(x1, x2))
+        yb = min(h_full, max(y1, y2))
+        if xb <= xa or yb <= ya:
             return None
-        crop = screen[y1:y2, x1:x2]
+        crop = screen[ya:yb, xa:xb]
         
         # Adaptive Resize: only double size if the cropped region is very small (height < 45px)
         # Standard question boxes (~80px) and standard options (~50px) are large enough.
@@ -631,17 +630,19 @@ class MultiPremiumApp(ctk.CTk):
             
         return cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
 
-    def ocr_read_text(self, crop_gray):
+    def ocr_read_text_with_boxes(self, crop_gray):
         global _ocr_reader
         if crop_gray is None or _ocr_reader is None:
-            return ""
+            return []
         try:
-            results = _ocr_reader.readtext(crop_gray, detail=0)
-            if results:
-                return " ".join(results).strip()
+            # detail=1 returns [([[x0,y0], [x1,y1], [x2,y2], [x3,y3]], text, confidence), ...]
+            results = _ocr_reader.readtext(crop_gray, detail=1)
+            # Sort by top-left y-coordinate to ensure top-to-bottom reading order
+            sorted_results = sorted(results, key=lambda r: r[0][0][1])
+            return sorted_results
         except Exception as e:
-            print(f"OCR Reader Failure: {e}")
-        return ""
+            print(f"OCR Reader detailed failure: {e}")
+        return []
 
     # --- Single manual instant check ---
     def trigger_instant_ocr_test(self):
@@ -651,7 +652,7 @@ class MultiPremiumApp(ctk.CTk):
             return
         
         self.tabview.set("Nhật Ký Quét")
-        self.add_log("=== BẮT ĐẦU TEST OCR CẢ 5 KHUNG TỌA ĐỘ ===")
+        self.add_log("=== BẮT ĐẦU TEST OCR 1 VÙNG ROI THÔNG MINH ===")
         
         reader = init_ocr_reader(self.add_log)
         if reader is None:
@@ -665,55 +666,88 @@ class MultiPremiumApp(ctk.CTk):
 
         try:
             rois = self.get_current_rois()
+            x1, y1, x2, y2 = rois['main_roi']
         except:
             self.add_log("LỖI: Tọa độ nhập không hợp lệ, vui lòng kiểm tra lại các ô tọa độ.")
             return
 
-        # Perform crops & reads
-        crops = {}
-        texts = {}
-        for key, (x, y, w, h) in rois.items():
-            crops[key] = self.crop_region(screen, x, y, w, h)
-            texts[key] = self.ocr_read_text(crops[key])
+        xa = max(0, min(x1, x2))
+        ya = max(0, min(y1, y2))
 
-        self.add_log(f"🔍 [TEST] Chữ quét Câu hỏi: \"{texts['question']}\"")
-        self.add_log(f"  ├─ OCR Đáp án A: \"{texts['opt_a']}\"")
-        self.add_log(f"  ├─ OCR Đáp án B: \"{texts['opt_b']}\"")
-        self.add_log(f"  ├─ OCR Đáp án C: \"{texts['opt_c']}\"")
-        self.add_log(f"  ├─ OCR Đáp án D: \"{texts['opt_d']}\"")
+        crop = self.crop_region(screen, x1, y1, x2, y2)
+        results = self.ocr_read_text_with_boxes(crop)
+
+        if not results:
+            self.add_log("❌ THẤT BẠI: Không nhận diện được dòng chữ nào trong vùng ROI!")
+            self.add_log("=== HOÀN TẤT THỬ NGHIỆM ===")
+            return
+
+        self.add_log(f"Tổng số dòng nhận diện được: {len(results)}")
+        for idx, r in enumerate(results):
+            self.add_log(f"  [{idx + 1}] \"{r[1]}\"")
+
+        # Split Question & Answers
+        if len(results) >= 5:
+            q_lines = results[:-4]
+            opt_lines = results[-4:]
+        else:
+            self.add_log("⚠️ CẢNH BÁO: Số dòng quét được ít hơn 5. Đang sử dụng chế độ dự phòng...")
+            if len(results) > 1:
+                q_lines = results[:1]
+                opt_lines = results[1:]
+            else:
+                q_lines = results
+                opt_lines = []
+
+        q_text = " ".join([r[1] for r in q_lines]).strip()
+        self.add_log(f"🔍 [TEST] Chữ quét Câu hỏi ghép: \"{q_text}\"")
+
+        opt_names = ['A', 'B', 'C', 'D']
+        options = {}
+        for idx, r in enumerate(opt_lines):
+            if idx < len(opt_names):
+                opt_char = opt_names[idx]
+                options[opt_char] = {
+                    "text": r[1],
+                    "box": r[0]
+                }
+
+        for char in opt_names:
+            if char in options:
+                self.add_log(f"  ├─ OCR Đáp án {char}: \"{options[char]['text']}\"")
+            else:
+                self.add_log(f"  ├─ OCR Đáp án {char}: (Không quét được!)")
 
         # Fuzzy lookup test
         db = load_answers(self.answer_file_path)
-        best_q, ratio = find_best_match(texts['question'], db.keys())
+        best_q, ratio = find_best_match(q_text, db.keys())
         
         if best_q:
             self.add_log(f"✅ KHỚP ĐÁP ÁN: \"{best_q}\" (Độ khớp mờ: {ratio*100:.1f}%)")
             correct_ans = db[best_q]
             self.add_log(f"👉 ĐÁP ÁN ĐÚNG TRONG FILE: \"{correct_ans}\"")
 
-            options = {
-                'A': (texts['opt_a'], rois['opt_a']),
-                'B': (texts['opt_b'], rois['opt_b']),
-                'C': (texts['opt_c'], rois['opt_c']),
-                'D': (texts['opt_d'], rois['opt_d'])
-            }
-            
             best_opt = None
             best_opt_ratio = 0.0
-            for opt_name, (opt_text, coords) in options.items():
-                r = get_match_ratio(correct_ans, opt_text)
-                if r > best_opt_ratio:
-                    best_opt_ratio = r
-                    best_opt = opt_name
+            for opt_char, opt_data in options.items():
+                r_ratio = get_match_ratio(correct_ans, opt_data["text"])
+                if r_ratio > best_opt_ratio:
+                    best_opt_ratio = r_ratio
+                    best_opt = opt_char
 
             if best_opt and best_opt_ratio >= 0.4:
-                _, coords = options[best_opt]
-                cx = coords[0] + coords[2] // 2
-                cy = coords[1] + coords[3] // 2
+                opt_data = options[best_opt]
+                box = opt_data["box"]
+                # Calculate center inside crop
+                cx_crop = (box[0][0] + box[2][0]) // 2
+                cy_crop = (box[0][1] + box[2][1]) // 2
+                # Convert to screen coordinates
+                cx = xa + cx_crop
+                cy = ya + cy_crop
                 self.add_log(f"🎯 XÁC ĐỊNH CLICK ĐÁP ÁN: Chọn {best_opt} (Độ khớp chữ: {best_opt_ratio*100:.1f}%)")
-                self.add_log(f"👉 TỌA ĐỘ CLICK: ({cx}, {cy})")
+                self.add_log(f"👉 TỌA ĐỘ CLICK TRÊN MÀN HÌNH: ({cx}, {cy})")
             else:
-                self.add_log("❌ THẤT BẠI: Không so khớp được đáp án đúng với 4 Option chữ OCR.")
+                self.add_log("❌ THẤT BẠI: Không so khớp được đáp án đúng với các Option chữ OCR.")
         else:
             self.add_log("❓ KHÔNG TÌM THẤY: Câu hỏi này chưa có trong file cơ sở đáp án.")
         self.add_log("=== HOÀN TẤT THỬ NGHIỆM ===")
@@ -769,18 +803,37 @@ class MultiPremiumApp(ctk.CTk):
 
             try:
                 rois = self.get_current_rois()
+                x1, y1, x2, y2 = rois['main_roi']
             except:
                 self.add_log("LỖI: Sai định dạng tọa độ. Vui lòng sửa lại.")
                 time.sleep(3)
                 continue
 
-            # Read Question ROI
-            xq, yq, wq, hq = rois['question']
-            crop_q = self.crop_region(screen, xq, yq, wq, hq)
-            q_text = self.ocr_read_text(crop_q)
+            xa = max(0, min(x1, x2))
+            ya = max(0, min(y1, y2))
 
+            crop_main = self.crop_region(screen, x1, y1, x2, y2)
+            results = self.ocr_read_text_with_boxes(crop_main)
+
+            if not results:
+                time.sleep(1.5)
+                continue
+
+            # Split Question & Answers
+            if len(results) >= 5:
+                q_lines = results[:-4]
+                opt_lines = results[-4:]
+            else:
+                if len(results) > 1:
+                    q_lines = results[:1]
+                    opt_lines = results[1:]
+                else:
+                    q_lines = results
+                    opt_lines = []
+
+            q_text = " ".join([r[1] for r in q_lines]).strip()
+            
             if not q_text or len(q_text) < 4:
-                # No question detected yet. Sleep to avoid hammering the CPU.
                 time.sleep(1.5)
                 continue
 
@@ -797,6 +850,27 @@ class MultiPremiumApp(ctk.CTk):
             self.add_log(f"🔍 PHÁT HIỆN CÂU HỎI MỚI: \"{q_text}\"")
             last_processed_question = q_text
 
+            opt_names = ['A', 'B', 'C', 'D']
+            options = {}
+            for idx, r in enumerate(opt_lines):
+                if idx < len(opt_names):
+                    opt_char = opt_names[idx]
+                    options[opt_char] = {
+                        "text": r[1],
+                        "box": r[0]
+                    }
+
+            self.add_log(f"Tổng số dòng nhận diện được: {len(results)}")
+            for idx, r in enumerate(results):
+                self.add_log(f"  [{idx + 1}] \"{r[1]}\"")
+
+            for char in opt_names:
+                if char in options:
+                    self.add_log(f"  ├─ Option {char} OCR: \"{options[char]['text']}\"")
+                else:
+                    self.add_log(f"  ├─ Option {char} OCR: (Không quét được!)")
+
+            # Lookup in database
             db = load_answers(self.answer_file_path)
             best_q, ratio = find_best_match(q_text, db.keys())
 
@@ -805,45 +879,28 @@ class MultiPremiumApp(ctk.CTk):
                 self.add_log(f"✅ KHỚP CƠ SỞ DỮ LIỆU: \"{best_q}\" ({ratio*100:.1f}%)")
                 self.add_log(f"💡 ĐÁP ÁN ĐÚNG TRONG FILE: \"{correct_ans}\"")
 
-                # Read 4 options
-                crops = {}
-                texts = {}
-                for key in ['opt_a', 'opt_b', 'opt_c', 'opt_d']:
-                    x, y, w, h = rois[key]
-                    crops[key] = self.crop_region(screen, x, y, w, h)
-                    texts[key] = self.ocr_read_text(crops[key])
-
-                self.add_log(f"  ├─ Option A OCR: \"{texts['opt_a']}\"")
-                self.add_log(f"  ├─ Option B OCR: \"{texts['opt_b']}\"")
-                self.add_log(f"  ├─ Option C OCR: \"{texts['opt_c']}\"")
-                self.add_log(f"  ├─ Option D OCR: \"{texts['opt_d']}\"")
-
-                options = {
-                    'A': (texts['opt_a'], rois['opt_a']),
-                    'B': (texts['opt_b'], rois['opt_b']),
-                    'C': (texts['opt_c'], rois['opt_c']),
-                    'D': (texts['opt_d'], rois['opt_d'])
-                }
-
                 best_opt = None
                 best_opt_ratio = 0.0
-                for opt_name, (opt_text, coords) in options.items():
-                    r = get_match_ratio(correct_ans, opt_text)
-                    if r > best_opt_ratio:
-                        best_opt_ratio = r
-                        best_opt = opt_name
+                for opt_char, opt_data in options.items():
+                    r_ratio = get_match_ratio(correct_ans, opt_data["text"])
+                    if r_ratio > best_opt_ratio:
+                        best_opt_ratio = r_ratio
+                        best_opt = opt_char
 
                 if best_opt and best_opt_ratio >= 0.4:
-                    _, coords = options[best_opt]
-                    cx = coords[0] + coords[2] // 2
-                    cy = coords[1] + coords[3] // 2
-                    self.add_log(f"🎯 XÁC ĐỊNH CHỌN: {best_opt} ({best_opt_ratio*100:.1f}%)")
+                    opt_data = options[best_opt]
+                    box = opt_data["box"]
+                    cx_crop = (box[0][0] + box[2][0]) // 2
+                    cy_crop = (box[0][1] + box[2][1]) // 2
+                    cx = xa + cx_crop
+                    cy = ya + cy_crop
                     
+                    self.add_log(f"🎯 XÁC ĐỊNH CHỌN: {best_opt} ({best_opt_ratio*100:.1f}%)")
                     # Tap center
                     self.call_adb(device_id, ["shell", "input", "tap", str(cx), str(cy)])
                     self.add_log(f"👉 CLICK THÀNH CÔNG: ({cx}, {cy}) ✓")
                 else:
-                    self.add_log("❌ LỖI: Không khớp được đáp án đúng với 4 Option chữ OCR trên màn hình.")
+                    self.add_log("❌ LỖI: Không khớp được đáp án đúng với các Option chữ OCR trên màn hình.")
             else:
                 self.add_log(f"❓ THẤT BẠI: Không có câu hỏi nào khớp trong cơ sở đáp án (Khớp tốt nhất: {ratio*100:.1f}%)")
 
