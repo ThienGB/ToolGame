@@ -692,18 +692,40 @@ class MultiPremiumApp(ctk.CTk):
         for idx, r in enumerate(results):
             self.add_log(f"  [{idx + 1}] \"{r[1]}\"")
 
-        # Split Question & Answers
-        if len(results) >= 5:
-            q_lines = results[:-4]
-            opt_lines = results[-4:]
+        # Split Question & Answers based on X indentation
+        min_x = min(r[0][0][0] for r in results)
+        max_x = max(r[0][0][0] for r in results)
+        
+        q_lines = []
+        opt_lines = []
+        
+        if max_x - min_x > 25:
+            threshold_x = min_x + (max_x - min_x) * 0.35
+            for r in results:
+                x0 = r[0][0][0]
+                text = r[1].strip()
+                if text in ["...", "..", ".", "…"]:
+                    continue
+                if x0 > threshold_x:
+                    opt_lines.append(r)
+                else:
+                    q_lines.append(r)
         else:
-            self.add_log("⚠️ CẢNH BÁO: Số dòng quét được ít hơn 5. Đang sử dụng chế độ dự phòng...")
-            if len(results) > 1:
-                q_lines = results[:1]
-                opt_lines = results[1:]
+            clean_results = [r for r in results if r[1].strip() not in ["...", "..", ".", "…"]]
+            if len(clean_results) >= 5:
+                q_lines = clean_results[:-4]
+                opt_lines = clean_results[-4:]
             else:
-                q_lines = results
-                opt_lines = []
+                self.add_log("⚠️ CẢNH BÁO: Số dòng quét được ít hơn 5. Đang sử dụng chế độ dự phòng...")
+                if len(clean_results) > 1:
+                    q_lines = clean_results[:1]
+                    opt_lines = clean_results[1:]
+                else:
+                    q_lines = clean_results
+                    opt_lines = []
+                    
+        if len(opt_lines) > 4:
+            opt_lines = opt_lines[-4:]
 
         q_text = " ".join([r[1] for r in q_lines]).strip()
         self.add_log(f"🔍 [TEST] Chữ quét Câu hỏi ghép: \"{q_text}\"")
@@ -825,17 +847,39 @@ class MultiPremiumApp(ctk.CTk):
                 time.sleep(0.3)
                 continue
 
-            # Split Question & Answers
-            if len(results) >= 5:
-                q_lines = results[:-4]
-                opt_lines = results[-4:]
+            # Split Question & Answers based on X indentation
+            min_x = min(r[0][0][0] for r in results)
+            max_x = max(r[0][0][0] for r in results)
+            
+            q_lines = []
+            opt_lines = []
+            
+            if max_x - min_x > 25:
+                threshold_x = min_x + (max_x - min_x) * 0.35
+                for r in results:
+                    x0 = r[0][0][0]
+                    text = r[1].strip()
+                    if text in ["...", "..", ".", "…"]:
+                        continue
+                    if x0 > threshold_x:
+                        opt_lines.append(r)
+                    else:
+                        q_lines.append(r)
             else:
-                if len(results) > 1:
-                    q_lines = results[:1]
-                    opt_lines = results[1:]
+                clean_results = [r for r in results if r[1].strip() not in ["...", "..", ".", "…"]]
+                if len(clean_results) >= 5:
+                    q_lines = clean_results[:-4]
+                    opt_lines = clean_results[-4:]
                 else:
-                    q_lines = results
-                    opt_lines = []
+                    if len(clean_results) > 1:
+                        q_lines = clean_results[:1]
+                        opt_lines = clean_results[1:]
+                    else:
+                        q_lines = clean_results
+                        opt_lines = []
+                        
+            if len(opt_lines) > 4:
+                opt_lines = opt_lines[-4:]
 
             q_text = " ".join([r[1] for r in q_lines]).strip()
             
