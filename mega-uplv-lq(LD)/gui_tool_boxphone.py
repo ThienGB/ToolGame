@@ -1015,7 +1015,8 @@ class AutoClickerInstance:
                         ]
                     },
                     {
-                        "trigger": "images_boxphone/tanthu.png", 
+                        "trigger1": "images_boxphone/tanthu.png", 
+                        "trigger2": "images_boxphone/tanthu1.png",
                        
                         "confidence": 0.7,
                         "script": [
