@@ -300,7 +300,7 @@ class MultiPremiumApp(ctk.CTk):
         
         # Load ROI coordinates
         self.coords = {
-            "main_roi": [150, 80, 810, 430]
+            "main_roi": [24, 243, 306, 451]
         }
         self.load_coords_config()
 
