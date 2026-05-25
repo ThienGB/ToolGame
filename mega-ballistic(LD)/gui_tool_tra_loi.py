@@ -932,5 +932,3 @@ if __name__ == "__main__":
     else:
         app = MultiPremiumApp()
         app.mainloop()
-
-# pyinstaller --noconfirm --onefile --windowed --name "MegaAutoAnswer" --icon "mega_login_logo.png" --add-data "mega_login_logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool_login.py

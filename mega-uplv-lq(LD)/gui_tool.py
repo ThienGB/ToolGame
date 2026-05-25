@@ -1117,7 +1117,7 @@ class AutoClickerInstance:
         #     # tí ghép lại
             {"action": "click_image", "target": "images/daulai.png", "timeout": 20, "confidence": 0.9},
             {"action": "click_image", "target": "images/home.png", "timeout": 20, "confidence": 0.9},
-             {"action": "click_coords", "x": 841, "y": 97, "timeout": 5},
+             {"action": "click_coords", "x": 841, "y": 97, "timeout": 7},
             
             {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
             {"action": "click_coords", "x": 26, "y": 228, "timeout": 2},
@@ -1310,7 +1310,9 @@ class AutoClickerInstance:
                     {
                         "trigger": "images/pvp.png", 
                         "confidence": 0.7,
-                        
+                        "script": [
+                        {"action": "press_esc", "wait": 2},
+                        ]
                     },
                     {
                         "trigger": "images/x5.png", 
