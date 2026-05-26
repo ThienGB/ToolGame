@@ -900,7 +900,7 @@ class AutoClickerInstance:
                             {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 120, "confidence": 0.7},
                             {"action": "click_any", "wait": 12},
                             ]
-                    }
+                    },
                 ]
             },
             {"action": "click_any", "wait": 2},
@@ -998,64 +998,59 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
-
-
-
-             
-               
-{
-    "action": "cases",
-    "timeout": 120,
-    "cases": [
+                
         {
-            "trigger1": "images_boxphone/lam.png",
-            "trigger2": "images_boxphone/lam1.png",
-            "confidence": 0.7,
-            "script": [
+            "action": "cases",
+            "timeout": 120,
+            "cases": [
                 {
-                    "action": "click_image_if",
-                    "target1": "images_boxphone/lam.png",
-                    "target2": "images_boxphone/lam1.png",
-                    "timeout": 7,
-                    "confidence": 0.7
-                },
-                {
-                    "action": "press_esc",
-                    "wait": 3
-                },
-                {
-                    "action": "press_esc",
-                    "wait": 3
-                },
-                {
-                    "action": "press_esc",
-                    "wait": 3
-                }
-            ]
-        },
-        {
-            "trigger1": "images_boxphone/tanthu.png",
-            "trigger2": "images_boxphone/tanthu1.png",
-            "confidence": 0.7,
-            "script": [
-                {
-                    "action": "click_image",
-                    "target1": "images_boxphone/sukien.png",
-                    "target2": "images_boxphone/sukien1.png",
-                    "timeout": 20,
-                    "confidence": 0.6
-                },
-                {
-                    "action": "press_esc",
-                    "wait": 3
-                },
-                {
-                    "action": "press_esc",
-                    "wait": 3
-                }
-            ]
-        },
-        {
+                    "trigger1": "images_boxphone/lam.png",
+                    "trigger2": "images_boxphone/lam1.png",
+                    "confidence": 0.7,
+                    "script": [
+                        {
+                            "action": "click_image_if",
+                            "target1": "images_boxphone/lam.png",
+                            "target2": "images_boxphone/lam1.png",
+                            "timeout": 7,
+                            "confidence": 0.7
+                        },
+                        {
+                            "action": "press_esc",
+                            "wait": 3
+                        },
+                        {
+                            "action": "press_esc",
+                            "wait": 3
+                        },
+                        {
+                            "action": "press_esc",
+                            "wait": 3
+                        }
+                ]},
+            {
+                "trigger1": "images_boxphone/tanthu.png",
+                "trigger2": "images_boxphone/tanthu1.png",
+                "confidence": 0.7,
+                "script": [
+                    {
+                        "action": "click_image",
+                        "target1": "images_boxphone/sukien.png",
+                        "target2": "images_boxphone/sukien1.png",
+                        "timeout": 20,
+                        "confidence": 0.6
+                    },
+                    {
+                        "action": "press_esc",
+                        "wait": 3
+                    },
+                    {
+                        "action": "press_esc",
+                        "wait": 3
+                    }
+                ]
+             },
+          {
             "trigger1": "images_boxphone/nhanxem.png",
             "confidence": 0.7,
             "script": [
@@ -1111,13 +1106,10 @@ class AutoClickerInstance:
                 }
             ]
         }
+    ]},
+        {"action": "press_esc", "wait": 3},
+        {"action": "wait", "timeout": 10},
     ]
-}
-
-
-            {"action": "press_esc", "wait": 3},
-            {"action": "wait", "timeout": 10},
-]
 
         # 2.5 GIAI ĐOẠN MUA EXP
         mua_exp_script = [
