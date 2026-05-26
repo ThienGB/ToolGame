@@ -242,80 +242,76 @@ class AutoClickerInstance:
             self.log("LỖI: Không xác định được index máy ảo để restart.")
             return False
 
-        # --- CHIẾN LƯỢC RESTART LẦN LƯỢT ---
-        # 1. Thêm Jitter để tránh các tab cùng lúc nhảy vào lock
+        # --- CHIẾN LƯỢC RESTART ---
+        # 1. Thêm Jitter để tránh các tab cùng lúc nhảy vào lock quá nhiều
         jitter = random.uniform(5, 45)
         self.log(f"Đang chờ {jitter:.1f}s jitter trước khi xếp hàng restart...")
         time.sleep(jitter)
 
-        # 2. Sử dụng Lock toàn cục để chỉ 1 máy restart tại một thời điểm
+        # 2. Sử dụng Lock toàn cục để tránh việc gọi quit/launch ldconsole quá nhiều cùng lúc gây rớt lệnh
         lock = getattr(self, "shared_data", {}).get("restart_lock", threading.Lock())
+        
         with lock:
             self.log(f"==> ĐÃ ĐẾN LƯỢT RESTART MÁY ẢO (Index {index})...")
             self.update_status(f"Restarting LD {index}")
             
-            # 0. Ngắt kết nối cũ
             try:
                 subprocess.run([self.adb_path, "disconnect", self.device_id], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
             except: pass
 
-        # 1. Tắt máy ảo
-        try:
-            subprocess.run([self.ld_console_path, "quit", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
-        except: pass
-        
-        # Đợi tắt hẳn (tránh lỗi launch khi instance đang closing)
-        start_quit = time.time()
-        while time.time() - start_quit < 45:
-            if not self.running: return False
-            time.sleep(2)
+            self.log(f"Đang tắt máy ảo (Index {index})...")
             try:
-                res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
-                is_running = True   # Mặc định coi là đang chạy cho đến khi có bằng chứng ngược lại
-                found_index = False
-                for line in res.stdout.splitlines():
-                    parts = line.split(',')
-                    if len(parts) >= 5 and parts[0].strip() == str(index):
-                        found_index = True
-                        is_running = (parts[4].strip() != '0')
+                subprocess.run([self.ld_console_path, "quit", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
+            except: pass
+            
+            # Đợi tắt hẳn (để lệnh launch tiếp theo không bị lỗi)
+            start_quit = time.time()
+            while time.time() - start_quit < 20:
+                if not self.running: return False
+                try:
+                    res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                    is_running = True
+                    found_index = False
+                    for line in res.stdout.splitlines():
+                        parts = line.split(',')
+                        if len(parts) >= 5 and parts[0].strip() == str(index):
+                            found_index = True
+                            is_running = (parts[4].strip() != '0')
+                            break
+                    if found_index and not is_running:
                         break
-                # Chỉ thoát khi ĐÃ TÌM THẤY dòng của index đó VÀ trạng thái là 0 (tắt hẳn)
-                if found_index and not is_running:
-                    break
-            except:
-                pass  # Lỗi list2 thì tiếp tục đợi, không break
+                except:
+                    pass
+                time.sleep(2)
 
-
-        time.sleep(3)
+            time.sleep(2)
+            self.log(f"Đang bật máy ảo (Index {index})...")
+            try:
+                subprocess.run([self.ld_console_path, "launch", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
+            except: pass
         
-        # 2. Bật lại máy ảo
-        try:
-            subprocess.run([self.ld_console_path, "launch", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
-        except: pass
-        
-        # 3. Chờ máy ảo lên và sẵn sàng
-        self.log(f"Đang đợi máy ảo (Index {index}) ổn định ADB...")
+        # Giải phóng lock để máy khác có thể quit/launch.
+        # Chờ máy ảo lên và sẵn sàng (chờ tự do, không giữ lock)
+        self.log(f"Đang đợi máy ảo (Index {index}) khởi động và kết nối ADB...")
         start_wait = time.time()
         
         guest_port = 5554 + (index * 2)
         guest_serial = f"127.0.0.1:{guest_port}"
 
-        while True: # Vòng lặp quét liên tục cho tới khi thấy máy
+        while True:
             if not self.running: return False
             elapsed = time.time() - start_wait
-            
-            # Thử connect liên tục vào port tiêu chuẩn
-            try:
-                subprocess.run([self.adb_path, "connect", guest_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
-            except: pass
 
-            # Cập nhật serial thực tế từ list2 (Quét mọi cột để tìm Serial/IP)
+            # Cập nhật trạng thái máy từ list2
             current_ld_serial = None
+            is_vm_running = True
             try:
                 res = subprocess.run([self.ld_console_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 for line in res.stdout.splitlines():
                     parts = line.split(',')
                     if len(parts) >= 7 and parts[0].strip() == str(index):
+                        if parts[4].strip() == '0':
+                            is_vm_running = False
                         for p in parts:
                             p = p.strip()
                             if (":" in p or p.startswith("emulator-")) and p != "null" and "." in p:
@@ -324,52 +320,77 @@ class AutoClickerInstance:
                         break
             except: pass
 
-            # Nếu tìm thấy serial mới, cập nhật và connect
-            if current_ld_serial:
-                try:
-                    subprocess.run([self.adb_path, "connect", current_ld_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+            # Tự động kick launch nếu vm bị xịt tắt ngang sau khi đã gọi launch
+            if not is_vm_running and elapsed > 15:
+                self.log("Phát hiện máy ảo chưa chạy, gọi lệnh launch lại...")
+                try: 
+                    # Dùng chung lock để đảm bảo ldconsole không bị nghẽn
+                    with lock:
+                        subprocess.run([self.ld_console_path, "launch", "--index", str(index)], creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
                 except: pass
-                if current_ld_serial != self.device_id:
-                    self.log(f"Quét lại phát hiện Serial mới: {current_ld_serial}")
-                    self.device_id = current_ld_serial
-            
+                time.sleep(5)
+                continue
+
             # Kiểm tra xem device_id đã online chưa
             try:
                 res_adb = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 is_connected = False
+                is_offline = False
                 for line in res_adb.stdout.splitlines():
-                    if self.device_id in line and "device" in line and "offline" not in line and "unauthorized" not in line:
-                        is_connected = True
+                    if self.device_id in line and "device" in line:
+                        if "offline" in line or "unauthorized" in line:
+                            is_offline = True
+                        else:
+                            is_connected = True
                         break
             except:
                 is_connected = False
-            
+                is_offline = False
+
+            if is_offline:
+                self.log(f"Phát hiện thiết bị {self.device_id} bị offline, đang thử ngắt kết nối...")
+                try:
+                    subprocess.run([self.adb_path, "disconnect", self.device_id], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                except: pass
+            elif not is_connected:
+                # Chỉ thử connect nếu chưa connect
+                target_serial = current_ld_serial if current_ld_serial else guest_serial
+                try:
+                    subprocess.run([self.adb_path, "connect", target_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+                except: pass
+                
+                if current_ld_serial and current_ld_serial != self.device_id:
+                    self.log(f"Quét lại phát hiện Serial mới: {current_ld_serial}")
+                    self.device_id = current_ld_serial
+
             if is_connected:
                 # Kiểm tra phản hồi shell thực tế (getprop hoặc wm size)
-                res_boot = self.call_adb(["shell", "getprop", "sys.boot_completed"])
-                if res_boot.stdout.strip() == b"1":
-                    self.log("==> KẾT NỐI THÀNH CÔNG! Đợi thêm 15s để máy ổn định...")
-                    time.sleep(15)
-                    return True
-                
-                # Dự phòng nếu boot_completed lâu nhưng shell đã chạy
-                if elapsed > 45:
-                    res_wm = self.call_adb(["shell", "wm", "size"])
-                    if b"Physical size" in res_wm.stdout:
-                        self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)! Đợi thêm 15s để máy ổn định...")
+                try:
+                    res_boot = self.call_adb(["shell", "getprop", "sys.boot_completed"])
+                    if res_boot.stdout.strip() == b"1":
+                        self.log("==> KẾT NỐI THÀNH CÔNG! Đợi thêm 15s để máy ổn định...")
                         time.sleep(15)
                         return True
+                    
+                    # Dự phòng nếu boot_completed lâu nhưng shell đã chạy
+                    if elapsed > 45:
+                        res_wm = self.call_adb(["shell", "wm", "size"])
+                        if b"Physical size" in res_wm.stdout:
+                            self.log("==> KẾT NỐI THÀNH CÔNG (qua wm size)! Đợi thêm 15s để máy ổn định...")
+                            time.sleep(15)
+                            return True
+                except: pass
 
             # Mỗi 30s log một lần
             if int(elapsed) % 30 == 0 and int(elapsed) > 0:
-                self.log(f"Vẫn đang quét máy ảo {index} (đã đợi {int(elapsed)}s)...")
+                self.log(f"Vẫn đang đợi máy ảo {index} (đã đợi {int(elapsed)}s)...")
 
             # Giới hạn an toàn 10 phút
             if elapsed > 600:
                 self.log(f"!! LỖI: Không thể kết nối máy ảo {index} sau 10 phút.")
                 return False
 
-            time.sleep(3) # Tần suất quét dầy hơn (3s)
+            time.sleep(3)
         
         return False
 
@@ -387,6 +408,34 @@ class AutoClickerInstance:
             self.call_adb(["shell", "am", "force-stop", app])
             self.call_adb(["shell", "pkill", "-f", app])
         time.sleep(2)
+
+    def open_game_logic(self, step):
+        """Chỉ thực hiện khởi chạy game (Simplified)."""
+        potential_apps = ["com.garena.game.kgvn64x", "com.garena.game.kgvn", "com.garena.game.kgtw"]
+        app = step.get("package")
+        
+        if not app:
+            for p in potential_apps:
+                check = self.call_adb(["shell", "pm", "path", p])
+                if check.returncode == 0 and check.stdout.strip():
+                    app = p
+                    break
+        
+        if not app:
+            app = "com.garena.game.kgvn" # Mặc định nếu không thấy
+            
+        self.log(f"-> Khởi chạy game: {app}")
+        
+        # Mở game bằng monkey
+        self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+        
+        # Đợi game load (mặc định 5s hoặc theo script)
+        wait_time = step.get("wait", 5)
+        if wait_time > 0:
+            self.log(f"Đợi game khởi động ({wait_time}s)...")
+            time.sleep(wait_time)
+            
+        return True
 
     def click_coords_logic(self, step):
         x, y = step.get("x"), step.get("y")
@@ -471,6 +520,8 @@ class AutoClickerInstance:
             res = self.cases_logic(step)
         elif action == "sync_autowin":
             res = self.sync_autowin_logic(step)
+        elif action == "open_game":
+            res = self.open_game_logic(step)
         elif action == "restart_app":
             app = step.get("app", "com.garena.game.kgvn")
             self.log(f"!! YÊU CẦU: Khởi động lại ứng dụng {app}...")
