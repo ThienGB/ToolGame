@@ -784,7 +784,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/matkhau.png",  "target2": "images_boxphone/matkhau1.png",  "timeout": 10, "confidence": 0.7},
             {"action": "input_password"},
             {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target1": "images_boxphone/xong.png", "target2": "images_boxphone/xong1.png","target3": "images_boxphone/done.png","timeout": 30, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/xong.png", "target2": "images_boxphone/xong1.png","target3": "images_boxphone/done.png","target4": "images_boxphone/m.png","timeout": 10, "confidence": 0.7},
             {"action": "wait", "timeout": 5},
             {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 6, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/dangnhap2.png", "target2": "images_boxphone/login.png","target3": "images_boxphone/login1.png","timeout": 3, "confidence": 0.7},
@@ -992,17 +992,21 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/dauhang.png", "target2": "images_boxphone/dau_hang1.jpg", "timeout": 7, "confidence": 0.7},
             {"action": "press_esc", "wait": 2},
             {"action": "click_coords", "x": 1186, "y": 57, "timeout": 5},
-            {"action": "click_coords", "x": 1399, "y": 473, "timeout": 2},
+            {"action": "click_coords", "x": 1399, "y": 473, "timeout": 5},
             
-            {"action": "click_coords", "x": 1606, "y": 544, "timeout": 2},
+            {"action": "click_coords", "x": 1606, "y": 544, "timeout": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
-            {
+
+
+
+             {
                 "action": "cases",
                 "timeout" : 120,
                 "cases": [
                     {
+                        
                         "trigger1": "images_boxphone/lam.png",
                         "trigger2": "images_boxphone/lam1.png",
                         "confidence": 0.7,
@@ -1038,8 +1042,23 @@ class AutoClickerInstance:
                         ]
                         },
                         ]
-                        },
-           
+                        {
+                        
+                        "trigger1": "images_boxphone/co.png",
+                        "trigger2": "images_boxphone/co1.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image_if", "target1": "images_boxphone/co.png", "timeout": 20, "confidence": 0.7},
+                            {"action": "wait", "timeout": 25},
+                            {"action": "click_image_if", "target1": "images_boxphone/co.png", "timeout": 20, "confidence": 0.7},
+                            {"action": "press_esc", "wait": 3},
+                            {"action": "press_esc", "wait": 3},
+                            {"action": "press_esc", "wait": 3},
+            
+                        ]
+                    },
+                        
+             },
             {"action": "press_esc", "wait": 3},
             {"action": "wait", "timeout": 10},
 ]
@@ -1207,7 +1226,8 @@ class AutoClickerInstance:
                 "action": "loop",
                 "count": 12,
                 "steps": [
-                    {"action": "click_image_if", "target1": "images_boxphone/bienve.png","target2": "images_boxphone/bienve.jpg", "timeout": 600, "confidence": 0.7},
+                    {"action": "click_coords", "x": 903, "y": 945},
+                    # {"action": "click_image_if", "target1": "images_boxphone/bienve.png","target2": "images_boxphone/bienve.jpg", "timeout": 600, "confidence": 0.7},
                     {"action": "wait", "timeout": 15}
                 ]
             },
