@@ -1387,7 +1387,8 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 2} ,
             
             {"action": "click_image", "target": "images/team5.png", "timeout": 60},
-            
+            {"action": "click_coords", "x": 675, "y": 441, "timeout": 3},
+            {"action": "click_coords", "x": 675, "y": 441, "timeout": 3},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 7, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/x1.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/huy.png", "timeout": 3, "confidence": 0.9},
