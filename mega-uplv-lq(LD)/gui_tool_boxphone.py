@@ -1058,7 +1058,7 @@ class AutoClickerInstance:
                 ]
              },
           {
-            "trigger1": "images_boxphone/nhanxem.png","trigger2": "images_boxphone/check.png",
+            "trigger1": "images_boxphone/nhanxem.png","trigger2": "images_boxphone/check.jpg",
             "confidence": 0.7,
             "script": [
                 {
@@ -1114,6 +1114,7 @@ class AutoClickerInstance:
             ]
         }
     ]},
+        {"action": "click_image_if", "target1": "images_boxphone/co.png", "timeout": 7, "confidence": 0.7},
         {"action": "press_esc", "wait": 3},
         {"action": "wait", "timeout": 10},
     ]
