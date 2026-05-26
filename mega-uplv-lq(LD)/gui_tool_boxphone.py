@@ -998,7 +998,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
-            {"action": "click_coords", "x": 1186, "y": 57, "timeout": 5},    
+            {"action": "click_coords", "x": 1399, "y": 473, "timeout": 5},   
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
@@ -1284,7 +1284,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/menu.png","target2": "images_boxphone/menu1.jpg", "timeout": 600, "confidence": 0.7},
             {
                 "action": "loop",
-                "count": 12,
+                "count": 13,
                 "steps": [
                     {"action": "click_coords", "x": 903, "y": 945},
                     # {"action": "click_image_if", "target1": "images_boxphone/bienve.png","target2": "images_boxphone/bienve.jpg", "timeout": 600, "confidence": 0.7},
@@ -1334,7 +1334,11 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images_boxphone/off.png", "timeout": 5, "confidence": 0.75, "use_color": True},
             {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2": "images_boxphone/minimize1.png", "target3": "images_boxphone/minimize2.png", "target4": "images_boxphone/minimize3.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/home1.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/cai_dat_button.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images_boxphone/cai_dat_button.png", "timeout": 6, "confidence": 0.7},
+            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
+            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
+            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
+
             {"action": "click_image", "target": "images_boxphone/dangxuat.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image", "target": "images_boxphone/ok1.png", "timeout": 30, "confidence": 0.7},
             {"action": "wait", "timeout": 15},

@@ -1024,7 +1024,7 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN
         login_script = [
-            {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
+            {"action": "open_game"},
             {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 30, "confidence": 0.7},
             {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
@@ -1502,18 +1502,19 @@ class AutoClickerInstance:
             # {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
             # {"action": "click_coords", "x": 476, "y": 498, "timeout": 3},
             # {"action": "click_coords", "x": 459, "y": 36, "timeout": 3},
+            {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
+            {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
+            {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
+            {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
+            {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
+            {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
+            
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
             {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
             {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
             {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
+            
 
           
 
