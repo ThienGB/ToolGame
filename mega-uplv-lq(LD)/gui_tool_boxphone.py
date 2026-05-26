@@ -998,11 +998,15 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
-                
+            {"action": "click_coords", "x": 1186, "y": 57, "timeout": 5},    
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
         {
             "action": "cases",
             "timeout": 60,
             "cases": [
+                {"action": "wait", "timeout": 5},
                 {
                     "trigger1": "images_boxphone/tuy_chon.png",
                     "trigger2": "images_boxphone/tuy_chon1.png",
