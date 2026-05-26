@@ -692,37 +692,59 @@ class MultiPremiumApp(ctk.CTk):
         for idx, r in enumerate(results):
             self.add_log(f"  [{idx + 1}] \"{r[1]}\"")
 
-        # Split Question & Answers based on X indentation
-        min_x = min(r[0][0][0] for r in results)
-        max_x = max(r[0][0][0] for r in results)
-        
+        # Phân loại dựa vào icon Bubble (được quét ra là "..." hoặc tương tự)
+        clean_results = []
+        bubbles = []
+        for r in results:
+            text = r[1].strip()
+            # Bắt các text thường là do icon chat tạo ra
+            if text in ["...", "..", ".", "…", "....", ":::", "''", '""', '°°°', ':']:
+                bubbles.append(r)
+            else:
+                clean_results.append(r)
+
         q_lines = []
         opt_lines = []
-        
-        if max_x - min_x > 25:
-            threshold_x = min_x + (max_x - min_x) * 0.35
-            for r in results:
-                x0 = r[0][0][0]
-                text = r[1].strip()
-                if text in ["...", "..", ".", "…"]:
-                    continue
-                if x0 > threshold_x:
+
+        if len(bubbles) >= 2: # Nếu tìm thấy ít nhất 2 icon bubble, dùng Y-axis
+            for r in clean_results:
+                r_cy = (r[0][0][1] + r[0][2][1]) / 2
+                is_opt = False
+                for b in bubbles:
+                    b_cy = (b[0][0][1] + b[0][2][1]) / 2
+                    b_h = b[0][2][1] - b[0][0][1]
+                    if abs(r_cy - b_cy) < b_h * 1.5:
+                        is_opt = True
+                        break
+                if is_opt:
                     opt_lines.append(r)
                 else:
                     q_lines.append(r)
         else:
-            clean_results = [r for r in results if r[1].strip() not in ["...", "..", ".", "…"]]
-            if len(clean_results) >= 5:
-                q_lines = clean_results[:-4]
-                opt_lines = clean_results[-4:]
+            # Fallback logic cũ (dựa vào thụt lề X)
+            min_x = min(r[0][0][0] for r in clean_results) if clean_results else 0
+            max_x = max(r[0][0][0] for r in clean_results) if clean_results else 0
+            
+            if max_x - min_x > 25:
+                threshold_x = min_x + (max_x - min_x) * 0.35
+                for r in clean_results:
+                    x0 = r[0][0][0]
+                    if x0 > threshold_x:
+                        opt_lines.append(r)
+                    else:
+                        q_lines.append(r)
             else:
-                self.add_log("⚠️ CẢNH BÁO: Số dòng quét được ít hơn 5. Đang sử dụng chế độ dự phòng...")
-                if len(clean_results) > 1:
-                    q_lines = clean_results[:1]
-                    opt_lines = clean_results[1:]
+                if len(clean_results) >= 5:
+                    q_lines = clean_results[:-4]
+                    opt_lines = clean_results[-4:]
                 else:
-                    q_lines = clean_results
-                    opt_lines = []
+                    self.add_log("⚠️ CẢNH BÁO: Số dòng quét được ít hơn 5. Đang sử dụng chế độ dự phòng...")
+                    if len(clean_results) > 1:
+                        q_lines = clean_results[:1]
+                        opt_lines = clean_results[1:]
+                    else:
+                        q_lines = clean_results
+                        opt_lines = []
                     
         if len(opt_lines) > 4:
             opt_lines = opt_lines[-4:]
@@ -845,39 +867,61 @@ class MultiPremiumApp(ctk.CTk):
 
             if not results:
                 time.sleep(0.3)
+                gc.collect() # Xóa rác khi màn hình rảnh để tránh khựng lúc đang có câu hỏi
                 continue
 
-            # Split Question & Answers based on X indentation
-            min_x = min(r[0][0][0] for r in results)
-            max_x = max(r[0][0][0] for r in results)
-            
+            # Phân loại dựa vào icon Bubble (được quét ra là "..." hoặc tương tự)
+            clean_results = []
+            bubbles = []
+            for r in results:
+                text = r[1].strip()
+                if text in ["...", "..", ".", "…", "....", ":::", "''", '""', '°°°', ':']:
+                    bubbles.append(r)
+                else:
+                    clean_results.append(r)
+
             q_lines = []
             opt_lines = []
-            
-            if max_x - min_x > 25:
-                threshold_x = min_x + (max_x - min_x) * 0.35
-                for r in results:
-                    x0 = r[0][0][0]
-                    text = r[1].strip()
-                    if text in ["...", "..", ".", "…"]:
-                        continue
-                    if x0 > threshold_x:
+
+            if len(bubbles) >= 2: # Nếu tìm thấy ít nhất 2 icon bubble, dùng Y-axis
+                for r in clean_results:
+                    r_cy = (r[0][0][1] + r[0][2][1]) / 2
+                    is_opt = False
+                    for b in bubbles:
+                        b_cy = (b[0][0][1] + b[0][2][1]) / 2
+                        b_h = b[0][2][1] - b[0][0][1]
+                        if abs(r_cy - b_cy) < b_h * 1.5:
+                            is_opt = True
+                            break
+                    if is_opt:
                         opt_lines.append(r)
                     else:
                         q_lines.append(r)
             else:
-                clean_results = [r for r in results if r[1].strip() not in ["...", "..", ".", "…"]]
-                if len(clean_results) >= 5:
-                    q_lines = clean_results[:-4]
-                    opt_lines = clean_results[-4:]
+                # Fallback logic cũ (dựa vào thụt lề X)
+                min_x = min(r[0][0][0] for r in clean_results) if clean_results else 0
+                max_x = max(r[0][0][0] for r in clean_results) if clean_results else 0
+                
+                if max_x - min_x > 25:
+                    threshold_x = min_x + (max_x - min_x) * 0.35
+                    for r in clean_results:
+                        x0 = r[0][0][0]
+                        if x0 > threshold_x:
+                            opt_lines.append(r)
+                        else:
+                            q_lines.append(r)
                 else:
-                    if len(clean_results) > 1:
-                        q_lines = clean_results[:1]
-                        opt_lines = clean_results[1:]
+                    if len(clean_results) >= 5:
+                        q_lines = clean_results[:-4]
+                        opt_lines = clean_results[-4:]
                     else:
-                        q_lines = clean_results
-                        opt_lines = []
-                        
+                        if len(clean_results) > 1:
+                            q_lines = clean_results[:1]
+                            opt_lines = clean_results[1:]
+                        else:
+                            q_lines = clean_results
+                            opt_lines = []
+                            
             if len(opt_lines) > 4:
                 opt_lines = opt_lines[-4:]
 
@@ -893,8 +937,8 @@ class MultiPremiumApp(ctk.CTk):
             
             # Use fuzzy ratio to check if it's the exact same active question
             if norm_new == norm_old or (norm_old and difflib.SequenceMatcher(None, norm_new, norm_old).ratio() > 0.85):
-                # Still showing the same question, avoid double clicks. Sleep longer.
-                time.sleep(0.5)
+                # Vẫn đang hiển thị câu hỏi cũ (do game chưa kịp chuyển), giảm thời gian chờ xuống cực thấp để liên tục dò
+                time.sleep(0.02)
                 continue
 
             self.add_log(f"🔍 PHÁT HIỆN CÂU HỎI MỚI: \"{q_text}\"")
@@ -953,9 +997,6 @@ class MultiPremiumApp(ctk.CTk):
                     self.add_log("❌ LỖI: Không khớp được đáp án đúng với các Option chữ OCR trên màn hình.")
             else:
                 self.add_log(f"❓ THẤT BẠI: Không có câu hỏi nào khớp trong cơ sở đáp án (Khớp tốt nhất: {ratio*100:.1f}%)")
-
-            time.sleep(0.2)
-            gc.collect()
 
         self.after(0, self.stop_ocr_engine)
 
