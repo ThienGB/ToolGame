@@ -1001,8 +1001,15 @@ class AutoClickerInstance:
                 
         {
             "action": "cases",
-            "timeout": 120,
+            "timeout": 60,
             "cases": [
+                {
+                    "trigger1": "images_boxphone/tuy_chon.png",
+                    "trigger2": "images_boxphone/tuy_chon1.png",
+                    "confidence": 0.7,
+                    "script": [
+                        
+                ]},
                 {
                     "trigger1": "images_boxphone/lam.png",
                     "trigger2": "images_boxphone/lam1.png",
@@ -1051,7 +1058,7 @@ class AutoClickerInstance:
                 ]
              },
           {
-            "trigger1": "images_boxphone/nhanxem.png",
+            "trigger1": "images_boxphone/nhanxem.png","trigger2": "images_boxphone/check.png",
             "confidence": 0.7,
             "script": [
                 {
