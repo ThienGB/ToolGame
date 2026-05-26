@@ -698,75 +698,55 @@ class MultiPremiumApp(ctk.CTk):
         for r in results:
             text = r[1].strip()
             # Bắt các text thường là do icon chat tạo ra
-            if text in ["...", "..", ".", "…", "....", ":::", "''", '""', '°°°', ':']:
+            if text in ["...", "..", ".", "…", "....", ":::", "''", '""', '°°°', ':', '-', '_']:
                 bubbles.append(r)
             else:
                 clean_results.append(r)
 
+        clean_results.sort(key=lambda r: r[0][0][1]) # Sắp xếp theo Y từ trên xuống
         q_lines = []
         opt_lines = []
 
-        if len(bubbles) >= 2: # Nếu tìm thấy ít nhất 2 icon bubble, dùng Y-axis
-            for r in clean_results:
-                r_cy = (r[0][0][1] + r[0][2][1]) / 2
-                is_opt = False
-                for b in bubbles:
-                    b_cy = (b[0][0][1] + b[0][2][1]) / 2
-                    b_h = b[0][2][1] - b[0][0][1]
-                    if abs(r_cy - b_cy) < b_h * 1.5:
-                        is_opt = True
-                        break
-                if is_opt:
+        if len(bubbles) > 0:
+            bubble_right_x = min(b[0][2][0] for b in bubbles)
+            threshold_x = bubble_right_x - 15
+
+            is_opt_section = False
+            for idx, r in enumerate(clean_results):
+                x0 = r[0][0][0]
+                if idx == 0:
+                    q_lines.append(r)
+                    continue
+                    
+                if x0 > threshold_x:
+                    is_opt_section = True
+                    
+                if is_opt_section:
                     opt_lines.append(r)
                 else:
                     q_lines.append(r)
         else:
-            # Fallback logic cũ (dựa vào thụt lề X)
-            min_x = min(r[0][0][0] for r in clean_results) if clean_results else 0
-            max_x = max(r[0][0][0] for r in clean_results) if clean_results else 0
-            
-            if max_x - min_x > 25:
-                threshold_x = min_x + (max_x - min_x) * 0.35
-                for r in clean_results:
-                    x0 = r[0][0][0]
-                    if x0 > threshold_x:
-                        opt_lines.append(r)
-                    else:
-                        q_lines.append(r)
+            # Fallback: dựa vào khoảng cách Y lớn nhất
+            if len(clean_results) > 1:
+                max_gap = 0
+                split_idx = 1
+                for i in range(1, len(clean_results)):
+                    gap = clean_results[i][0][0][1] - clean_results[i-1][0][2][1]
+                    if gap > max_gap:
+                        max_gap = gap
+                        split_idx = i
+                
+                q_lines = clean_results[:split_idx]
+                opt_lines = clean_results[split_idx:]
             else:
-                if len(clean_results) >= 5:
-                    q_lines = clean_results[:-4]
-                    opt_lines = clean_results[-4:]
-                else:
-                    self.add_log("⚠️ CẢNH BÁO: Số dòng quét được ít hơn 5. Đang sử dụng chế độ dự phòng...")
-                    if len(clean_results) > 1:
-                        q_lines = clean_results[:1]
-                        opt_lines = clean_results[1:]
-                    else:
-                        q_lines = clean_results
-                        opt_lines = []
-                    
-        if len(opt_lines) > 4:
-            opt_lines = opt_lines[-4:]
+                q_lines = clean_results
+                opt_lines = []
 
         q_text = " ".join([r[1] for r in q_lines]).strip()
         self.add_log(f"🔍 [TEST] Chữ quét Câu hỏi ghép: \"{q_text}\"")
 
-        opt_names = ['A', 'B', 'C', 'D']
-        options = {}
         for idx, r in enumerate(opt_lines):
-            if idx < len(opt_names):
-                opt_char = opt_names[idx]
-                options[opt_char] = {
-                    "text": r[1],
-                    "box": r[0]
-                }
-
-        for char in opt_names:
-            if char in options:
-                self.add_log(f"  ├─ OCR Đáp án {char}: \"{options[char]['text']}\"")
-            else:
-                self.add_log(f"  ├─ OCR Đáp án {char}: (Không quét được!)")
+            self.add_log(f"  ├─ OCR Đáp án dòng {idx+1}: \"{r[1]}\"")
 
         # Fuzzy lookup test
         db = load_answers(self.answer_file_path)
@@ -777,24 +757,23 @@ class MultiPremiumApp(ctk.CTk):
             correct_ans = db[best_q]
             self.add_log(f"👉 ĐÁP ÁN ĐÚNG TRONG FILE: \"{correct_ans}\"")
 
-            best_opt = None
+            best_opt_idx = -1
             best_opt_ratio = 0.0
-            for opt_char, opt_data in options.items():
-                r_ratio = get_match_ratio(correct_ans, opt_data["text"])
+            for idx, r in enumerate(opt_lines):
+                r_ratio = get_match_ratio(correct_ans, r[1])
                 if r_ratio > best_opt_ratio:
                     best_opt_ratio = r_ratio
-                    best_opt = opt_char
+                    best_opt_idx = idx
 
-            if best_opt and best_opt_ratio >= 0.4:
-                opt_data = options[best_opt]
-                box = opt_data["box"]
+            if best_opt_idx != -1 and best_opt_ratio >= 0.4:
+                box = opt_lines[best_opt_idx][0]
                 # Calculate center inside crop
                 cx_crop = (box[0][0] + box[2][0]) // 2
                 cy_crop = (box[0][1] + box[2][1]) // 2
                 # Convert to screen coordinates
                 cx = xa + cx_crop
                 cy = ya + cy_crop
-                self.add_log(f"🎯 XÁC ĐỊNH CLICK ĐÁP ÁN: Chọn {best_opt} (Độ khớp chữ: {best_opt_ratio*100:.1f}%)")
+                self.add_log(f"🎯 XÁC ĐỊNH CLICK ĐÁP ÁN: Chọn dòng {best_opt_idx+1} (Độ khớp chữ: {best_opt_ratio*100:.1f}%)")
                 self.add_log(f"👉 TỌA ĐỘ CLICK TRÊN MÀN HÌNH: ({cx}, {cy})")
             else:
                 self.add_log("❌ THẤT BẠI: Không so khớp được đáp án đúng với các Option chữ OCR.")
@@ -875,55 +854,49 @@ class MultiPremiumApp(ctk.CTk):
             bubbles = []
             for r in results:
                 text = r[1].strip()
-                if text in ["...", "..", ".", "…", "....", ":::", "''", '""', '°°°', ':']:
+                if text in ["...", "..", ".", "…", "....", ":::", "''", '""', '°°°', ':', '-', '_']:
                     bubbles.append(r)
                 else:
                     clean_results.append(r)
 
+            clean_results.sort(key=lambda r: r[0][0][1]) # Sắp xếp theo Y từ trên xuống
             q_lines = []
             opt_lines = []
 
-            if len(bubbles) >= 2: # Nếu tìm thấy ít nhất 2 icon bubble, dùng Y-axis
-                for r in clean_results:
-                    r_cy = (r[0][0][1] + r[0][2][1]) / 2
-                    is_opt = False
-                    for b in bubbles:
-                        b_cy = (b[0][0][1] + b[0][2][1]) / 2
-                        b_h = b[0][2][1] - b[0][0][1]
-                        if abs(r_cy - b_cy) < b_h * 1.5:
-                            is_opt = True
-                            break
-                    if is_opt:
+            if len(bubbles) > 0:
+                bubble_right_x = min(b[0][2][0] for b in bubbles)
+                threshold_x = bubble_right_x - 15
+
+                is_opt_section = False
+                for idx, r in enumerate(clean_results):
+                    x0 = r[0][0][0]
+                    if idx == 0:
+                        q_lines.append(r)
+                        continue
+                        
+                    if x0 > threshold_x:
+                        is_opt_section = True
+                        
+                    if is_opt_section:
                         opt_lines.append(r)
                     else:
                         q_lines.append(r)
             else:
-                # Fallback logic cũ (dựa vào thụt lề X)
-                min_x = min(r[0][0][0] for r in clean_results) if clean_results else 0
-                max_x = max(r[0][0][0] for r in clean_results) if clean_results else 0
-                
-                if max_x - min_x > 25:
-                    threshold_x = min_x + (max_x - min_x) * 0.35
-                    for r in clean_results:
-                        x0 = r[0][0][0]
-                        if x0 > threshold_x:
-                            opt_lines.append(r)
-                        else:
-                            q_lines.append(r)
+                # Fallback: dựa vào khoảng cách Y lớn nhất
+                if len(clean_results) > 1:
+                    max_gap = 0
+                    split_idx = 1
+                    for i in range(1, len(clean_results)):
+                        gap = clean_results[i][0][0][1] - clean_results[i-1][0][2][1]
+                        if gap > max_gap:
+                            max_gap = gap
+                            split_idx = i
+                    
+                    q_lines = clean_results[:split_idx]
+                    opt_lines = clean_results[split_idx:]
                 else:
-                    if len(clean_results) >= 5:
-                        q_lines = clean_results[:-4]
-                        opt_lines = clean_results[-4:]
-                    else:
-                        if len(clean_results) > 1:
-                            q_lines = clean_results[:1]
-                            opt_lines = clean_results[1:]
-                        else:
-                            q_lines = clean_results
-                            opt_lines = []
-                            
-            if len(opt_lines) > 4:
-                opt_lines = opt_lines[-4:]
+                    q_lines = clean_results
+                    opt_lines = []
 
             q_text = " ".join([r[1] for r in q_lines]).strip()
             
@@ -944,25 +917,12 @@ class MultiPremiumApp(ctk.CTk):
             self.add_log(f"🔍 PHÁT HIỆN CÂU HỎI MỚI: \"{q_text}\"")
             last_processed_question = q_text
 
-            opt_names = ['A', 'B', 'C', 'D']
-            options = {}
-            for idx, r in enumerate(opt_lines):
-                if idx < len(opt_names):
-                    opt_char = opt_names[idx]
-                    options[opt_char] = {
-                        "text": r[1],
-                        "box": r[0]
-                    }
-
             self.add_log(f"Tổng số dòng nhận diện được: {len(results)}")
             for idx, r in enumerate(results):
                 self.add_log(f"  [{idx + 1}] \"{r[1]}\"")
 
-            for char in opt_names:
-                if char in options:
-                    self.add_log(f"  ├─ Option {char} OCR: \"{options[char]['text']}\"")
-                else:
-                    self.add_log(f"  ├─ Option {char} OCR: (Không quét được!)")
+            for idx, r in enumerate(opt_lines):
+                self.add_log(f"  ├─ Option dòng {idx+1} OCR: \"{r[1]}\"")
 
             # Lookup in database
             db = load_answers(self.answer_file_path)
@@ -973,26 +933,26 @@ class MultiPremiumApp(ctk.CTk):
                 self.add_log(f"✅ KHỚP CƠ SỞ DỮ LIỆU: \"{best_q}\" ({ratio*100:.1f}%)")
                 self.add_log(f"💡 ĐÁP ÁN ĐÚNG TRONG FILE: \"{correct_ans}\"")
 
-                best_opt = None
+                best_opt_idx = -1
                 best_opt_ratio = 0.0
-                for opt_char, opt_data in options.items():
-                    r_ratio = get_match_ratio(correct_ans, opt_data["text"])
+                for idx, r in enumerate(opt_lines):
+                    r_ratio = get_match_ratio(correct_ans, r[1])
                     if r_ratio > best_opt_ratio:
                         best_opt_ratio = r_ratio
-                        best_opt = opt_char
+                        best_opt_idx = idx
 
-                if best_opt and best_opt_ratio >= 0.4:
-                    opt_data = options[best_opt]
-                    box = opt_data["box"]
+                if best_opt_idx != -1 and best_opt_ratio >= 0.4:
+                    box = opt_lines[best_opt_idx][0]
                     cx_crop = (box[0][0] + box[2][0]) // 2
                     cy_crop = (box[0][1] + box[2][1]) // 2
                     cx = xa + cx_crop
                     cy = ya + cy_crop
                     
-                    self.add_log(f"🎯 XÁC ĐỊNH CHỌN: {best_opt} ({best_opt_ratio*100:.1f}%)")
+                    self.add_log(f"🎯 XÁC ĐỊNH CHỌN: Dòng {best_opt_idx+1} ({best_opt_ratio*100:.1f}%)")
                     # Tap center
                     self.call_adb(device_id, ["shell", "input", "tap", str(cx), str(cy)])
                     self.add_log(f"👉 CLICK THÀNH CÔNG: ({cx}, {cy}) ✓")
+                    time.sleep(0.8) # Ngủ đông ngắn sau khi click để đợi game chuyển cảnh, tránh quét lỗi animation gây click đúp
                 else:
                     self.add_log("❌ LỖI: Không khớp được đáp án đúng với các Option chữ OCR trên màn hình.")
             else:
