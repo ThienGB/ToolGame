@@ -1564,10 +1564,25 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 25},
             {"action": "click_image_if", "target1": "images/batdau.png","target2": "images/batdau1.png", "timeout": 6, "confidence": 0.9},
             {"action": "press_esc", "wait": 2} ,
+            {"action": "click_coords", "x": 867, "y": 492, "timeout": 10},
+            
             {
                 "action": "cases",
                 "timeout" : 120,
                 "cases": [
+                     {
+                        "trigger": "images/tieptucchiendau.png",
+                        "confidence": 0.7,
+                        "script": [
+                            
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                        ]
+                    },
                     {
                         "trigger": "images/event_default.png",
                         "confidence": 0.7,
@@ -1620,6 +1635,9 @@ class AutoClickerInstance:
                     },
                 ]
               } ,     
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
             
@@ -1627,9 +1645,9 @@ class AutoClickerInstance:
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
             {"action": "wait", "timeout": 15},    
-            {"action": "press_esc", "wait": 1} ,
-            {"action": "press_esc", "wait": 1} ,
-            {"action": "press_esc", "wait": 1} ,
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
+            {"action": "press_esc", "wait": 3} ,
         ]
 
         while self.running:
