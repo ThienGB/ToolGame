@@ -747,11 +747,8 @@ class AutoClickerInstance:
             time.sleep(0.1)  # Giảm thời gian nghỉ xuống 100ms để 5 máy phản hồi đồng thời siêu nhạy!
 
         # 3. Thực hiện hành động click đồng bộ cùng lúc
-        # BoxPhone hay bị miss lệnh tap (0ms) do game chặn, nên chuyển sang swipe (nhấn giữ 100ms)
-        # Thêm một chút độ trễ ngẫu nhiên siêu nhỏ (jitter) để tránh 5 máy gọi adb cùng 1 mili-giây gây nghẽn
         time.sleep(2 + random.uniform(0.0, 0.1))
-        self.call_adb(["shell", "input", "tap", "403", "283"])
-        self.log("CLICK ĐỒNG BỘ LẦN 1: (459, 307) - Chống miss")
+        self.click_coords_logic({"action": "click_coords", "x": 403, "y": 283})
 
         # 4. Quản lý dọn dẹp rào chắn khi thoát (Exit Barrier)
         with self.shared_data["lock"]:
@@ -1720,13 +1717,14 @@ class MultiPremiumApp(ctk.CTk):
         modes = {"login":self.mode_login.get(), "tutorial":self.mode_tutorial.get(), "mua_exp":self.mode_mua_exp.get(), "dinh_game":self.mode_dinh_game.get(), "teamup":self.mode_teamup.get(), "battle_count":b_count}
         
         def update_single_status():
-             # Find status label for this serial
-             if serial in self.device_cards:
-                 for w in self.active_workers:
-                     if w.device_id == serial:
-                         self.device_cards[serial]["status"].configure(text=w.status, text_color="#4ADE80" if not w.is_lagging else "#FB7185")
-                         break
-             self.update_all_ui()
+             def _update():
+                 if serial in self.device_cards:
+                     for w in self.active_workers:
+                         if w.device_id == serial:
+                             self.device_cards[serial]["status"].configure(text=w.status, text_color="#4ADE80" if not w.is_lagging else "#FB7185")
+                             break
+                 self.update_all_ui()
+             self.after(0, _update)
 
         dev_info = self.device_map[serial]
         worker = AutoClickerInstance(serial, dev_info["idx"], dev_info["is_host"], self.adb_path, self.add_log, update_single_status, self.report_stats)
@@ -1758,9 +1756,11 @@ class MultiPremiumApp(ctk.CTk):
         self.after(0, self.update_all_ui)
 
     def update_all_ui(self):
-        self.total_val.configure(text=str(self.total_count))
-        self.success_val.configure(text=str(self.success_count))
-        self.failure_val.configure(text=str(self.failure_count))
+        def _update():
+            self.total_val.configure(text=str(self.total_count))
+            self.success_val.configure(text=str(self.success_count))
+            self.failure_val.configure(text=str(self.failure_count))
+        self.after(0, _update)
 
     def add_log(self, text):
         now = datetime.now().strftime("%H:%M:%S")
