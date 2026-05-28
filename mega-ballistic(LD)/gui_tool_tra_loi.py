@@ -703,67 +703,66 @@ class MultiPremiumApp(ctk.CTk):
             if not added:
                 grouped_lines.append([r])
         
-        merged_results = []
+        icon_texts = ["...", "..", ".", "…", "....", ":::", "''", '""', '°°°', ':', '-', '_', '·', '•', '°', '>', '»']
+        
+        parsed_lines = []
         for g_line in grouped_lines:
             g_line.sort(key=lambda item: item[0][0][0])
-            combined_text = " ".join(item[1].strip() for item in g_line if item[1].strip())
-            merged_results.append((g_line[0][0], combined_text, 1.0))
+            first_text = g_line[0][1].strip()
             
-        results = merged_results
-
-        self.add_log(f"Tổng số dòng nhận diện được: {len(results)}")
-        for idx, r in enumerate(results):
-            self.add_log(f"  [{idx + 1}] \"{r[1]}\"")
-
-        # Phân loại dựa vào icon Bubble (được quét ra là "..." hoặc tương tự)
-        clean_results = []
-        bubbles = []
-        for r in results:
-            text = r[1].strip()
-            # Bắt các text thường là do icon chat tạo ra
-            if text in ["...", "..", ".", "…", "....", ":::", "''", '""', '°°°', ':', '-', '_']:
-                bubbles.append(r)
+            has_icon = False
+            if first_text in icon_texts or (len(first_text) <= 3 and any(c in first_text for c in ['.', ':', '-', '_', '°', '•', '>', '»'])):
+                has_icon = True
+                clean_items = g_line[1:]
             else:
-                clean_results.append(r)
+                clean_items = g_line
+            
+            if not clean_items:
+                continue
+                
+            combined_text = " ".join(item[1].strip() for item in clean_items if item[1].strip()).strip()
+            box = clean_items[0][0]
+            
+            parsed_lines.append({
+                "has_icon": has_icon,
+                "x0": box[0][0],
+                "box": box,
+                "text": combined_text
+            })
 
-        clean_results.sort(key=lambda r: r[0][0][1]) # Sắp xếp theo Y từ trên xuống
         q_lines = []
         opt_lines = []
-
-        if len(bubbles) > 0:
-            bubble_right_x = min(b[0][2][0] for b in bubbles)
-            threshold_x = bubble_right_x - 15
-
-            is_opt_section = False
-            for idx, r in enumerate(clean_results):
-                x0 = r[0][0][0]
-                if idx == 0:
-                    q_lines.append(r)
-                    continue
+        
+        icon_x_coords = [p["x0"] for p in parsed_lines if p["has_icon"]]
+        
+        for p in parsed_lines:
+            is_opt = False
+            if p["has_icon"]:
+                is_opt = True
+            elif icon_x_coords:
+                avg_icon_x = sum(icon_x_coords) / len(icon_x_coords)
+                if abs(p["x0"] - avg_icon_x) < 30:
+                    is_opt = True
                     
-                if x0 > threshold_x:
-                    is_opt_section = True
-                    
-                if is_opt_section:
-                    opt_lines.append(r)
-                else:
-                    q_lines.append(r)
-        else:
-            # Fallback: dựa vào khoảng cách Y lớn nhất
-            if len(clean_results) > 1:
-                max_gap = 0
-                split_idx = 1
-                for i in range(1, len(clean_results)):
-                    gap = clean_results[i][0][0][1] - clean_results[i-1][0][2][1]
-                    if gap > max_gap:
-                        max_gap = gap
-                        split_idx = i
-                
-                q_lines = clean_results[:split_idx]
-                opt_lines = clean_results[split_idx:]
+            if is_opt:
+                opt_lines.append((p["box"], p["text"], 1.0))
             else:
-                q_lines = clean_results
-                opt_lines = []
+                q_lines.append((p["box"], p["text"], 1.0))
+
+        if not opt_lines:
+            if len(parsed_lines) >= 5:
+                opt_lines = [(p["box"], p["text"], 1.0) for p in parsed_lines[-4:]]
+                q_lines = [(p["box"], p["text"], 1.0) for p in parsed_lines[:-4]]
+            elif len(parsed_lines) > 1:
+                opt_lines = [(p["box"], p["text"], 1.0) for p in parsed_lines[1:]]
+                q_lines = [(p["box"], p["text"], 1.0) for p in parsed_lines[:1]]
+            else:
+                q_lines = [(p["box"], p["text"], 1.0) for p in parsed_lines]
+
+        results = q_lines + opt_lines
+        self.add_log(f"Tổng số dòng nhận diện được (sau khi gộp): {len(results)}")
+        for idx, r in enumerate(results):
+            self.add_log(f"  [{idx + 1}] \"{r[1]}\"")
 
         q_text = " ".join([r[1] for r in q_lines]).strip()
         self.add_log(f"🔍 [TEST] Chữ quét Câu hỏi ghép: \"{q_text}\"")
@@ -886,62 +885,63 @@ class MultiPremiumApp(ctk.CTk):
                 if not added:
                     grouped_lines.append([r])
             
-            merged_results = []
+            icon_texts = ["...", "..", ".", "…", "....", ":::", "''", '""', '°°°', ':', '-', '_', '·', '•', '°', '>', '»']
+            
+            parsed_lines = []
             for g_line in grouped_lines:
                 g_line.sort(key=lambda item: item[0][0][0])
-                combined_text = " ".join(item[1].strip() for item in g_line if item[1].strip())
-                merged_results.append((g_line[0][0], combined_text, 1.0))
+                first_text = g_line[0][1].strip()
                 
-            results = merged_results
-
-            # Phân loại dựa vào icon Bubble (được quét ra là "..." hoặc tương tự)
-            clean_results = []
-            bubbles = []
-            for r in results:
-                text = r[1].strip()
-                if text in ["...", "..", ".", "…", "....", ":::", "''", '""', '°°°', ':', '-', '_']:
-                    bubbles.append(r)
+                has_icon = False
+                if first_text in icon_texts or (len(first_text) <= 3 and any(c in first_text for c in ['.', ':', '-', '_', '°', '•', '>', '»'])):
+                    has_icon = True
+                    clean_items = g_line[1:]
                 else:
-                    clean_results.append(r)
+                    clean_items = g_line
+                
+                if not clean_items:
+                    continue
+                    
+                combined_text = " ".join(item[1].strip() for item in clean_items if item[1].strip()).strip()
+                box = clean_items[0][0]
+                
+                parsed_lines.append({
+                    "has_icon": has_icon,
+                    "x0": box[0][0],
+                    "box": box,
+                    "text": combined_text
+                })
 
-            clean_results.sort(key=lambda r: r[0][0][1]) # Sắp xếp theo Y từ trên xuống
             q_lines = []
             opt_lines = []
-
-            if len(bubbles) > 0:
-                bubble_right_x = min(b[0][2][0] for b in bubbles)
-                threshold_x = bubble_right_x - 15
-
-                is_opt_section = False
-                for idx, r in enumerate(clean_results):
-                    x0 = r[0][0][0]
-                    if idx == 0:
-                        q_lines.append(r)
-                        continue
+            
+            icon_x_coords = [p["x0"] for p in parsed_lines if p["has_icon"]]
+            
+            for p in parsed_lines:
+                is_opt = False
+                if p["has_icon"]:
+                    is_opt = True
+                elif icon_x_coords:
+                    avg_icon_x = sum(icon_x_coords) / len(icon_x_coords)
+                    if abs(p["x0"] - avg_icon_x) < 30:
+                        is_opt = True
                         
-                    if x0 > threshold_x:
-                        is_opt_section = True
-                        
-                    if is_opt_section:
-                        opt_lines.append(r)
-                    else:
-                        q_lines.append(r)
-            else:
-                # Fallback: dựa vào khoảng cách Y lớn nhất
-                if len(clean_results) > 1:
-                    max_gap = 0
-                    split_idx = 1
-                    for i in range(1, len(clean_results)):
-                        gap = clean_results[i][0][0][1] - clean_results[i-1][0][2][1]
-                        if gap > max_gap:
-                            max_gap = gap
-                            split_idx = i
-                    
-                    q_lines = clean_results[:split_idx]
-                    opt_lines = clean_results[split_idx:]
+                if is_opt:
+                    opt_lines.append((p["box"], p["text"], 1.0))
                 else:
-                    q_lines = clean_results
-                    opt_lines = []
+                    q_lines.append((p["box"], p["text"], 1.0))
+
+            if not opt_lines:
+                if len(parsed_lines) >= 5:
+                    opt_lines = [(p["box"], p["text"], 1.0) for p in parsed_lines[-4:]]
+                    q_lines = [(p["box"], p["text"], 1.0) for p in parsed_lines[:-4]]
+                elif len(parsed_lines) > 1:
+                    opt_lines = [(p["box"], p["text"], 1.0) for p in parsed_lines[1:]]
+                    q_lines = [(p["box"], p["text"], 1.0) for p in parsed_lines[:1]]
+                else:
+                    q_lines = [(p["box"], p["text"], 1.0) for p in parsed_lines]
+
+            results = q_lines + opt_lines
 
             q_text = " ".join([r[1] for r in q_lines]).strip()
             
