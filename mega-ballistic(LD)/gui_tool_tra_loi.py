@@ -642,7 +642,8 @@ class MultiPremiumApp(ctk.CTk):
             return []
         try:
             # detail=1 returns [([[x0,y0], [x1,y1], [x2,y2], [x3,y3]], text, confidence), ...]
-            results = _ocr_reader.readtext(crop_gray, detail=1)
+            # Thêm min_size=5 và mag_ratio=1.2 để bắt được các đáp án chỉ có 1 chữ số rất nhỏ
+            results = _ocr_reader.readtext(crop_gray, detail=1, min_size=5, mag_ratio=1.2, text_threshold=0.6)
             # Sort by top-left y-coordinate to ensure top-to-bottom reading order
             sorted_results = sorted(results, key=lambda r: r[0][0][1])
             return sorted_results
@@ -687,6 +688,28 @@ class MultiPremiumApp(ctk.CTk):
             self.add_log("❌ THẤT BẠI: Không nhận diện được dòng chữ nào trong vùng ROI!")
             self.add_log("=== HOÀN TẤT THỬ NGHIỆM ===")
             return
+
+        # Nhóm các kết quả OCR thành từng dòng ngang để tránh bị ngắt đoạn giữa câu
+        grouped_lines = []
+        for r in results:
+            y_center = (r[0][0][1] + r[0][2][1]) / 2
+            added = False
+            for g_line in grouped_lines:
+                g_line_y = sum((item[0][0][1] + item[0][2][1])/2 for item in g_line) / len(g_line)
+                if abs(y_center - g_line_y) < 15:
+                    g_line.append(r)
+                    added = True
+                    break
+            if not added:
+                grouped_lines.append([r])
+        
+        merged_results = []
+        for g_line in grouped_lines:
+            g_line.sort(key=lambda item: item[0][0][0])
+            combined_text = " ".join(item[1].strip() for item in g_line if item[1].strip())
+            merged_results.append((g_line[0][0], combined_text, 1.0))
+            
+        results = merged_results
 
         self.add_log(f"Tổng số dòng nhận diện được: {len(results)}")
         for idx, r in enumerate(results):
@@ -848,6 +871,28 @@ class MultiPremiumApp(ctk.CTk):
                 time.sleep(0.3)
                 gc.collect() # Xóa rác khi màn hình rảnh để tránh khựng lúc đang có câu hỏi
                 continue
+
+            # Nhóm các kết quả OCR thành từng dòng ngang để tránh bị ngắt đoạn giữa câu
+            grouped_lines = []
+            for r in results:
+                y_center = (r[0][0][1] + r[0][2][1]) / 2
+                added = False
+                for g_line in grouped_lines:
+                    g_line_y = sum((item[0][0][1] + item[0][2][1])/2 for item in g_line) / len(g_line)
+                    if abs(y_center - g_line_y) < 15:
+                        g_line.append(r)
+                        added = True
+                        break
+                if not added:
+                    grouped_lines.append([r])
+            
+            merged_results = []
+            for g_line in grouped_lines:
+                g_line.sort(key=lambda item: item[0][0][0])
+                combined_text = " ".join(item[1].strip() for item in g_line if item[1].strip())
+                merged_results.append((g_line[0][0], combined_text, 1.0))
+                
+            results = merged_results
 
             # Phân loại dựa vào icon Bubble (được quét ra là "..." hoặc tương tự)
             clean_results = []
