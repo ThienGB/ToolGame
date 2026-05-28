@@ -1596,6 +1596,9 @@ class AutoClickerInstance:
                             {"action": "click_image", "target": "images/event_default.png", "timeout": 20, "confidence": 0.9},
                             {"action": "press_esc", "wait": 2},
                             {"action": "press_esc", "wait": 2},
+                            {"action": "click_image_if", "target1": "images/dau_hang_button.png", "target2": "images/dauhang.png","timeout": 7, "confidence": 0.9},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
                         ]
                     },
                     {
@@ -1640,6 +1643,8 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3} ,
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
+            {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
+            {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
             
             
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
@@ -1648,6 +1653,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
+            {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
 
         while self.running:
