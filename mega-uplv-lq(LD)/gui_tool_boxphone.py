@@ -747,8 +747,11 @@ class AutoClickerInstance:
             time.sleep(0.1)  # Giảm thời gian nghỉ xuống 100ms để 5 máy phản hồi đồng thời siêu nhạy!
 
         # 3. Thực hiện hành động click đồng bộ cùng lúc
-        self.click_coords_logic({"action": "click_coords", "x": 403, "y": 283, "timeout": 2})
-        self.click_coords_logic({"action": "click_coords", "x": 403, "y": 283, "timeout": 2})
+        # BoxPhone hay bị miss lệnh tap (0ms) do game chặn, nên chuyển sang swipe (nhấn giữ 100ms)
+        # Thêm một chút độ trễ ngẫu nhiên siêu nhỏ (jitter) để tránh 5 máy gọi adb cùng 1 mili-giây gây nghẽn
+        time.sleep(2 + random.uniform(0.0, 0.1))
+        self.call_adb(["shell", "input", "swipe", "403", "283", "403", "283", "100"])
+        self.log("CLICK ĐỒNG BỘ LẦN 1: (403, 283) - Chống miss")
 
         # 4. Quản lý dọn dẹp rào chắn khi thoát (Exit Barrier)
         with self.shared_data["lock"]:
