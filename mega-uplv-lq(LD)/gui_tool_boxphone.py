@@ -750,7 +750,7 @@ class AutoClickerInstance:
         # BoxPhone hay bị miss lệnh tap (0ms) do game chặn, nên chuyển sang swipe (nhấn giữ 100ms)
         # Thêm một chút độ trễ ngẫu nhiên siêu nhỏ (jitter) để tránh 5 máy gọi adb cùng 1 mili-giây gây nghẽn
         time.sleep(2 + random.uniform(0.0, 0.1))
-        self.call_adb(["shell", "input", "tap", "403", "283"])
+        self.call_adb(["shell", "input", "tap", "459", "307"])
         self.log("CLICK ĐỒNG BỘ LẦN 1: (459, 307) - Chống miss")
 
         # 4. Quản lý dọn dẹp rào chắn khi thoát (Exit Barrier)
