@@ -748,7 +748,7 @@ class AutoClickerInstance:
 
         # 3. Thực hiện hành động click đồng bộ cùng lúc
         time.sleep(2 + random.uniform(0.0, 0.1))
-        self.click_coords_logic({"action": "click_coords", "x": 403, "y": 283})
+        self.click_coords_logic({"action": "click_coords", "x": 459, "y": 307})
 
         # 4. Quản lý dọn dẹp rào chắn khi thoát (Exit Barrier)
         with self.shared_data["lock"]:
