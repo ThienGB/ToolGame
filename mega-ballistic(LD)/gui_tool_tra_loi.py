@@ -300,7 +300,7 @@ class MultiPremiumApp(ctk.CTk):
         
         # Load ROI coordinates
         self.coords = {
-            "main_roi": [24, 243, 306, 451]
+            "main_roi": [24, 203, 306, 451]
         }
         self.load_coords_config()
 
@@ -642,8 +642,8 @@ class MultiPremiumApp(ctk.CTk):
             return []
         try:
             # detail=1 returns [([[x0,y0], [x1,y1], [x2,y2], [x3,y3]], text, confidence), ...]
-            # Thêm min_size=5 và mag_ratio=1.2 để bắt được các đáp án chỉ có 1 chữ số rất nhỏ
-            results = _ocr_reader.readtext(crop_gray, detail=1, min_size=5, mag_ratio=1.2, text_threshold=0.6)
+            # Chỉ dùng min_size=1 để bắt số nhỏ, bỏ mag_ratio để tránh làm OCR bị lú và gộp chữ sai
+            results = _ocr_reader.readtext(crop_gray, detail=1, min_size=1)
             # Sort by top-left y-coordinate to ensure top-to-bottom reading order
             sorted_results = sorted(results, key=lambda r: r[0][0][1])
             return sorted_results
@@ -721,6 +721,8 @@ class MultiPremiumApp(ctk.CTk):
                 continue
                 
             combined_text = " ".join(item[1].strip() for item in clean_items if item[1].strip()).strip()
+            # Dọn dẹp rác ký tự ở đầu (đề phòng OCR gộp icon và chữ)
+            combined_text = combined_text.lstrip(".;,:_@'\"°•·>-»{}[]()! ")
             box = clean_items[0][0]
             
             parsed_lines.append({
@@ -903,6 +905,8 @@ class MultiPremiumApp(ctk.CTk):
                     continue
                     
                 combined_text = " ".join(item[1].strip() for item in clean_items if item[1].strip()).strip()
+                # Dọn dẹp rác ký tự ở đầu (đề phòng OCR gộp icon và chữ)
+                combined_text = combined_text.lstrip(".;,:_@'\"°•·>-»{}[]()! ")
                 box = clean_items[0][0]
                 
                 parsed_lines.append({
