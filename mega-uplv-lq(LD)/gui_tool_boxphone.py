@@ -750,8 +750,8 @@ class AutoClickerInstance:
         # BoxPhone hay bị miss lệnh tap (0ms) do game chặn, nên chuyển sang swipe (nhấn giữ 100ms)
         # Thêm một chút độ trễ ngẫu nhiên siêu nhỏ (jitter) để tránh 5 máy gọi adb cùng 1 mili-giây gây nghẽn
         time.sleep(2 + random.uniform(0.0, 0.1))
-        self.call_adb(["shell", "input", "swipe", "403", "283", "403", "283", "100"])
-        self.log("CLICK ĐỒNG BỘ LẦN 1: (403, 283) - Chống miss")
+        self.call_adb(["shell", "input", "tap", "403", "283"])
+        self.log("CLICK ĐỒNG BỘ LẦN 1: (80, 283) - Chống miss")
 
         # 4. Quản lý dọn dẹp rào chắn khi thoát (Exit Barrier)
         with self.shared_data["lock"]:
@@ -778,6 +778,12 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN (Đã được tối ưu cho BoxPhone)
         login_script = [
+
+            {"action": "click_coords", "x": 387, "y": 638, "timeout": 2},
+
+            
+            {"action": "sync_autowin", "timeout": 120},
+
             {"action": "click_image_if", "target1": "images_boxphone/xacnhan1.png",  "target2": "images_boxphone/xacnhan.png", "timeout": 6, "confidence": 0.7},
             {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 30, "confidence": 0.7},
             {"action": "click_coords", "x": 387, "y": 888, "timeout": 2},
