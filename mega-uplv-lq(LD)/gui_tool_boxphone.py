@@ -1294,6 +1294,7 @@ class AutoClickerInstance:
             
             {"action": "click_image_if", "target": "images_boxphone/open.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 2},
+            {"action": "click_image_if", "target": "images_boxphone/open.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 2},
             {"action": "click_coords", "x": 1819, "y": 1021, "timeout": 3},
             {"action": "click_image_if", "target": "images_boxphone/ok1.png", "timeout": 20, "confidence": 0.7},
