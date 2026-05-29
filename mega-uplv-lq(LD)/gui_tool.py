@@ -1050,7 +1050,8 @@ class AutoClickerInstance:
         # 2. GIAI ĐOẠN VƯỢT TÂN THỦ
         tutorial_script = [
             {"action": "click_coords", "x": 867, "y": 492, "timeout": 10},
-            {"action": "click_coords", "x": 867, "y": 492, "timeout": 5},
+            {"action": "press_esc", "wait": 3} ,
+            
         {
 
 
@@ -1093,6 +1094,17 @@ class AutoClickerInstance:
                             {"action": "wait", "timeout": 10},
                             {"action": "click_image_if", "target": "images/victory.png", "timeout": 200, "confidence": 0.9},
                             {"action": "click_coords", "x": 463, "y": 492, "timeout": 20},
+                            
+
+                            
+                            
+                        ]
+                    },
+                    {
+                        "trigger1": "images/pvp.png" ,
+                        "confidence": 0.7,
+                         "script": [
+                            
                             
 
                             
