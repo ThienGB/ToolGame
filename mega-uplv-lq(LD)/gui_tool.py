@@ -2144,6 +2144,7 @@ class MultiPremiumApp(ctk.CTk):
 
     def scan_devices(self):
         # Chạy quét máy ảo trong luồng riêng để tránh lag UI
+        self.add_log("HỆ THỐNG: Đang quét thiết bị ADB...")
         threading.Thread(target=self._perform_scan, daemon=True).start()
 
     def _perform_scan(self):
@@ -2160,38 +2161,38 @@ class MultiPremiumApp(ctk.CTk):
                     ldconsole_path = p
                     break
             
-            # 2. Thu thập danh sách port/serial từ LDPlayer
-            targets = set()
+            # 2. Thu thập danh sách từ LDPlayer - chỉ lấy máy đang ON
+            targets = {}  # idx -> port (dùng dict để track idx)
             if ldconsole_path:
                 try:
                     res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                     for line in res_ld.stdout.splitlines():
                         parts = line.split(',')
-                        if len(parts) >= 5 and parts[4] == '1': # Chỉ lấy máy ảo đang ON
-                            idx = parts[0]
-                            # Port mặc định của LD
-                            targets.add(f"127.0.0.1:{5554 + int(idx) * 2}")
-                            # Thử lấy serial từ list2 (thường ở cột 7 hoặc các cột sau)
-                            for p in parts[5:]:
-                                p = p.strip()
-                                if (":" in p or p.startswith("emulator-")) and p != "null":
-                                    targets.add(p)
+                        if len(parts) >= 5 and parts[4].strip() == '1':  # Chỉ lấy máy ảo đang ON
+                            try:
+                                idx = int(parts[0].strip())
+                                # Port mặc định của LD: idx 0 -> 5554, idx 1 -> 5556, idx 2 -> 5558...
+                                port = 5554 + (idx * 2)
+                                targets[idx] = f"127.0.0.1:{port}"
+                            except:
+                                pass
                 except: pass
 
-            # 3. Quét dự phòng thêm 10 port đầu
-            for i in range(10): 
-                targets.add(f"127.0.0.1:{5554 + (i * 2)}")
-            
-            # 4. Connect đồng loạt (Parallel) - Không block
-            for target in targets:
+            if not targets:
+                self.add_log("⚠️ CẢNH BÁO: Không tìm thấy máy ảo nào ON trong LDPlayer. Hãy bật máy ảo trước!")
+                self.after(0, lambda: self._update_device_ui([]))
+                return
+
+            # 3. Connect tất cả máy ON (không quét dự phòng - chỉ connect những máy thực sự ON)
+            for target in targets.values():
                 subprocess.Popen([self.adb_path, "connect", target], 
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
                                creationflags=subprocess.CREATE_NO_WINDOW)
             
-            # Đợi ngắn để ADB nhận diện (2s là đủ cho parallel connect)
-            time.sleep(2)
+            # Đợi để ADB nhận diện (tăng từ 2s lên 3s để ensure)
+            time.sleep(3)
 
-            # 5. Lấy danh sách thiết bị cuối cùng
+            # 4. Lấy danh sách thiết bị từ adb devices
             try:
                 res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
                 lines = res.stdout.strip().split('\n')[1:]
@@ -2199,8 +2200,28 @@ class MultiPremiumApp(ctk.CTk):
             except:
                 device_serials = []
             
-            # Cập nhật UI
-            self.after(0, lambda: self._update_device_ui(device_serials))
+            # 5. Lọc lại để chỉ giữ những thiết bị từ list máy ON
+            filtered_serials = []
+            for serial in device_serials:
+                # Kiểm tra xem serial này có match với port nào từ list ON không
+                matched = False
+                for idx, port_str in targets.items():
+                    # Lấy port từ port_str (127.0.0.1:5554)
+                    try:
+                        port = int(port_str.split(':')[1])
+                        # Kiểm xem serial này có phải từ port này không
+                        if str(port) in serial or port_str == serial:
+                            matched = True
+                            break
+                    except:
+                        pass
+                
+                if matched:
+                    filtered_serials.append(serial)
+            
+            # Cập nhật UI với danh sách đã lọc
+            self.after(0, lambda: self._update_device_ui(filtered_serials))
+            self.add_log(f"HỆ THỐNG: Quét hoàn tất. Tìm thấy {len(filtered_serials)}/{len(targets)} thiết bị đang ON.")
         except Exception as e:
             self.add_log(f"LỖI QUÉT: {e}")
 
@@ -2211,27 +2232,34 @@ class MultiPremiumApp(ctk.CTk):
         self.device_map = {}
         
         try:
-            # 1. Khử trùng thiết bị (Trường hợp 1 máy hiện cả 127.0.0.1 và emulator-xxxx)
+            # 1. Khử trùng thiết bị - Chỉ giữ 1 serial cho mỗi absolute_index
+            # Ưu tiên: 127.0.0.1:XXXX > emulator-XXXX (vì ổn định hơn)
             unique_map = {} # abs_idx -> serial
-            unidentified = []
             
             for serial in device_serials:
                 abs_idx = self.get_absolute_index(serial)
+                
+                # Bỏ qua thiết bị không xác định được index
                 if abs_idx == -1:
-                    unidentified.append(serial)
                     continue
                 
+                # Nếu chưa có thiết bị nào cho index này
                 if abs_idx not in unique_map:
                     unique_map[abs_idx] = serial
                 else:
-                    # Ưu tiên giữ lại địa chỉ 127.0.0.1 vì nó ổn định hơn cho LDPlayer
-                    if serial.startswith("127.0.0.1"):
+                    # Ưu tiên 127.0.0.1 > emulator
+                    current_serial = unique_map[abs_idx]
+                    if serial.startswith("127.0.0.1") and not current_serial.startswith("127.0.0.1"):
                         unique_map[abs_idx] = serial
+                    # Nếu cùng loại thì giữ cái đã có (không thay)
+            
+            if not unique_map:
+                self.add_log("⚠️ CẢNH BÁO: Không tìm thấy thiết bị hợp lệ.")
+                self.update_stats_ui()
+                return
             
             # 2. Tạo danh sách đã sắp xếp
             serials_with_idx = [(s, idx) for idx, s in unique_map.items()]
-            for s in unidentified:
-                serials_with_idx.append((s, -1))
             
             # Sắp xếp theo LD index tăng dần
             serials_with_idx.sort(key=lambda x: x[1])
@@ -2239,7 +2267,7 @@ class MultiPremiumApp(ctk.CTk):
             # Gán worker_index (0, 1, 2...) theo thứ tự đã sắp xếp
             for i, (serial, abs_idx) in enumerate(serials_with_idx):
                 self.device_map[serial] = i
-                machine_num = abs_idx + 1 if abs_idx != -1 else "?? "
+                machine_num = abs_idx + 1
                 self.add_log(f"Thiết bị: {serial} -> Index: {i} (LD Máy: {machine_num})")
             
             if not self.device_map:
@@ -2296,6 +2324,7 @@ class MultiPremiumApp(ctk.CTk):
                 
                 self.team_frames[team_idx] = {"frame": team_frame, "devices": current_team_devices, "start_btn": btn_start_team, "stop_btn": btn_stop_team}
             
+            self.add_log(f"HỆ THỐNG: Thiết lập {len(self.team_frames)} team(s) thành công. Sẵn sàng chạy!")
             self.update_stats_ui()
         except Exception as e:
             self.add_log(f"LỖI CẬP NHẬT UI THIẾT BỊ: {e}")
