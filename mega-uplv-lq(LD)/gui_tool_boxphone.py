@@ -954,6 +954,7 @@ class AutoClickerInstance:
             
             {"action": "click_image", "target1": "images_boxphone/home.png","target2": "images_boxphone/home1.png", "timeout": 20, "confidence": 0.7},
             {"action": "wait", "timeout": 3},
+            
             {"action": "click_coords", "x": 1702, "y": 210, "timeout": 6},
             {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
             {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
@@ -995,12 +996,14 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target1": "images_boxphone/dauhang.png", "target2": "images_boxphone/dau_hang1.jpg", "timeout": 7, "confidence": 0.7},
             {"action": "press_esc", "wait": 2},
             {"action": "click_coords", "x": 1186, "y": 57, "timeout": 5},
+            {"action": "click_image", "target1": "images_boxphone/sukien.png","target2": "images_boxphone/sukien1.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_coords", "x": 1399, "y": 473, "timeout": 5},
             
             {"action": "click_coords", "x": 1606, "y": 544, "timeout": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
+            {"action": "click_image", "target1": "images_boxphone/sukien.png","target2": "images_boxphone/sukien1.png", "timeout": 20, "confidence": 0.7},
             {"action": "click_coords", "x": 1399, "y": 473, "timeout": 5},   
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
@@ -1016,6 +1019,7 @@ class AutoClickerInstance:
                     "trigger2": "images_boxphone/sukien1.png",
                     "confidence": 0.7,
                     "script": [
+                        
                         
                 ]},
         #         {
@@ -1294,6 +1298,7 @@ class AutoClickerInstance:
             
             {"action": "click_image_if", "target": "images_boxphone/open.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 2},
+            {"action": "click_image_if", "target": "images_boxphone/open.png", "timeout": 60, "confidence": 0.7},
             {"action": "click_coords", "x": my_hero_pos["x"], "y": my_hero_pos["y"], "timeout": 2},
             {"action": "click_coords", "x": 1819, "y": 1021, "timeout": 3},
             {"action": "click_image_if", "target": "images_boxphone/ok1.png", "timeout": 20, "confidence": 0.7},

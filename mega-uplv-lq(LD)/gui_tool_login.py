@@ -146,7 +146,10 @@ class AutoClickerInstance:
                 for s in sub_steps:
                     if not self.execute_step(s): return False
             res = True
-        
+        elif action == "clear_android_data":
+            pkg = step.get("package")
+            self.call_adb(["shell", "pm", "clear", pkg])
+            res = True
         # Kiểm tra lag
         duration = time.time() - self.last_step_time
         if duration > 35: 
@@ -200,19 +203,19 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN (Đã tối giản)
         login_script = [
-            {"action": "click_coords", "x": 193, "y": 444, "timeout": 10}, # garena
-            {"action": "click_coords", "x": 151, "y": 256, "timeout": 5}, # input_acc
+            {"action": "click_coords", "x": 193, "y": 444, "timeout": 2}, # garena
+            {"action": "click_coords", "x": 151, "y": 256, "timeout": 3}, # input_acc
             {"action": "input_account"},
             {"action": "click_coords", "x": 130, "y": 319, "timeout": 2}, # input_pass
             {"action": "input_password"},
             {"action": "click_coords", "x": 476, "y": 391, "timeout": 2}, # logic (login)
             {"action": "click_coords", "x": 476, "y": 391, "timeout": 4},
             {"action": "click_coords", "x": 476, "y": 391, "timeout": 4},
-            {"action": "click_coords", "x": 770, "y": 502, "timeout": 4},
+            
             {"action": "click_coords", "x": 770, "y": 502, "timeout": 4},
             {"action": "click_coords", "x": 770, "y": 502, "timeout": 4}, # ok
-            {"action": "click_coords", "x": 476, "y": 494, "timeout": 10}, # bắt đầu
-            {"action": "click_coords", "x": 193, "y": 444, "timeout": 10},
+            {"action": "click_coords", "x": 476, "y": 458, "timeout": 3}, # bắt đầu
+            
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
 
