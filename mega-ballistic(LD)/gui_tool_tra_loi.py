@@ -357,6 +357,17 @@ class MultiPremiumApp(ctk.CTk):
         
         ctk.CTkButton(ans_card, text="Chọn File Đáp Án", command=self.choose_answer_file, height=28, fg_color=BORDER_COLOR).pack(padx=10, pady=(5, 10), fill="x")
 
+        # ADB Path Card
+        adb_card = ctk.CTkFrame(self.sidebar, fg_color=CARD_COLOR, corner_radius=10, border_width=1, border_color=BORDER_COLOR)
+        adb_card.pack(padx=15, pady=5, fill="x")
+        ctk.CTkLabel(adb_card, text="ĐƯỜNG DẪN ADB", font=ctk.CTkFont(size=11, weight="bold"), text_color=TEXT_MUTED).pack(pady=(8, 2))
+        
+        self.adb_path_entry = ctk.CTkEntry(adb_card, placeholder_text="Nhập đường dẫn ADB...", height=28)
+        self.adb_path_entry.pack(padx=10, pady=(2, 5), fill="x")
+        self.adb_path_entry.insert(0, self.adb_path)
+        
+        ctk.CTkButton(adb_card, text="Lưu Đường Dẫn ADB", command=self.save_adb_path, height=28, fg_color=BORDER_COLOR).pack(padx=10, pady=(0, 10), fill="x")
+
         # Bottom Controls
         self.btn_stop = ctk.CTkButton(self.sidebar, text="DỪNG QUÉT (F2)", command=self.stop_ocr_engine, fg_color="#333", text_color="#aaa", height=40, corner_radius=10, font=ctk.CTkFont(weight="bold"), state="disabled")
         self.btn_stop.pack(side="bottom", padx=15, pady=10, fill="x")
@@ -534,13 +545,34 @@ class MultiPremiumApp(ctk.CTk):
         
         config_data = dict(self.coords)
         config_data["answer_file_path"] = self.answer_file_path
+        config_data["adb_path"] = self.adb_path
         
         try:
             with open("config.json", "w") as f:
                 json.dump(config_data, f, indent=4)
-            self.add_log("HỆ THỐNG: Đã lưu tọa độ và file đáp án vào file config.json.")
+            self.add_log("HỆ THỐNG: Đã lưu tọa độ, file đáp án và đường dẫn ADB vào config.json.")
         except Exception as e:
             self.add_log(f"LỖI: Không thể ghi file config.json! {e}")
+
+    def save_adb_path(self):
+        new_adb_path = self.adb_path_entry.get().strip()
+        if not new_adb_path:
+            self.add_log("LỖI: Đường dẫn ADB không thể trống!")
+            return
+        
+        self.adb_path = new_adb_path
+        
+        # Load existing config and update adb_path
+        config_data = dict(self.coords)
+        config_data["answer_file_path"] = self.answer_file_path
+        config_data["adb_path"] = self.adb_path
+        
+        try:
+            with open("config.json", "w") as f:
+                json.dump(config_data, f, indent=4)
+            self.add_log(f"HỆ THỐNG: Đã lưu đường dẫn ADB: {self.adb_path}")
+        except Exception as e:
+            self.add_log(f"LỖI: Không thể lưu đường dẫn ADB! {e}")
 
     def load_coords_config(self):
         if os.path.exists("config.json"):
@@ -555,6 +587,9 @@ class MultiPremiumApp(ctk.CTk):
                     # Custom answer path
                     if "answer_file_path" in saved:
                         self.answer_file_path = saved["answer_file_path"]
+                    # ADB path
+                    if "adb_path" in saved:
+                        self.adb_path = saved["adb_path"]
             except Exception as e:
                 print(f"Error loading config.json: {e}")
 
@@ -570,19 +605,48 @@ class MultiPremiumApp(ctk.CTk):
 
     def _perform_scan(self):
         self.add_log("Đang quét thiết bị giả lập mở cổng ADB...")
+        
+        # Kiểm tra ADB path hợp lệ
+        adb_to_use = self.adb_path.strip()
+        if not adb_to_use:
+            self.add_log("LỖI: Đường dẫn ADB trống! Vui lòng nhập đường dẫn ADB hợp lệ.")
+            return
+        
         try:
-            # Try to connect default emulator ports
-            for i in range(5):
-                subprocess.Popen([self.adb_path, "connect", f"127.0.0.1:{5554 + i*2}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
+            # Test ADB version để chắc chắn ADB hoạt động
+            result = subprocess.run([adb_to_use, "version"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+            if result.returncode != 0:
+                self.add_log(f"LỖI: ADB không hoạt động! Đường dẫn: {adb_to_use}")
+                return
+            
+            # Kill any existing ADB server and start fresh
+            subprocess.run([adb_to_use, "kill-server"], capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
+            time.sleep(0.5)
+            subprocess.run([adb_to_use, "start-server"], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
             time.sleep(1)
             
-            res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=8, creationflags=subprocess.CREATE_NO_WINDOW)
+            # Try to connect default emulator ports
+            for i in range(5):
+                try:
+                    subprocess.Popen([adb_to_use, "connect", f"127.0.0.1:{5554 + i*2}"], 
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
+                                   creationflags=subprocess.CREATE_NO_WINDOW)
+                except Exception as e:
+                    print(f"Connect attempt {i}: {e}")
+            
+            time.sleep(2)
+            
+            res = subprocess.run([adb_to_use, "devices"], capture_output=True, text=True, timeout=8, creationflags=subprocess.CREATE_NO_WINDOW)
             lines = res.stdout.strip().split('\n')[1:]
             active_devs = [line.split('\t')[0] for line in lines if "device" in line and "offline" not in line]
             
             self.after(0, lambda: self._update_device_ui(active_devs))
+        except FileNotFoundError:
+            self.add_log(f"LỖI: Không tìm thấy ADB tại: {adb_to_use}")
+        except PermissionError:
+            self.add_log(f"LỖI: Quyền truy cập bị từ chối cho: {adb_to_use}. Hãy kiểm tra quyền file!")
         except Exception as e:
-            self.add_log(f"LỖI QUÉT ADB: {e}")
+            self.add_log(f"LỖI QUÉT ADB: {type(e).__name__}: {e}")
 
     def _update_device_ui(self, active_devs):
         self.devices = active_devs
