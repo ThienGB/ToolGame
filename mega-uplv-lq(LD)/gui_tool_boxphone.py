@@ -147,6 +147,9 @@ class AutoClickerInstance:
         self.log_func = log_func
         self.update_ui_func = update_ui_func
         self.report_stats_func = report_stats_func
+        self.group_id = device_index // 5
+        self.current_stage_name = "đang chờ"
+        self.is_resetting = False
         self.running = False
         self.status = "Đang chờ"
         self.last_step_time = time.time()
@@ -285,8 +288,11 @@ class AutoClickerInstance:
             self.log(f"Bỏ qua bước '{action}' vì chỉ dành cho HOST.")
             return True
 
+        if step.get("stage"):
+            self.current_stage_name = step.get("stage")
+
         target_info = step.get("target") or step.get("target1", "")
-        self.log(f"==> Bước: {action} {f'({target_info})' if target_info else ''}")
+        self.log(f"==> Bước: {action} {f'({target_info})' if target_info else ''} [{self.current_stage_name}]")
         self.last_step_time = time.time()
         res = True
         
@@ -1367,27 +1373,137 @@ class AutoClickerInstance:
             {"action": "wait", "timeout": 15},
         ]
         
+        def tag_script(script_list, stage_name):
+            for s in script_list:
+                s["stage"] = stage_name
+
+        new_circle_script = [
+            {"action": "restart_app", "app": "com.garena.game.kgvn"},
+            {"action": "click_image_if", "target": "images_boxphone/game_logo.png", "timeout": 10, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images_boxphone/xacnhan.png", "timeout": 120, "confidence": 0.7},
+            {"action": "click_image", "target": "images_boxphone/login_garena.png", "timeout": 420, "confidence": 0.9},
+            {"action": "wait", "timeout": 25},
+            {"action": "click_image_if", "target1": "images_boxphone/batdau.png","target2": "images_boxphone/batdau1.png", "timeout": 6, "confidence": 0.9},
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 10},
+            {
+                "action": "cases",
+                "timeout" : 120,
+                "cases": [
+                     {
+                        "trigger": "images_boxphone/tieptucchiendau.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                        ]
+                    },
+                    {
+                        "trigger": "images_boxphone/event_default.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_image", "target": "images_boxphone/event_default.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 2},
+                            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image", "target": "images_boxphone/event_default.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "click_image_if", "target1": "images_boxphone/dau_hang_button.png", "target2": "images_boxphone/dauhang.png","timeout": 7, "confidence": 0.9},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                        ]
+                    },
+                    {
+                        "trigger1": "images_boxphone/vao_tran_button_2.png",
+                        "confidence": 0.7,
+                        "script": [
+                            {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 3},
+                            {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 3},
+                            {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 3},
+                            {"action": "wait", "timeout": 3},
+                            {"action": "click_image_if", "target": "images_boxphone/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images_boxphone/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images_boxphone/vao_tran_button_2.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "press_esc", "wait": 10},
+                        ]
+                    },
+                    {
+                        "trigger1": "images_boxphone/any2.png" ,
+                        "confidence": 0.7,
+                         "script": [
+                            {"action": "click_image_if", "target": "images_boxphone/any2.png", "timeout": 10, "confidence": 0.9},
+                            {"action": "click_image", "target1": "images_boxphone/vao.png","target2": "images_boxphone/vao_button.png","target3": "images_boxphone/vaoo.png", "timeout": 20, "confidence": 0.9},
+                            {"action": "click_image_if", "target1": "images_boxphone/vao.png","target2": "images_boxphone/vao_button.png","target3": "images_boxphone/vaoo.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images_boxphone/logo.png", "timeout": 10, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images_boxphone/logo.png", "timeout": 10, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images_boxphone/on.png", "timeout": 10, "confidence": 0.9,"use_color": True},
+                            {"action": "click_image_if", "target": "images_boxphone/minimize.png", "timeout": 5, "confidence": 0.9},
+                            {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 200, "confidence": 0.9},
+                            {"action": "wait", "timeout": 10},
+                            {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 200, "confidence": 0.9},
+                            {"action": "click_coords", "x": 959, "y": 995, "timeout": 20},
+                        ]
+                    },
+                ]
+            } ,
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
+            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 2},
+            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 2},
+            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 2},
+            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 2},
+            
+            {"action": "click_image", "target": "images_boxphone/dangxuat.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images_boxphone/ok1.png", "timeout": 30, "confidence": 0.7},
+            {"action": "wait", "timeout": 15},
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
+            {"action": "press_esc", "wait": 3},
+            {"action": "clear_android_data", "package": "com.garena.game.kgvn"},
+        ]
+
         # --- ASSEMBLE SCRIPT BASED ON MODES ---
         self.script = []
-        if self.modes.get("login"): self.script += login_script
-        if self.modes.get("tutorial"): self.script += tutorial_script
-        if self.modes.get("mua_exp"): self.script += mua_exp_script
-        if self.modes.get("dinh_game"): self.script += dinh_game_script
+        if self.modes.get("login"):
+            tag_script(login_script, "login")
+            self.script += login_script
+        if self.modes.get("tutorial"):
+            tag_script(tutorial_script, "tân thủ")
+            self.script += tutorial_script
+        if self.modes.get("mua_exp"):
+            tag_script(mua_exp_script, "off lâu")
+            self.script += mua_exp_script
+        if self.modes.get("dinh_game"):
+            tag_script(dinh_game_script, "dính game")
+            self.script += dinh_game_script
         if self.modes.get("teamup"):
             if self.is_host:
+                tag_script(teamup_host_script, "ghép đội")
                 self.script += teamup_host_script
             else:
+                tag_script(teamup_guest_script, "ghép đội")
                 self.script += teamup_guest_script
                 
-            self.script.append({"action": "wait_for_players", "count": 4, "timeout": 300})
+            self.script.append({"action": "wait_for_players", "count": 4, "timeout": 300, "stage": "ghép đội"})
             
             battle_loop = {
                 "action": "loop", 
                 "count": self.modes.get("battle_count", 3), 
                 "steps": shared_battle_script
             }
+            # Add stage to all steps in battle loop
+            for s in battle_loop["steps"]:
+                s["stage"] = "đánh trận"
             self.script.append(battle_loop)
         
+        tag_script(uplevel_script, "đăng xuất")
         self.script += uplevel_script # ALWAYS LOGOUT AT END
 
         while self.running:
@@ -1410,16 +1526,72 @@ class AutoClickerInstance:
             success = True
             for step in self.script:
                 if not self.running: break
+                
+                # Check team error before each step
+                with self.shared_data["lock"]:
+                    if self.shared_data.get("team_error_triggered", {}).get(self.group_id):
+                        success = False
+                        break
+
                 if not self.execute_step(step):
+                    self.log("THẤT BẠI: Lỗi xử lý bước. Kích hoạt reset cả đội...")
+                    with self.shared_data["lock"]:
+                        if "team_error_triggered" not in self.shared_data:
+                            self.shared_data["team_error_triggered"] = {}
+                        if "team_error_stage" not in self.shared_data:
+                            self.shared_data["team_error_stage"] = {}
+                        
+                        self.shared_data["team_error_triggered"][self.group_id] = True
+                        self.shared_data["team_error_stage"][self.group_id] = self.current_stage_name
+                    
                     success = False; break
             
             if self.running:
                 if not success:
-                    self.update_status("LỖI - DỪNG", True)
-                    self.log("!! CẢNH BÁO: Acc gặp lỗi hoặc Timeout. Đã dừng máy để kiểm tra.")
-                    # Vòng lặp chờ ở đây để không chuyển sang acc tiếp theo
+                    # Lấy tên giai đoạn bị lỗi từ shared_data
+                    with self.shared_data["lock"]:
+                        error_stage = self.shared_data.get("team_error_stage", {}).get(self.group_id, self.current_stage_name)
+                    
+                    self.log(f"!!! THỰC HIỆN RESET CẢ ĐỘI (5 MÁY) DO LỖI Ở: {error_stage}...")
+                    self.is_resetting = True
+                    
+                    # Thực hiện kịch bản thoát/đăng xuất
                     while self.running:
+                        reset_success = True
+                        for reset_step in new_circle_script:
+                            if not self.running: break
+                            if not self.execute_step(reset_step):
+                                self.log("!!! BƯỚC TRONG KỊCH BẢN RESET THẤT BẠI. THỰC HIỆN LẠI TỪ ĐẦU...")
+                                reset_success = False
+                                break
+                        if reset_success: break
+                    
+                    self.report_stats_func(False, self.current_account, error_stage)
+                    self.accounts_processed += 1
+                    
+                    # Barrier: Đợi cả 5 máy trong team xong reset
+                    with self.shared_data["lock"]:
+                        if "team_reset_barrier" not in self.shared_data:
+                            self.shared_data["team_reset_barrier"] = {}
+                        self.shared_data["team_reset_barrier"][self.group_id] = self.shared_data["team_reset_barrier"].get(self.group_id, 0) + 1
+                    
+                    self.log(f"Đã xong reset. Đợi đồng đội... ({self.shared_data['team_reset_barrier'].get(self.group_id, 0)}/5)")
+                    start_barrier = time.time()
+                    while time.time() - start_barrier < 180 and self.running:
+                        with self.shared_data["lock"]:
+                            if self.shared_data["team_reset_barrier"].get(self.group_id, 0) >= 5:
+                                break
                         time.sleep(2)
+                    
+                    self.is_resetting = False
+                    
+                    # Xóa cờ lỗi đội (chỉ host hoặc máy cuối cùng xoá là đủ, nhưng ở đây ai cũng xóa giá trị reset barrier thì cẩn thận)
+                    with self.shared_data["lock"]:
+                        if self.shared_data.get("team_error_triggered", {}).get(self.group_id):
+                            self.shared_data["team_error_triggered"][self.group_id] = False
+                            self.shared_data["team_reset_barrier"][self.group_id] = 0
+
+                    continue # Bỏ qua báo cáo phía dưới để bắt đầu acc mới
                 
                 self.report_stats_func(success, self.current_account)
                 self.accounts_processed += 1
@@ -1746,13 +1918,14 @@ class MultiPremiumApp(ctk.CTk):
             self.device_cards[serial]["status"].configure(text="Stopped", text_color="#888")
 
 
-    def report_stats(self, success, account):
+    def report_stats(self, success, account, note=""):
         if success: self.success_count += 1
         else: self.failure_count += 1
         if account:
             fn = "SUCCESS_ACC.txt" if success else "FAILED_ACC.txt"
             with FILE_LOCK:
-                with open(fn, "a") as f: f.write(f"{account['tk']}|{account['mk']}\n")
+                note_str = f" ({note})" if note else ""
+                with open(fn, "a") as f: f.write(f"{account['tk']}|{account['mk']}{note_str}\n")
                 if self.account_file_path:
                     with open(self.account_file_path, "r") as f: lines = f.readlines()
                     with open(self.account_file_path, "w") as f:
