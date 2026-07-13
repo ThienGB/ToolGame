@@ -68,6 +68,22 @@ else:
 
 import tkinter.filedialog as fd
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+for candidate in [SCRIPT_DIR, PROJECT_ROOT]:
+    if candidate not in sys.path:
+        sys.path.insert(0, candidate)
+
+from ld_device_utils import parse_ldconsole_list2, parse_adb_devices_output, refresh_adb_devices, resolve_adb_path
+
+try:
+    from gui_tool_login_boxphone import login_script as boxphone_login_script
+except Exception as e:
+    boxphone_login_script = []
+    BOXPHONE_IMPORT_ERROR = str(e)
+else:
+    BOXPHONE_IMPORT_ERROR = None
+
 # --- Biến toàn cục để nạp OCR khi cần (Lazy Load) ---
 easyocr = None
 _ocr_reader = None
@@ -140,7 +156,7 @@ class AutoClickerInstance:
         self.is_lagging = False
         self.script = []
         self.current_account = None
-        self.modes = {"login": True, "tutorial": True, "uplevel": True} # Default
+        self.modes = {"login": True, "tutorial": True, "uplevel": True, "boxphone": False} # Default
         
         self.accounts_processed = 0 # Bộ đếm số acc đã chạy
         self.restart_threshold = 1 # Sau N lượt chạy sẽ khởi động lại LDPlayer 1 lần
@@ -191,10 +207,58 @@ class AutoClickerInstance:
                 escaped_text += char
         return escaped_text
 
+    def _run_adb_raw(self, cmd, timeout=10):
+        return subprocess.run(cmd, capture_output=True, timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
+
+    def recover_adb_connection(self, target_serial=None):
+        if not self.adb_path:
+            return False
+
+        target_serial = target_serial or self.device_id
+        self.log("Đang khôi phục kết nối ADB/LDPlayer...")
+        try:
+            self._run_adb_raw([self.adb_path, "kill-server"], timeout=5)
+        except Exception:
+            pass
+
+        try:
+            self._run_adb_raw([self.adb_path, "start-server"], timeout=10)
+        except Exception:
+            pass
+
+        if target_serial:
+            try:
+                self._run_adb_raw([self.adb_path, "disconnect", target_serial], timeout=5)
+            except Exception:
+                pass
+
+            try:
+                self._run_adb_raw([self.adb_path, "connect", target_serial], timeout=10)
+            except Exception:
+                pass
+
+        try:
+            devices = self._run_adb_raw([self.adb_path, "devices"], timeout=8)
+            if devices.returncode == 0:
+                self.log(devices.stdout.decode("utf-8", errors="ignore").strip())
+            return True
+        except Exception:
+            return False
+
     def call_adb(self, args):
         cmd = [self.adb_path, "-s", self.device_id] + args
-        # Thêm CREATE_NO_WINDOW để không bị hiện CMD khi chạy trên Win
-        return subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+        try:
+            result = self._run_adb_raw(cmd, timeout=15)
+            if result.returncode != 0:
+                stderr = result.stderr.decode("utf-8", errors="ignore").lower()
+                if any(token in stderr for token in ["device not found", "offline", "no devices", "connection reset", "cannot connect"]):
+                    self.recover_adb_connection()
+                    result = self._run_adb_raw(cmd, timeout=15)
+            return result
+        except subprocess.TimeoutExpired:
+            self.log(f"ADB timeout cho: {' '.join(cmd)}")
+            self.recover_adb_connection()
+            return self._run_adb_raw(cmd, timeout=15)
 
     def get_screenshot(self):
         try:
@@ -293,6 +357,7 @@ class AutoClickerInstance:
         # Giải phóng lock để máy khác có thể quit/launch.
         # Chờ máy ảo lên và sẵn sàng (chờ tự do, không giữ lock)
         self.log(f"Đang đợi máy ảo (Index {index}) khởi động và kết nối ADB...")
+        self.recover_adb_connection(guest_serial if 'guest_serial' in locals() else None)
         start_wait = time.time()
         
         guest_port = 5554 + (index * 2)
@@ -348,16 +413,23 @@ class AutoClickerInstance:
                 is_offline = False
 
             if is_offline:
-                self.log(f"Phát hiện thiết bị {self.device_id} bị offline, đang thử ngắt kết nối...")
+                self.log(f"Phát hiện thiết bị {self.device_id} bị offline, đang thử ngắt kết nối và refresh ADB...")
                 try:
                     subprocess.run([self.adb_path, "disconnect", self.device_id], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 except: pass
+                try:
+                    refresh_adb_devices(self.adb_path, [self.device_id], attempts=3, delay=2.0)
+                except Exception:
+                    pass
             elif not is_connected:
                 # Chỉ thử connect nếu chưa connect
                 target_serial = current_ld_serial if current_ld_serial else guest_serial
                 try:
                     subprocess.run([self.adb_path, "connect", target_serial], capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
                 except: pass
+
+                if elapsed > 20:
+                    self.recover_adb_connection(target_serial)
                 
                 if current_ld_serial and current_ld_serial != self.device_id:
                     self.log(f"Quét lại phát hiện Serial mới: {current_ld_serial}")
@@ -1025,8 +1097,8 @@ class AutoClickerInstance:
         # 1. GIAI ĐOẠN LOGIN
         login_script = [
             {"action": "open_game"},
-            {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 5, "confidence": 0.7},
+            # {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 30, "confidence": 0.7},
+            # {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 5, "confidence": 0.7},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/login_garena.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_coords", "x": 173, "y": 442, "timeout": 3},
@@ -1237,6 +1309,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 1} ,
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 4} ,
+            {"action": "press_esc", "wait": 2} ,
             {"action": "click_image", "target1": "images/nhan_sktt.png", "target2": "images/nhan_sktt1.png","timeout": 60, "confidence": 0.9},
             {"action": "click_image_if", "target": "images/nhan_sktt.png", "timeout": 5, "confidence": 0.9},
             {"action": "click_coords", "x": 802, "y": 486, "timeout": 2},
@@ -1326,6 +1399,7 @@ class AutoClickerInstance:
             {"action": "click_image_if", "target": "images/ok.png", "timeout": 3, "confidence": 0.9},
              {"action": "click_image_if", "target": "images/ready.png", "timeout": 3, "confidence": 0.9},
             {"action": "click_image", "target": "images/sansang5v5.png", "timeout": 20, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/sansang5v5.png", "timeout": 5, "confidence": 0.9},
             
             {"action": "click_image_if", "target": "images/ok3.png", "timeout": 15, "confidence": 0.9},
             {"action": "wait", "timeout": 2},
@@ -1515,18 +1589,21 @@ class AutoClickerInstance:
             # {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
             # {"action": "click_coords", "x": 476, "y": 498, "timeout": 3},
             # {"action": "click_coords", "x": 459, "y": 36, "timeout": 3},
+            # đấu lại
+            {"action": "click_coords", "x": 576, "y": 492, "timeout": 2}, 
             {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
             {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
             {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
             {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
             {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 2},
+           
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
+            {"action": "click_image_if", "target": "images/chinh.png", "timeout": 8, "confidence": 0.9},
+            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
+            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
+            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
             
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
-            {"action": "click_image_if", "target": "images/close.png", "timeout": 4, "confidence": 0.9},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
-            {"action": "click_coords", "x": 576, "y": 492, "timeout": 1},
             
 
           
@@ -1571,17 +1648,29 @@ class AutoClickerInstance:
         new_circle_script = [
             {"action": "restart_app", "app": "com.garena.game.kgvn"},
             {"action": "click_image_if", "target": "images/game_logo.png", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 120, "confidence": 0.7},
+            # {"action": "click_image_if", "target": "images/xacnhan.png", "timeout": 120, "confidence": 0.7},
             {"action": "click_image", "target": "images/login_garena.png", "timeout": 420, "confidence": 0.9},
-            {"action": "wait", "timeout": 25},
+            {"action": "wait", "timeout": 15},
             {"action": "click_image_if", "target1": "images/batdau.png","target2": "images/batdau1.png", "timeout": 6, "confidence": 0.9},
-            {"action": "press_esc", "wait": 2} ,
-            {"action": "click_coords", "x": 867, "y": 492, "timeout": 10},
+            {"action": "click_coords", "x": 932, "y": 317, "timeout": 6},
             
             {
                 "action": "cases",
                 "timeout" : 120,
                 "cases": [
+                     {
+                        "trigger1": "images/closee.png",
+                        "trigger2": "images/khonghienlai.png",
+                        "confidence": 0.7,
+                        "script": [
+                            
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            {"action": "press_esc", "wait": 2},
+                            
+                            
+                        ]
+                    },
                      {
                         "trigger": "images/tieptucchiendau.png",
                         "confidence": 0.7,
@@ -1655,16 +1744,14 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3} ,
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
             {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
-            {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
-            {"action": "click_coords", "x": 833, "y": 22, "timeout": 2},
             
             
             {"action": "click_image", "target": "images/logout.png", "timeout": 30, "confidence": 0.9},
             {"action": "click_image", "target": "images/ok.png", "timeout": 30, "confidence": 0.9},
-            {"action": "wait", "timeout": 15},    
+            {"action": "wait", "timeout": 10},    
             {"action": "press_esc", "wait": 3} ,
             {"action": "press_esc", "wait": 3} ,
-            {"action": "press_esc", "wait": 3} ,
+            
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
 
@@ -1673,8 +1760,9 @@ class AutoClickerInstance:
 
             # GHÉP SCRIPT DỰA TRÊN LỰA CHỌN MỚI NHẤT
             self.script = []
+            active_login_script = boxphone_login_script if self.modes.get("boxphone") else login_script
             if self.modes.get("login"):
-                self.script += login_script
+                self.script += active_login_script
             if self.modes.get("tutorial"):
                 self.script += tutorial_script
             if self.modes.get("buy_exp"):
@@ -1707,7 +1795,7 @@ class AutoClickerInstance:
                 self.script += uplevel_script
             
             # Gán nhãn giai đoạn cho các phần còn lại
-            tag_script(login_script, "login")
+            tag_script(active_login_script, "login")
             tag_script(tutorial_script, "tân thủ")
             tag_script(mua_exp_script, "off lâu")
             tag_script(dinh_game_script, "dính game")
@@ -1853,8 +1941,9 @@ class MultiPremiumApp(ctk.CTk):
         self.account_file_path = None # Đường dẫn file tài khoản đang nạp
         self.instances = [] # Danh sách các máy thực tế đang chạy ADB
         self.active_workers = [] # Các thread đang chạy
+        default_ld_path = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
         self.adb_path = self.find_adb()
-        self.ld_path = r"C:\LDPlayer\LDPlayer9\ldconsole.exe" # Mặc định
+        self.ld_path = os.path.join(default_ld_path, "ldconsole.exe") if os.path.isdir(default_ld_path) else default_ld_path
         
         # Stats Data
         self.success_count = 0
@@ -1886,9 +1975,42 @@ class MultiPremiumApp(ctk.CTk):
         # Tải sẵn mô hình OCR trong luồng nền để tránh lag khi quét ID phòng lần đầu
         threading.Thread(target=init_ocr_reader, args=(self.add_log,), daemon=True).start()
 
+    def get_ld_candidate_paths(self):
+        candidates = []
+        if hasattr(self, "ld_path_entry"):
+            raw = self.ld_path_entry.get().strip()
+            if raw:
+                candidates.append(raw)
+
+        if getattr(sys, 'frozen', False):
+            exe_dir = os.path.dirname(sys.executable)
+            candidates.append(exe_dir)
+            candidates.append(os.path.dirname(exe_dir))
+        else:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            candidates.append(script_dir)
+            candidates.append(os.path.dirname(script_dir))
+
+        candidates.extend([r"C:\LDPlayer\LDPlayer9", r"C:\LDPlayer\LDPlayer4", r"C:\LDPlayer"])
+
+        normalized = []
+        for path in candidates:
+            if not path:
+                continue
+            if path.lower().endswith((".exe", ".bat")):
+                path = os.path.dirname(path)
+            path = os.path.normpath(path)
+            if path not in normalized:
+                normalized.append(path)
+        return normalized
+
     def find_adb(self):
-        paths = ["adb", r"C:\LDPlayer\LDPlayer9\adb.exe", r"C:\LDPlayer\LDPlayer4\adb.exe"]
-        for p in paths:
+        for base in self.get_ld_candidate_paths():
+            for candidate in [os.path.join(base, "adb.exe"), os.path.join(base, "adb"), os.path.join(base, "platform-tools", "adb.exe")]:
+                if os.path.exists(candidate):
+                    return candidate
+
+        for p in ["adb", r"C:\LDPlayer\LDPlayer9\adb.exe", r"C:\LDPlayer\LDPlayer4\adb.exe"]:
             try:
                 subprocess.run([p, "version"], capture_output=True, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
                 return p
@@ -1911,7 +2033,8 @@ class MultiPremiumApp(ctk.CTk):
         ctk.CTkLabel(self.path_card, text="ĐƯỜNG DẪN LDPLAYER", font=ctk.CTkFont(size=10, weight="bold")).pack(pady=(5, 0))
         self.ld_path_entry = ctk.CTkEntry(self.path_card, placeholder_text=r"Ví dụ: C:\LDPlayer\LDPlayer9", height=28)
         self.ld_path_entry.pack(padx=10, pady=5, fill="x")
-        self.ld_path_entry.insert(0, r"C:\LDPlayer\LDPlayer9")
+        default_ld_path = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+        self.ld_path_entry.insert(0, default_ld_path)
         ctk.CTkButton(self.path_card, text="Lưu Đường Dẫn", command=self.save_config, height=22, font=ctk.CTkFont(size=11)).pack(padx=10, pady=(0, 5), fill="x")
 
         # Restart Threshold config
@@ -1978,7 +2101,7 @@ class MultiPremiumApp(ctk.CTk):
         
         self.mode_frame = ctk.CTkFrame(self.stats_card, fg_color="transparent")
         self.mode_frame.pack(fill="x", padx=15, pady=5)
-        self.mode_frame.columnconfigure((0, 1, 2, 3, 4), weight=1)
+        self.mode_frame.columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
 
         self.mode_login = ctk.CTkCheckBox(self.mode_frame, text="LOGIN", font=ctk.CTkFont(size=11))
         self.mode_login.grid(row=0, column=0); self.mode_login.select()
@@ -1994,6 +2117,9 @@ class MultiPremiumApp(ctk.CTk):
 
         self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI", font=ctk.CTkFont(size=11), text_color=ACCENT_GREEN)
         self.mode_teamup.grid(row=0, column=4); self.mode_teamup.select()
+
+        self.mode_boxphone = ctk.CTkCheckBox(self.mode_frame, text="BOXPHONE", font=ctk.CTkFont(size=11), text_color="#00D2FF")
+        self.mode_boxphone.grid(row=0, column=5)
 
 
 
@@ -2148,78 +2274,112 @@ class MultiPremiumApp(ctk.CTk):
         threading.Thread(target=self._perform_scan, daemon=True).start()
 
     def _perform_scan(self):
-        base_path = self.ld_path_entry.get().strip()
-        self.adb_path = os.path.join(base_path, "adb.exe")
-        if not os.path.exists(self.adb_path): self.adb_path = "adb"
-        
+        base_path = self.ld_path_entry.get().strip() or (self.get_ld_candidate_paths()[0] if hasattr(self, "get_ld_candidate_paths") else "")
+        self.adb_path = resolve_adb_path(base_path, "adb.exe")
+        if not self.adb_path or not os.path.exists(self.adb_path):
+            self.adb_path = self.find_adb() if hasattr(self, "find_adb") else "adb"
+
+        self.add_log(f"HỆ THỐNG: Dùng ADB tại {self.adb_path}")
+
         try:
-            # 1. Tìm file console điều khiển
             ldconsole_path = None
-            for exe in ["ldconsole.exe", "dnconsole.exe", "ld.exe"]:
-                p = os.path.join(base_path, exe)
-                if os.path.exists(p):
-                    ldconsole_path = p
+            for candidate_base in self.get_ld_candidate_paths():
+                for exe in ["ldconsole.exe", "dnconsole.exe", "ld.exe"]:
+                    p = os.path.join(candidate_base, exe)
+                    if os.path.exists(p):
+                        ldconsole_path = p
+                        break
+                if ldconsole_path:
                     break
-            
-            # 2. Thu thập danh sách từ LDPlayer - chỉ lấy máy đang ON
-            targets = {}  # idx -> port (dùng dict để track idx)
+            if not ldconsole_path and base_path and os.path.isfile(base_path):
+                if os.path.basename(base_path).lower() in {"ldconsole.exe", "dnconsole.exe", "ld.exe"}:
+                    ldconsole_path = base_path
+
+            targets = {}
             if ldconsole_path:
                 try:
-                    res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
-                    for line in res_ld.stdout.splitlines():
-                        parts = line.split(',')
-                        if len(parts) >= 5 and parts[4].strip() == '1':  # Chỉ lấy máy ảo đang ON
-                            try:
-                                idx = int(parts[0].strip())
-                                # Port mặc định của LD: idx 0 -> 5554, idx 1 -> 5556, idx 2 -> 5558...
-                                port = 5554 + (idx * 2)
-                                targets[idx] = f"127.0.0.1:{port}"
-                            except:
-                                pass
-                except: pass
+                    res_ld = subprocess.run([ldconsole_path, "list2"], capture_output=True, text=True, timeout=8, creationflags=subprocess.CREATE_NO_WINDOW)
+                    self.add_log(f"LDConsole output: {res_ld.stdout.strip()[:400]}")
+                    for device in parse_ldconsole_list2(res_ld.stdout):
+                        if not device.get("running", False):
+                            continue
+                        idx = device.get("index")
+                        if idx is None:
+                            idx = self.get_absolute_index(device.get("serial", ""))
+                        if idx is None or idx < 0:
+                            idx = len(targets)
+                        serial = device.get("serial") or f"127.0.0.1:{5554 + idx * 2}"
+                        targets[idx] = serial
+                except Exception as e:
+                    self.add_log(f"⚠️ LDConsole trả về lỗi: {e}")
 
             if not targets:
-                self.add_log("⚠️ CẢNH BÁO: Không tìm thấy máy ảo nào ON trong LDPlayer. Hãy bật máy ảo trước!")
+                try:
+                    res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+                    for line in res.stdout.splitlines()[1:]:
+                        parts = line.split('\t')
+                        if len(parts) < 2:
+                            continue
+                        serial = parts[0].strip()
+                        state = parts[1].strip().lower()
+                        if serial and state == "device" and (serial.startswith("127.0.0.1:") or serial.startswith("emulator-")):
+                            idx = self.get_absolute_index(serial)
+                            if idx >= 0:
+                                targets[idx] = serial
+                except Exception:
+                    pass
+
+            if not targets:
+                self.add_log("⚠️ Không phát hiện được máy ảo từ LDConsole. Đang thử kết nối các cổng ADB mặc định của LDPlayer...")
+                for i in range(6):
+                    port = 5554 + (i * 2)
+                    serial = f"127.0.0.1:{port}"
+                    try:
+                        subprocess.run([self.adb_path, "connect", serial], capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
+                        targets[i] = serial
+                    except Exception:
+                        pass
+
+            if not targets:
+                self.add_log("⚠️ CẢNH BÁO: Không tìm thấy máy ảo nào ON trong LDPlayer. Hãy bật máy ảo trước và đảm bảo ADB đang hoạt động!")
                 self.after(0, lambda: self._update_device_ui([]))
                 return
 
-            # 3. Connect tất cả máy ON (không quét dự phòng - chỉ connect những máy thực sự ON)
-            for target in targets.values():
-                subprocess.Popen([self.adb_path, "connect", target], 
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, 
-                               creationflags=subprocess.CREATE_NO_WINDOW)
-            
-            # Đợi để ADB nhận diện (tăng từ 2s lên 3s để ensure)
+            for idx, serial in sorted(targets.items()):
+                target = serial or f"127.0.0.1:{5554 + idx * 2}"
+                try:
+                    subprocess.Popen([self.adb_path, "connect", target], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
+                except Exception:
+                    pass
+
             time.sleep(3)
 
-            # 4. Lấy danh sách thiết bị từ adb devices
             try:
-                res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
-                lines = res.stdout.strip().split('\n')[1:]
-                device_serials = [line.split('\t')[0] for line in lines if "device" in line and "offline" not in line]
-            except:
+                refreshed = refresh_adb_devices(self.adb_path, list(targets.values()), attempts=3, delay=2.0)
+                if refreshed:
+                    device_serials = [serial for serial, state in refreshed if state == "device"]
+                else:
+                    res = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
+                    lines = res.stdout.strip().split('\n')[1:]
+                    device_serials = [line.split('\t')[0] for line in lines if "device" in line and "offline" not in line]
+            except Exception:
                 device_serials = []
-            
-            # 5. Lọc lại để chỉ giữ những thiết bị từ list máy ON
+
             filtered_serials = []
             for serial in device_serials:
-                # Kiểm tra xem serial này có match với port nào từ list ON không
                 matched = False
                 for idx, port_str in targets.items():
-                    # Lấy port từ port_str (127.0.0.1:5554)
                     try:
                         port = int(port_str.split(':')[1])
-                        # Kiểm xem serial này có phải từ port này không
                         if str(port) in serial or port_str == serial:
                             matched = True
                             break
-                    except:
+                    except Exception:
                         pass
-                
+
                 if matched:
                     filtered_serials.append(serial)
-            
-            # Cập nhật UI với danh sách đã lọc
+
             self.after(0, lambda: self._update_device_ui(filtered_serials))
             self.add_log(f"HỆ THỐNG: Quét hoàn tất. Tìm thấy {len(filtered_serials)}/{len(targets)} thiết bị đang ON.")
         except Exception as e:
@@ -2398,6 +2558,7 @@ class MultiPremiumApp(ctk.CTk):
             "buy_exp": self.mode_buy_exp.get(),
             "dinh_game": self.mode_dinh_game.get(),
             "teamup": self.mode_teamup.get(),
+            "boxphone": self.mode_boxphone.get(),
             "battle_count": b_count,
         }
 
