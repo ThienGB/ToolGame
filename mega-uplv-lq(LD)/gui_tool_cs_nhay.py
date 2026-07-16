@@ -346,35 +346,35 @@ class AutoClickerInstance:
             if getattr(self, 'chest_claimed', False):
                 self.log("!! Lỗi sau khi nhận rương: Chỉ thực hiện đăng xuất...")
                 for _ in range(2): self.call_adb(["shell", "input", "keyevent", "4"]); time.sleep(1)
-                self.execute_step({"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "skip_maintain": True})
+                self.execute_step({"action": "click_image", "target1": "images_boxphone/setting.jpg", "target2": "images_boxphone/setting1.jpg", "timeout": 10, "skip_maintain": True})
                 time.sleep(2)
-                self.execute_step({"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 20, "skip_maintain": True})
+                self.execute_step({"action": "click_image", "target1": "images_boxphone/logout.jpg", "target2": "images_boxphone/logout_big.jpg", "timeout": 20, "skip_maintain": True})
                 time.sleep(2)
-                self.execute_step({"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
+                self.execute_step({"action": "click_image", "target": "images_boxphone/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
                 
                 # Fallback nếu UI logout thất bại
-                if not self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
+                if not self.search_logic({"target": "images_boxphone/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
                     self.force_stop_game()
                     self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
                     self.log("Đợi game mở và nhấn Garena...")
-                    self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
+                    self.execute_step({"action": "click_image_if", "target": "images_boxphone/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
                     time.sleep(5)
                 return False
             elif getattr(self, 'code_entered', False):
                 self.log("!! PHÁT HIỆN LỖI (Đã nhập mã): Đang thực hiện đăng xuất...")
                 for _ in range(2): self.call_adb(["shell", "input", "keyevent", "4"]); time.sleep(1)
-                if self.execute_step({"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "skip_maintain": True}):
+                if self.execute_step({"action": "click_image", "target1": "images_boxphone/setting.jpg", "target2": "images_boxphone/setting1.jpg", "timeout": 10, "skip_maintain": True}):
                     time.sleep(2)
-                    self.execute_step({"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 20, "skip_maintain": True})
+                    self.execute_step({"action": "click_image", "target1": "images_boxphone/logout.jpg", "target2": "images_boxphone/logout_big.jpg", "timeout": 20, "skip_maintain": True})
                     time.sleep(2)
-                    self.execute_step({"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
+                    self.execute_step({"action": "click_image", "target": "images_boxphone/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
                     time.sleep(5)
                 
-                if not self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
+                if not self.search_logic({"target": "images_boxphone/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
                     self.force_stop_game()
                     self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
                     self.log("Đợi game mở và nhấn Garena...")
-                    self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
+                    self.execute_step({"action": "click_image_if", "target": "images_boxphone/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
                     time.sleep(5)
                 return False
             elif getattr(self, 'is_login_phase', False):
@@ -390,12 +390,28 @@ class AutoClickerInstance:
                 self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
                 self.skip_login_for_this_acc = True
                 self.log("Đợi game mở và nhấn Garena...")
-                self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
+                self.execute_step({"action": "click_image_if", "target": "images_boxphone/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
                 time.sleep(5)
-                if self.search_logic({"target1": "images/account_input1.jpg", "target2": "images/account_input.png", "target3": "images/account.jpg", "timeout": 5}):
+                if self.search_logic({"target1": "images_boxphone/account_input1.jpg", "target2": "images_boxphone/account_input.png", "target3": "images_boxphone/account.jpg", "timeout": 5}):
                     self.log("!! PHÁT HIỆN CHƯA ĐĂNG NHẬP (THẤY INPUT): TIẾN HÀNH ĐĂNG NHẬP LẠI.")
                     self.skip_login_for_this_acc = False # Yêu cầu chạy kịch bản login
                 return False
+        elif action == "click_coords":
+            res = self.click_coords_logic(step)
+        elif action == "input_partner_code":
+            if not self.partner_code:
+                self.log("!! KHÔNG CÓ MÃ ĐỐI PHƯƠNG ĐỂ NHẬP")
+                return False
+            self.log(f"-> ĐANG NHẬP MÃ: {self.partner_code}")
+            time.sleep(1.5) # Đợi bàn phím/input box hiện hẳn lên
+            # Xóa cũ chắc chắn hơn
+            for _ in range(3):
+                self.call_adb(["shell", "input", "keyevent"] + ["67"] * 10)
+                time.sleep(0.2)
+            self.input_text_robust(self.partner_code)
+            time.sleep(1)
+            self.code_entered = True
+            res = True    
         elif action == "long_click":
             duration = step.get("duration", 5000)
             res = self.long_click_logic(step, duration)
@@ -416,7 +432,15 @@ class AutoClickerInstance:
         if duration > 35: self.update_status("Lag", True)
         else: self.update_status("Đang chạy", False)
         return res
-
+    def click_coords_logic(self, step):
+        x, y = step.get("x"), step.get("y")
+        if x is not None and y is not None:
+            delay = step.get("timeout", 0)
+            if delay > 0: time.sleep(delay)
+            self.call_adb(["shell", "input", "tap", str(x), str(y)])
+            self.log(f"CLICK TỌA ĐỘ: ({x}, {y})")
+            return True
+        return False
     def click_image_logic(self, step):
         targets = []
         if step.get("target"): targets.append(step.get("target"))
@@ -463,7 +487,7 @@ class AutoClickerInstance:
             del screen
             time.sleep(1.5)
         return None
-
+    
     def cases_logic(self, step):
         cases = step.get("cases", [])
         if not cases: return True
@@ -667,71 +691,70 @@ class AutoClickerInstance:
         
         # Giá trị mặc định (Hardcoded)
         login_script = [
-            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 45, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 3, "confidence": 0.8, "login_step": True},
-            {"action": "click_image", "target1": "images/account_input1.jpg","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.8, "login_step": True},
-            {"action": "input_account", "login_step": True},
-            {"action": "click_image", "target1": "images/tiep_theo.jpg", "target2": "images/tiep_theo1.jpg", "timeout": 60, "confidence": 0.8, "login_step": True},
-            {"action": "input_password", "login_step": True},
-            {"action": "wait", "timeout": 2, "login_step": True},
-            {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "timeout": 30, "confidence": 0.8, "login_step": True},
-            {"action": "wait", "timeout": 5, "login_step": True},
-            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.8, "login_step": True},
-            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 2, "confidence": 0.8, "login_step": True},
-            {"action": "wait", "timeout": 5, "login_step": True},
-            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.8, "login_step": True, "then": [
-                {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.8},
-                {"action": "click_image_if", "target": "images/sai_pass.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
-                {"action": "clear_android_data", "package": "com.garena.gaslite"},
-                {"action": "restart_app"}]
-            },
-            ]},
-            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 10, "confidence": 0.85},
-            {"action": "press_esc", "wait": 2},
+           {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 30, "confidence": 0.7},
+            
+            {"action": "wait", "timeout": 3},
+            
+            {"action": "input_account"},
+            {"action": "click_image_if", "target1": "images_boxphone/matkhau.png",  "target2": "images_boxphone/matkhau1.png",  "timeout": 10, "confidence": 0.7},
+            {"action": "input_password"},
+            
+            {"action": "click_image_if", "target1": "images_boxphone/xong.png", "target2": "images_boxphone/xong1.png","target3": "images_boxphone/done.png","target4": "images_boxphone/m.png","timeout": 10, "confidence": 0.7},
+            # {"action": "wait", "timeout": 5},
+            # {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 3, "confidence": 0.7},
+            # {"action": "click_image_if", "target1": "images_boxphone/dangnhap2.png", "target2": "images_boxphone/login.png","target3": "images_boxphone/login1.png","timeout": 3, "confidence": 0.7},
+            # {"action": "wait", "timeout": 3},
+            # # {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png","target3": "images_boxphone/okdangnhap2.png", "timeout": 10, "confidence": 0.7},
+            # {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png", "timeout": 10, "confidence": 0.7},
+            # {"action": "wait", "timeout": 3},
+            # {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png", "timeout": 3, "confidence": 0.7},
+            # {"action": "click_image_if", "target1": "images_boxphone/batdau.png", "target2": "images_boxphone/batdau1.png", "target3": "images_boxphone/batdauu.jpg",  "timeout": 10, "confidence": 0.7},
+            
+            # {"action": "click_coords", "x": 972, "y": 937,  "timeout": 6},
+            # {"action": "click_coords", "x": 972, "y": 937,  "timeout": 3},
+            
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
         ]
 
         nhay_script = [
+            
+            {"action": "wait", "timeout": 10},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
             {"action": "press_esc", "wait": 2},
-            {"action": "wait", "timeout": 8},
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target1": "images/su_kien.jpg","target2": "images/su_kien2.jpg", "timeout": 25, "confidence": 0.8},
-            {"action": "click_image_if", "target1": "images/su_kien.jpg", "target2": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.8},
-            {"action": "press_esc", "wait": 1},
-            {"action": "press_esc", "wait": 1},
-            {"action": "press_esc", "wait": 1},
-            {"action": "press_esc", "wait": 1},
-            {"action": "click_image", "target": "images/su_kien_cs.jpg", "timeout": 10, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.8},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
-            {"action": "loop", "count": 15, "until": "images/0_ve_cs.jpg", "steps": [
-                {"action": "click_image_if", "target": "images/x_cs2.jpg", "timeout": 2, "confidence": 0.7},
-                {"action": "long_click", "target": "images/nhay_nao.jpg", "duration": 5000},
-                {"action": "click_any", "timeout": 11},
-            ]},
-            {"action": "click_image", "target": "images/doi_qua_cs.jpg", "timeout": 25, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/doi_qua_cs.jpg", "timeout": 3, "confidence": 0.8},
-            {"action": "click_image", "target": "images/ruong_ss.jpg", "timeout": 10, "confidence": 0.8, "decisive_failure": True, "skip_maintain": True},
-            {"action": "click_image", "target": "images/xac_nhan_ruong_ss.jpg", "timeout": 10, "confidence": 0.8, "decisive_failure": True, "skip_maintain": True},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target": "images/back_sk1.jpg", "timeout": 10, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.8},
+            {"action": "click_image_if", "target1": "images_boxphone/huy.png","target2": "images_boxphone/huy1.png", "timeout": 5, "confidence": 0.8},
+            {"action": "click_coords", "x": 104, "y": 93,  "timeout": 5},
+            {"action": "click_image_if", "target": "images_boxphone/back.png", "timeout": 5, "confidence": 0.8},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "click_coords", "x": 56, "y": 456,  "timeout": 3},
+            {"action": "click_coords", "x": 56, "y": 456,  "timeout": 1},
+            {"action": "click_coords", "x": 52, "y": 299,  "timeout": 1},
+            {"action": "click_coords", "x": 52, "y": 299,  "timeout": 1},
+            {"action": "click_coords", "x": 52, "y": 299,  "timeout": 1},
+            # đến
+            {"action": "click_coords", "x": 1456, "y": 924,  "timeout": 3},
+            {"action": "click_coords", "x": 1456, "y": 924,  "timeout": 1},
+        # chơi ngay
+            {"action": "click_coords", "x": 1210, "y": 937,  "timeout": 1},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_coords", "x": 1827, "y": 707,  "timeout": 2},
+            {"action": "click_coords", "x": 1718, "y": 622,  "timeout": 2},
+            {"action": "wait", "timeout": 6},
+            
+            {"action": "click_image", "target": "images_boxphone/mamoi.png", "timeout": 25, "confidence": 0.8},
+            {"action": "click_coords", "x": 956, "y": 517,  "timeout": 2},
+            {"action": "input_partner_code"},
+            {"action": "click_coords", "x": 947, "y": 755,  "timeout": 2},
+            {"action": "click_coords", "x": 947, "y": 755,  "timeout": 2},
+            
         ]
 
         dang_xuat_script = [
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "confidence": 0.8},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 30, "confidence": 0.8},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 30, "confidence": 0.8},
-            {"action": "wait", "timeout": 15},
+            
         ]
 
         if os.path.exists(script_file):
@@ -766,7 +789,7 @@ class AutoClickerInstance:
                 self.is_login_phase = True
                 for retry_login in range(3):
                     # Check nếu đã ở trong sảnh rồi thì skip login luôn
-                    if self.search_logic({"target1": "images/su_kien.jpg", "target2": "images/setting.jpg", "target3": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7}):
+                    if self.search_logic({"target1": "images_boxphone/su_kien.jpg", "target2": "images_boxphone/setting.jpg", "target3": "images_boxphone/su_kien2.jpg", "timeout": 5, "confidence": 0.7}):
                         self.log("==> ĐÃ Ở TRONG SẢNH, BỎ QUA ĐĂNG NHẬP.")
                         success_login = True
                         break
@@ -797,7 +820,7 @@ class AutoClickerInstance:
                 for step in nhay_script:
                     if not self.running: break
                     
-                    if decisive_failure and step.get("target") == "images/xac_nhan_ruong_ss.jpg":
+                    if decisive_failure and step.get("target") == "images_boxphone/xac_nhan_ruong_ss.jpg":
                         continue # Bỏ qua bước xác nhận rương nếu không thấy rương
                         
                     if not self.execute_step(step):
@@ -808,7 +831,7 @@ class AutoClickerInstance:
                             success_nhay = False
                             break
                     
-                    if step.get("target") == "images/xac_nhan_ruong_ss.jpg":
+                    if step.get("target") == "images_boxphone/xac_nhan_ruong_ss.jpg":
                         self.chest_claimed = True
                 
                 # --- 3. ĐĂNG XUẤT ---
@@ -1119,4 +1142,4 @@ if __name__ == "__main__":
     app = MultiPremiumApp()
     app.mainloop()
 
-# pyinstaller --noconfirm --onefile --windowed --icon "nhay_script_logo.png" --name "AutoNhayLQ_Pro" --add-data "images;images" --add-data "nhay_script_logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool_cs_nhay.py
+# pyinstaller --noconfirm --onefile --windowed --icon "nhay_script_logo.png" --name "AutoNhayLQ_Pro" --add-data "images_boxphone;images_boxphone" --add-data "nhay_script_logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool_cs_nhay.py

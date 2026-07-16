@@ -694,169 +694,81 @@ class AutoClickerInstance:
         self.running = True
 
         login_script = [
-            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 15, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 3, "confidence": 0.7, "login_step": True},
-            {"action": "click_image", "target1": "images/account_input1.jpg","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.7, "login_step": True},
-            {"action": "input_account", "login_step": True},
-            {"action": "click_image", "target1": "images/tiep_theo.jpg", "target2": "images/tiep_theo1.jpg", "target3": "images/tiep_theo2.png", "timeout": 60, "confidence": 0.7, "login_step": True},
-            {"action": "input_password", "login_step": True},
-            {"action": "wait", "timeout": 2, "login_step": True},
-            {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "target3": "images/xong2.png", "timeout": 30, "confidence": 0.7, "login_step": True},
-            {"action": "wait", "timeout": 5, "login_step": True},
-            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.7, "login_step": True},
-            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 2, "confidence": 0.7, "login_step": True},
-            {"action": "wait", "timeout": 5, "login_step": True},
-            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.7, "login_step": True, "then": [
-                {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.7},
-                {"action": "click_image_if", "target": "images/sai_pass.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
-                {"action": "clear_android_data", "package": "com.garena.gaslite"},
-                {"action": "restart_app"}]
-            },
-            ]},
+            {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 30, "confidence": 0.7},
             
-            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 6, "confidence": 0.8},
-            {"action": "press_esc", "wait": 2},
+            {"action": "wait", "timeout": 3},
+            
+            {"action": "input_account"},
+            {"action": "click_image_if", "target1": "images_boxphone/matkhau.png",  "target2": "images_boxphone/matkhau1.png",  "timeout": 10, "confidence": 0.7},
+            {"action": "input_password"},
+            
+            {"action": "click_image_if", "target1": "images_boxphone/xong.png", "target2": "images_boxphone/xong1.png","target3": "images_boxphone/done.png","target4": "images_boxphone/m.png","timeout": 10, "confidence": 0.7},
+            # {"action": "wait", "timeout": 5},
+            # {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 3, "confidence": 0.7},
+            # {"action": "click_image_if", "target1": "images_boxphone/dangnhap2.png", "target2": "images_boxphone/login.png","target3": "images_boxphone/login1.png","timeout": 3, "confidence": 0.7},
+            # {"action": "wait", "timeout": 3},
+            # # {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png","target3": "images_boxphone/okdangnhap2.png", "timeout": 10, "confidence": 0.7},
+            # {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "timeout": 3, "confidence": 0.7},
+            {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png", "timeout": 10, "confidence": 0.7},
+            # {"action": "wait", "timeout": 3},
+            # {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png", "timeout": 3, "confidence": 0.7},
+            # {"action": "click_image_if", "target1": "images_boxphone/batdau.png", "target2": "images_boxphone/batdau1.png", "target3": "images_boxphone/batdauu.jpg",  "timeout": 10, "confidence": 0.7},
+            
+            # {"action": "click_coords", "x": 972, "y": 937,  "timeout": 6},
+            # {"action": "click_coords", "x": 972, "y": 937,  "timeout": 3},
+            
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 3},
-        ]
-       
+       ]
         copy_script = [
-            {
-                "action": "cases",  
-                "timeout" : 60,
-                "timeout_then": [{"action": "handle_maintenance"}],
-                "cases": [
-                    {
-                        "trigger": "images/su_kien.jpg",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image", "target1": "images/su_kien.jpg","target2": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images/su_kien.jpg", "target2": "images/su_kien2.jpg", "timeout": 2, "confidence": 0.8},
-                            {"action": "press_esc", "wait": 3},
-                            {"action": "press_esc", "wait": 3},
-                            {"action": "press_esc", "wait": 3},
-                            {"action": "press_esc", "wait": 3},
-                            {"action": "click_image", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 10, "confidence": 0.8},
-                            {"action": "click_image_if", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 2, "confidence": 0.8},
-                            {"action": "click_image_if", "target1": "images/su_kien_cs.jpg", "target2": "images/su_kien_cs1.jpg", "timeout": 2, "confidence": 0.8},
-                            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.8},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
-                            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/sao_chep_ma.jpg", "timeout": 2, "confidence": 0.7},
-                            {"action": "get_code", "timeout": 10},
-                            {"action": "wait", "timeout": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
-                            {"action": "click_image", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "target3": "images/input_gift_code2.jpg", "target4": "images/input_gift_code3.jpg", "timeout": 20, "confidence": 0.7},
-                        ]
-                    },
-                    {
-                        "trigger1": "images/xac_nhan_chung_suc1.png",
-                        "trigger2": "images/invite_friend.jpg",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "wait", "timeout": 5},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "click_image", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
-                            {"action": "press_esc", "wait": 3},
-                            {"action": "click_image_if", "target": "images/invite_friend.jpg", "timeout": 5, "confidence": 0.7},
-                            {"action": "click_image", "target": "images/sao_chep_ma.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/sao_chep_ma.jpg", "timeout": 2, "confidence": 0.7},
-                            {"action": "get_code", "timeout": 10},
-                            {"action": "wait", "timeout": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
-                            {"action": "click_image", "target1": "images/input_gift_code.jpg", "target2": "images/input_gift_code1.jpg", "target3": "images/input_gift_code2.jpg", "target4": "images/input_gift_code3.jpg", "timeout": 20, "confidence": 0.7},
-                        ]
-                    }
-                ]
-            },
-            {"action": "wait", "timeout": 5}
-        ]
+            {"action": "wait", "timeout": 10},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_image_if", "target1": "images_boxphone/huy.png","target2": "images_boxphone/huy1.png", "timeout": 5, "confidence": 0.8},
+            {"action": "click_coords", "x": 104, "y": 93,  "timeout": 5},
+            {"action": "click_image_if", "target": "images_boxphone/back.png", "timeout": 5, "confidence": 0.8},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "click_coords", "x": 1678, "y": 214,  "timeout": 1},
+            {"action": "click_coords", "x": 56, "y": 456,  "timeout": 3},
+            {"action": "click_coords", "x": 56, "y": 456,  "timeout": 1},
+            {"action": "click_coords", "x": 52, "y": 299,  "timeout": 1},
+            {"action": "click_coords", "x": 52, "y": 299,  "timeout": 1},
+            {"action": "click_coords", "x": 52, "y": 299,  "timeout": 1},
+            # đến
+            {"action": "click_coords", "x": 1456, "y": 924,  "timeout": 3},
+            {"action": "click_coords", "x": 1456, "y": 924,  "timeout": 1},
+        # chơi ngay
+            {"action": "click_coords", "x": 1210, "y": 937,  "timeout": 1},
+            {"action": "wait", "timeout": 5},
+            {"action": "click_coords", "x": 1827, "y": 707,  "timeout": 2},
+            {"action": "click_coords", "x": 1718, "y": 622,  "timeout": 2},
+            {"action": "wait", "timeout": 6},
+            
+            {"action": "click_image", "target": "images_boxphone/mamoi.png", "timeout": 25, "confidence": 0.8},
+            {"action": "click_coords", "x": 956, "y": 517,  "timeout": 2},
         
-        input_code_script = [
+        
             {"action": "input_partner_code"},
+        
+            {"action": "click_coords", "x": 947, "y": 755,  "timeout": 2},
+            {"action": "click_coords", "x": 947, "y": 755,  "timeout": 2},
+        
         ]
+        input_code_script = []
         
         confirm_script = [
-            {"action": "click_image_if", "target": "images/ok_cs.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image", "target": "images/xac_nhan_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "mark_success"},
-            {"action": "click_image_if", "target": "images/xac_nhan_chung_suc1.jpg", "timeout": 3, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 1},
-            {"action": "press_esc", "wait": 1},
-            {"action": "click_image", "target": "images/back_sk1.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2},
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "confidence": 0.7},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 30, "confidence": 0.7},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 30, "confidence": 0.7},
-            {"action": "wait", "timeout": 15},
+           
         ]
 
         goto_input_code_only = [
-            {
-                "action": "cases",
-                "timeout" : 60,
-                "timeout_then": [{"action": "handle_maintenance"}],
-                "cases": [
-                    {
-                        "trigger1": "images/input_gift_code2.jpg",
-                        "trigger2": "images/input_gift_code1.jpg",
-                        "trigger3": "images/input_gift_code3.jpg",
-                        "trigger4": "images/input_gift_code.jpg",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image", "target1": "images/input_gift_code2.jpg", "target2": "images/input_gift_code1.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg",  "timeout": 20,  "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images/input_gift_code1.jpg", "target2": "images/input_gift_code2.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg", "timeout": 2, "confidence": 0.7},
-                        ]
-                    },
-                    {
-                        "trigger": "images/su_kien.jpg",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image", "target1": "images/su_kien.jpg","target2": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images/su_kien.jpg", "target2": "images/su_kien2.jpg", "timeout": 2, "confidence": 0.8},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "click_image", "target": "images/su_kien_cs.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "press_esc", "wait": 2},
-                            {"action": "click_image", "target": "images/nhap_ma_moi.jpg", "timeout": 10, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/nhap_ma_moi.jpg", "timeout": 2, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images/tiep_tuc_cs.jpg", "timeout": 3, "confidence": 0.7},
-                            {"action": "click_image", "target1": "images/input_gift_code2.jpg", "target2": "images/input_gift_code1.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images/input_gift_code1.jpg", "target2": "images/input_gift_code2.jpg", "target3": "images/input_gift_code3.jpg", "target4": "images/input_gift_code.jpg", "timeout": 2, "confidence": 0.7},
-                        ]
-                    }
-                ]
-            },
-            {"action": "wait", "timeout": 5},
+            
+                
         ]
 
         # --- TẢI KỊCH BẢN TỪ FILE NGOÀI NẾU CÓ ---
-        script_file = "script_cheo.json"
+        # script_file = "script_cheo.json"
         
         if os.path.exists(script_file):
             try:

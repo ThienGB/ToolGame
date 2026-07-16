@@ -1359,25 +1359,25 @@ class AutoClickerInstance:
 
         # 6. GIAI ĐOẠN ĐĂNG XUẤT
         uplevel_script = [
-            # {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png","timeout": 5, "confidence": 0.9},
+            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png","timeout": 5, "confidence": 0.9},
            
-            # {"action": "wait", "timeout": 2},
-            # {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png","timeout": 5, "confidence": 0.9},
-            # {"action": "wait", "timeout": 2},
-            # {"action": "click_image_if", "target1": "images_boxphone/huy.png", "target2": "images_boxphone/huy1.png", "timeout": 6, "confidence": 0.9},
-            # {"action": "wait", "timeout": 3},
-            # {"action": "click_image", "target": "images_boxphone/logo.png", "timeout": 30, "confidence": 0.7},
-            # {"action": "click_image_if", "target": "images_boxphone/off.png", "timeout": 5, "confidence": 0.75, "use_color": True},
-            # {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2": "images_boxphone/minimize1.png", "target3": "images_boxphone/minimize2.png", "target4": "images_boxphone/minimize3.png", "target5": "images_boxphone/minimize.jpg","timeout": 20, "confidence": 0.7},
-            # {"action": "click_image", "target": "images_boxphone/home1.png", "timeout": 30, "confidence": 0.7},
-            # {"action": "click_image_if", "target": "images_boxphone/cai_dat_button.png", "timeout": 6, "confidence": 0.7},
-            # {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
-            # {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
-            # {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png","timeout": 5, "confidence": 0.9},
+            {"action": "wait", "timeout": 2},
+            {"action": "click_image_if", "target1": "images_boxphone/huy.png", "target2": "images_boxphone/huy1.png", "timeout": 6, "confidence": 0.9},
+            {"action": "wait", "timeout": 3},
+            {"action": "click_image", "target": "images_boxphone/logo.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images_boxphone/off.png", "timeout": 5, "confidence": 0.75, "use_color": True},
+            {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2": "images_boxphone/minimize1.png", "target3": "images_boxphone/minimize2.png", "target4": "images_boxphone/minimize3.png", "target5": "images_boxphone/minimize.jpg","timeout": 20, "confidence": 0.7},
+            {"action": "click_image", "target": "images_boxphone/home1.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image_if", "target": "images_boxphone/cai_dat_button.png", "timeout": 6, "confidence": 0.7},
+            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
+            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
+            {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
 
-            # {"action": "click_image", "target": "images_boxphone/dangxuat.png", "timeout": 30, "confidence": 0.7},
-            # {"action": "click_image", "target": "images_boxphone/ok1.png", "timeout": 30, "confidence": 0.7},
-            # {"action": "wait", "timeout": 15},
+            {"action": "click_image", "target": "images_boxphone/dangxuat.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images_boxphone/ok1.png", "timeout": 30, "confidence": 0.7},
+            {"action": "wait", "timeout": 15},
         ]
         
         def tag_script(script_list, stage_name):
@@ -1581,10 +1581,6 @@ class AutoClickerInstance:
                     
                     self.report_stats_func(False, self.current_account, error_stage)
                     self.accounts_processed += 1
-
-                    if self.modes.get("single_cycle", True):
-                        self.running = False
-                        break
                     
                     # Barrier: Đợi cả 5 máy trong team xong reset
                     with self.shared_data["lock"]:
@@ -1612,9 +1608,6 @@ class AutoClickerInstance:
                 
                 self.report_stats_func(success, self.current_account)
                 self.accounts_processed += 1
-                if self.modes.get("single_cycle", True):
-                    self.running = False
-                    break
             gc.collect()
         self.update_status("Xong"); self.running = False
 
@@ -1696,7 +1689,7 @@ class MultiPremiumApp(ctk.CTk):
         
         self.mode_login = ctk.CTkCheckBox(self.mode_frame, text="LOGIN"); self.mode_login.grid(row=0, column=0, pady=10); self.mode_login.select()
         self.mode_tutorial = ctk.CTkCheckBox(self.mode_frame, text="TÂN THỦ"); self.mode_tutorial.grid(row=0, column=1); self.mode_tutorial.select()
-        self.mode_mua_exp = ctk.CTkCheckBox(self.mode_frame, text="MUA EXP"); self.mode_mua_exp.grid(row=0, column=2); self.mode_mua_exp.select()
+        self.mode_mua_exp = ctk.CTkCheckBox(self.mode_frame, text="MUA EXP"); self.mode_mua_exp.grid(row=0, column=2); self.mode_mua_exp.deselect()
         self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME"); self.mode_dinh_game.grid(row=0, column=3); self.mode_dinh_game.select()
         self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI"); self.mode_teamup.grid(row=0, column=4); self.mode_teamup.select()
         
@@ -1911,7 +1904,7 @@ class MultiPremiumApp(ctk.CTk):
         b_count = 3
         try: b_count = int(self.battle_count_entry.get().strip())
         except: pass
-        modes = {"login":self.mode_login.get(), "tutorial":self.mode_tutorial.get(), "mua_exp":self.mode_mua_exp.get(), "dinh_game":self.mode_dinh_game.get(), "teamup":self.mode_teamup.get(), "battle_count":b_count, "single_cycle": True}
+        modes = {"login":self.mode_login.get(), "tutorial":self.mode_tutorial.get(), "mua_exp":self.mode_mua_exp.get(), "dinh_game":self.mode_dinh_game.get(), "teamup":self.mode_teamup.get(), "battle_count":b_count}
         
         def update_single_status():
              def _update():

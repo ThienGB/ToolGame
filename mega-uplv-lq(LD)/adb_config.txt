@@ -1,1 +1,1 @@
-C:\Program Files (x86)\xiaowei_android\tools\adb.exe
+C:\Program Files (x86)\BoxPhone86\tools\adb.exe
