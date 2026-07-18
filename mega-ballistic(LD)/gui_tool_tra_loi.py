@@ -152,6 +152,16 @@ def normalize_text(text):
 
 # Smart dual-level ratio calculation for maximum accuracy
 def get_match_ratio(str1, str2):
+    s1_is_num = str1.strip().isdigit()
+    s2_is_num = str2.strip().isdigit()
+    
+    if s1_is_num and not s2_is_num:
+        mapping = str.maketrans("oODQiIlLtTzZeEaAsSbBGqg", "00001111112233445566899")
+        str2 = str2.translate(mapping)
+    elif s2_is_num and not s1_is_num:
+        mapping = str.maketrans("oODQiIlLtTzZeEaAsSbBGqg", "00001111112233445566899")
+        str1 = str1.translate(mapping)
+
     norm1 = normalize_text(str1)
     norm2 = normalize_text(str2)
     if not norm1 or not norm2:
@@ -168,7 +178,7 @@ def get_match_ratio(str1, str2):
     # Penalize the unaccented slightly (by 0.98) so that accented is always preferred if correct
     return max(ratio_accented, ratio_unaccented * 0.98)
 
-def find_best_match(query, database_keys, threshold=0.55):
+def find_best_match(query, database_keys, threshold=0.50):
     best_match = None
     best_ratio = 0.0
     for q in database_keys:
@@ -560,7 +570,14 @@ class MultiPremiumApp(ctk.CTk):
             self.add_log("LỖI: Đường dẫn ADB không thể trống!")
             return
         
+        if os.path.isdir(new_adb_path):
+            new_adb_path = os.path.join(new_adb_path, "adb.exe")
+            
         self.adb_path = new_adb_path
+        
+        # Update the entry field to reflect the new path
+        self.adb_path_entry.delete(0, "end")
+        self.adb_path_entry.insert(0, self.adb_path)
         
         # Load existing config and update adb_path
         config_data = dict(self.coords)
@@ -608,6 +625,8 @@ class MultiPremiumApp(ctk.CTk):
         
         # Kiểm tra ADB path hợp lệ
         adb_to_use = self.adb_path.strip()
+        if os.path.isdir(adb_to_use):
+            adb_to_use = os.path.join(adb_to_use, "adb.exe")
         if not adb_to_use:
             self.add_log("LỖI: Đường dẫn ADB trống! Vui lòng nhập đường dẫn ADB hợp lệ.")
             return
