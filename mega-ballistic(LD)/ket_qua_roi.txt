@@ -2295,3 +2295,19 @@ vjp.csa93356|2xkO@HfVqYJX|e Nearby 1 24
 4af146814|C/S<YEm^$#l,|2 Điêu Thuyền Nhật Nguyệt Thánh Linh | 2 Capheny Càn Nguyên Điện Chủ | 2 Airi Bích hải thánh nữ
 4af146816|HyO}5H41;e[d|500 'Đổi Capheny Càn Nguyên Điện Chủ uà | A Airi Bích hải thánh nữ | 2
 4af145801|FFYGz$50%)OD|500 'Đổi Điêu Thuyền Nhật Nguyêt uà Thánh Linh | Eland'orr giới thần chủ | 2 Mộng
+4af146815|ZD[lc=a;(009|2 Tel'Annas Tân niên vệ thần | 2 Airi Bích hải thánh nữ | 2 Điêu Thuyền Nhật Nguyệt Thánh Linh
+4af145750|U#1&Wveo>mF6|2 Eland'orr giới thần chủ Mộng | 2 Tel'Annas Tân niên vệ thần | 2 Airi Bích hải thánh nữ
+4af146765|C5OOE_Y/iOBm|500 'Đổi Điêu Thuyền Nhật Nguyêt uà Thánh Linh | 2 Airi Bích hải thánh nữ | Không đọc được
+4af146306|K5s~$c=t,%&S|2 Điêu Thuyền Nhật Nguyệt Thánh Linh | 2 Aya chúa Cầu Công Vồng | 2 Capheny Càn Nguyên Điện Chù
+4af146313|L&TztO*FUOcM|2 Điêu Thuyền Nhật Nguyệt Thánh Linh | 2 Eland orr giới thần chủ Mộng | 2 Capheny Càn Nguyên Điện Chù
+4af146813|I2F}[gDqcVWv|500 'Đổi Điêu Thuyền uà Nhật Nguyêt Thánh Linh | Tulen Chítôn Kiếm tiên | 2
+4af146198|B?z/xW?+!>!U|500 'Đổi Airi Bích hải uà thánh nữ | 2 Điêu Thuyền Nhât Nguyêt Thánh Linb | Không đọc được
+4af146766|F]~+fpwirx^b|500 'Đổi Điêu Thuyền Nhật Nguyêt uà Thánh Linh | Eland'orr giới thần chủ | 2 Mộng
+4af147931|M;fUE&#%KbPs|1500 Thẻ Đổi Quà | 6 Airi Bích hải thánh nữ | Không đọc được
+4af147937|X]FJP#4!6-Ko|2 Eland'orr giới thần chủ Mộng | 2 Airi Bích hải thánh nữ | 2 Capheny Càn Nguyên Điện Chù
+4af147917|YUEC.VA%/m2q|2 chúa Cầu Công Aya Vồng | 2 Điêu Thuyền Nhật Nguyêt Thanb Linh | 2 Tel'Annas Tân niên vệ thần
+4af147928|YgMXiHWKcN..|500 'Đổi Điêu Thuyền Nhật Nguyêt uà Thánh Linh | Capheny Càn Nguyên Điện Chủ | 2
+4af147932|X_KQ]{PZAJwv|2 Điêu Thuyền Nhật Nguyệt Thánh Linh | 2 Tulen Chítôn Kiếm tiên | 2 Aya chúa Cầu Công Vồng
+4af147911|JZDX.IF%Ej#Q|500 'Đổi Tel'Annas Tân uà niên vệ thần | A Tulen Chítôn Kiếm tiên | 2
+4af147914|F@2$(i*tLyC-|1500 Thẻ Đổi Quà | 6 Tulen Chítôn Kiếm tiên | Không đọc được
+4af147915|Zh>wXqdW8liZ|2 Eland'orr giới thần chủ Mộng | 2 Điêu Thuyền Nhật Nguyêt Thanb Linh | 2 Tulen Chítôn Kiếm tiên
