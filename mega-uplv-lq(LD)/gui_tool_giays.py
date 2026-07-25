@@ -781,382 +781,82 @@ class AutoClickerInstance:
         
         # 1. GIAI ĐOẠN LOGIN (Đã được tối ưu cho BoxPhone)
         login_script = [
+             {"action": "click_image_if", "target": "images_cs187/garena.png", "timeout": 45, "confidence": 0.8},
+            {"action": "wait", "timeout": 2, "login_step": True},
+            {"action": "input_account", "login_step": True},
+            {"action": "click_coords", "x": 391, "y": 638, "timeout": 1},
+            
+            {"action": "input_password", "login_step": True},
+            {"action": "click_coords", "x": 1718, "y": 533, "timeout": 1},
+            {"action": "click_coords", "x": 1537, "y": 981, "timeout": 3},
+            
+                
+               
+                
             
             
-            # {"action": "click_image_if", "target1": "images_boxphone/xacnhan1.png",  "target2": "images_boxphone/xacnhan.png","target3": "images_boxphone/xacnhan.jpg", "timeout": 6, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 30, "confidence": 0.7},
-            {"action": "click_coords", "x": 387, "y": 888, "timeout": 4},
-            # {"action": "click_coords", "x": 387, "y": 888, "timeout": 2},
-            {"action": "wait", "timeout": 4},
-            
-            {"action": "input_account"},
-            {"action": "click_image_if", "target1": "images_boxphone/matkhau.png",  "target2": "images_boxphone/matkhau1.png",  "timeout": 10, "confidence": 0.7},
-            {"action": "input_password"},
-            
-            {"action": "click_image_if", "target1": "images_boxphone/xong.png", "target2": "images_boxphone/xong1.png","target3": "images_boxphone/done.png","target4": "images_boxphone/m.png","timeout": 10, "confidence": 0.7},
-            {"action": "wait", "timeout": 5},
-            {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png", "target4": "images_boxphone/dangnhap_box3.png","timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/dangnhap2.png", "target2": "images_boxphone/login.png","target3": "images_boxphone/login1.png","timeout": 3, "confidence": 0.7},
-            {"action": "wait", "timeout": 3},
-            # {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png","target3": "images_boxphone/okdangnhap2.png", "timeout": 10, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png", "timeout": 3, "confidence": 0.7},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_image_if", "target1": "images_boxphone/okdangnhap.png", "target2": "images_boxphone/okdangnhap1.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/batdau.png", "target2": "images_boxphone/batdau1.png", "target3": "images_boxphone/batdauu.jpg",  "timeout": 10, "confidence": 0.7},
-            
-            {"action": "click_coords", "x": 972, "y": 937,  "timeout": 6},
-            {"action": "click_coords", "x": 972, "y": 937,  "timeout": 3},
-            
+            {"action": "click_image_if", "target": "images_cs187/batdau1.png", "timeout": 4, "confidence": 0.85},
+            {"action": "wait", "timeout": 15},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
+            
+            
+            
         ]
         # 2. GIAI ĐOẠN VƯỢT TÂN THỦ (Full chi tiết từ LD)
         tutorial_script = [
-            {
-                "action": "cases",
-                "timeout" : 120,
-                "cases": [
-                    {
-                        "trigger": "images_boxphone/vaotran.png",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_coords", "x": 1488, "y": 1037, "timeout": 2},
-                            {"action": "click_coords", "x": 1488, "y": 1037, "timeout": 2},
-                            {"action": "click_coords", "x": 1488, "y": 1037, "timeout": 2},
-                            {"action": "wait", "timeout": 3},
-                            {"action": "click_coords", "x": 956, "y": 981, "timeout": 2},
-                            {"action": "click_coords", "x": 956, "y": 981, "timeout": 2},
-                            {"action": "click_coords", "x": 956, "y": 981, "timeout": 2},
-                            {"action": "click_image", "target": "images_boxphone/dkysau.png", "timeout": 20, "confidence": 0.7},
+            {"action": "click_coords", "x": 23, "y": 243, "timeout": 2},
+            {"action": "click_image_if", "target1": "images_cs187/x.png", "target2": "images_cs187/x1.png", "timeout": 120, "confidence": 0.85},
+            {"action": "click_image_if", "target1": "images_cs187/x.png", "target2": "images_cs187/x1.png", "timeout": 5, "confidence": 0.85},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            
+            {"action": "click_coords", "x": 1759, "y": 226, "timeout": 2},  # sự kiện
+            {"action": "click_coords", "x": 23, "y": 243, "timeout": 2},
+            {"action": "click_coords", "x": 253, "y": 424, "timeout": 2},   # 18/7
+            {"action": "click_coords", "x": 253, "y": 424, "timeout": 2},   # đăng nhập là trúng
+            {"action": "click_coords", "x": 253, "y": 424, "timeout": 2},   # đăng nhập là trúng
+            
+            {"action": "click_coords", "x": 1682, "y": 997, "timeout": 3} ,  # collect
+            {"action": "click_coords", "x": 1105, "y": 989, "timeout": 2},
+            {"action": "click_image", "target1": "images_cs187/back.png", "target2": "images_cs187/back1.png","timeout": 30, "confidence": 0.8},
+            
+            {"action": "click_coords", "x": 1561, "y": 45, "timeout": 2},
+            {"action": "click_coords", "x": 197, "y": 311, "timeout": 2}, # hệ thống
 
-                        ]
-                    },
-                    {
-                        "trigger1": "images_boxphone/dkysau.png", 
-                        "trigger2": "images_boxphone/dkysau1.jpg",
-                        "trigger3": "images_boxphone/any.png", 
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image_if", "target": "images_boxphone/any.png",  "timeout": 3, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images_boxphone/any.png",  "timeout": 3, "confidence": 0.7},
-                            {"action": "press_esc", "wait": 1},
-                            {"action": "click_coords", "x": 1589, "y": 920, "timeout": 2},
-                            {"action": "click_coords", "x": 1589, "y": 920, "timeout": 2},
-                            
-                            {"action": "click_coords", "x": 39, "y": 158, "timeout": 3},
-                            {"action": "click_image_if", "target": "images_boxphone/on.png", "timeout": 5, "confidence": 0.75, "use_color": True},
-                            
-                            {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2":"images_boxphone/minimize1.png", "target3":"images_boxphone/minimize2.png", "target4":"images_boxphone/minimize3.png","target5": "images_boxphone/minimize.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 120, "confidence": 0.7},
-                            {"action": "click_any", "wait": 15},
-                            
-                        ]
-                    },
-                    {
-                        "trigger": "images_boxphone/an_de_tro_lai.png",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image_if", "target": "images_boxphone/an_de_tro_lai.png", "confidence": 0.7},
-                            {"action": "wait", "timeout": 2},
-                            {"action": "click_image_if", "target": "images_boxphone/an_de_tro_lai.png", "confidence": 0.7},
-                            {"action": "wait", "timeout": 2},
-                            {"action": "click_image_if", "target": "images_boxphone/an_de_tro_lai.png", "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images_boxphone/x_start.png", "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images_boxphone/x_start1.png", "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images_boxphone/x_start1.png", "confidence": 0.7}
-                        ]
-                    },
-                    {
-                        "trigger1": "images_boxphone/thutuong.png",
-                        "trigger2": "images_boxphone/khoe.png",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "press_esc", "wait": 3},
-                            {"action": "press_esc", "wait": 3},
-                            {"action": "press_esc", "wait": 3},
-                            {"action": "press_esc", "wait": 3},
-                        ]
-                    },
-                    {
-                        "trigger": "images_boxphone/tuy_chon.png",
-                        "confidence": 0.7,
-                        "script": []
-                    },
-                    {
-                        "trigger": "images_boxphone/any1.png",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "press_esc", "wait": 3},
-                            {"action": "press_esc", "wait": 3},
-                        ]
-                    },
-                    {
-                        "trigger": "images_boxphone/maychubaotri.png",
-                        "confidence": 0.7,
-                        "script": [
-                            {"action": "click_image_if", "target": "images_boxphone/okbaotri.png", "confidence": 0.7},
-                            {"action": "wait", "timeout": 10},
-                            {"action": "open_game"},
-                            {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png","timeout": 30, "confidence": 0.7},
-                            {"action": "click_image_if", "target1": "images_boxphone/dangnhap_box.png","target2": "images_boxphone/dangnhap_box1.png", "target3": "images_boxphone/dangnhap_box2.png","timeout": 2, "confidence": 0.7},
-                            {"action": "click_coords", "x": 197, "y": 989, "timeout": 5},
-                            {"action": "click_coords", "x": 197, "y": 989, "timeout": 5},
-                            {"action": "click_coords", "x": 197, "y": 989, "timeout": 5},
-                            {"action": "click_coords", "x": 1589, "y": 920, "timeout": 5},
-                            {"action": "click_image", "target": "images_boxphone/logo1.png", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image_if", "target": "images_boxphone/on.png", "timeout": 5, "confidence": 0.75, "use_color": True},
-                            {"action": "click_image_if", "target1": "images_boxphone/vao_button.png","target2": "images_boxphone/vao_button1.png","target3": "images_boxphone/vao_button2.png","target4": "images_boxphone/vao1.png", "target5": "images_boxphone/vao_tan_thu.png", "timeout": 2, "confidence": 0.7},
-                            {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2":"images_boxphone/minimize1.png", "target3":"images_boxphone/minimize2.png", "target4":"images_boxphone/minimize3.png","target5": "images_boxphone/minimize.jpg", "timeout": 20, "confidence": 0.7},
-                            {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 120, "confidence": 0.7},
-                            {"action": "click_any", "wait": 12},
-                            ]
-                    },
-                ]
-            },
-            {"action": "click_any", "wait": 2},
-            {"action": "press_esc", "wait": 6},
-            {"action": "press_esc", "wait": 6},
-            {"action": "press_esc", "wait": 3},
-            {"action": "press_esc", "wait": 3},
-            {"action": "press_esc", "wait": 3},
-            
-        
-            
-        
-        
-            {"action": "click_image", "target": "images_boxphone/tuy_chon.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/1v1.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/x3.png","target2": "images_boxphone/daro.png", "timeout": 5, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/pve.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/logo.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/on.png", "timeout": 5, "confidence": 0.75, "use_color": True},
-            {"action": "click_image", "target1": "images_boxphone/minimize.png","target2": "images_boxphone/minimize1.png","target3": "images_boxphone/minimize2.png","target4": "images_boxphone/minimize3.png","target5": "images_boxphone/minimize.jpg", "timeout": 20, "confidence": 0.9},
-            {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 6},
-            {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 1},
-            {"action": "click_image_if", "target": "images_boxphone/ok1.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/open.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_coords", "x": 249, "y": 170, "timeout": 2},
-            {"action": "click_image", "target": "images_boxphone/ok1.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 120, "confidence": 0.7},
-            {"action": "wait", "timeout": 20},
-            {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_coords", "x": 1145, "y": 1005, "timeout": 2},
-            {"action": "wait", "timeout": 3},
-            
-            {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 6},
-            {"action": "click_coords", "x": 1742, "y": 1017, "timeout": 1},
-            {"action": "click_image_if", "target": "images_boxphone/ok1.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/sansang.png","target2": "images_boxphone/sansang1.png","target3": "images_boxphone/sansang2.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/open.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_coords", "x": 855, "y": 158, "timeout": 3},
-            {"action": "click_image", "target": "images_boxphone/ok1.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/victory.png", "timeout": 120, "confidence": 0.7},
-            {"action": "wait", "timeout": 20},
-            {"action": "click_image_if", "target": "images_boxphone/victory.png", "timeout": 10, "confidence": 0.7},
-            {"action": "click_coords", "x": 1145, "y": 1005, "timeout": 2},
-            {"action": "wait", "timeout": 3},
+            {"action": "click_coords", "x": 1105, "y": 989, "timeout": 2},# claim
+            {"action": "click_coords", "x": 754, "y": 977, "timeout": 2},# claim
+            {"action": "click_coords", "x": 754, "y": 977, "timeout": 2},# claim
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_coords", "x": 1759, "y": 226, "timeout": 2},  # sự kiện
+            {"action": "click_coords", "x": 23, "y": 243, "timeout": 2},
+            {"action": "click_coords", "x": 241, "y": 311, "timeout": 2}, # sưu tầm
+            {"action": "click_image", "target": "images_cs187/batdau.png", "timeout": 30, "confidence": 0.8},
+            {"action": "click_image", "target": "images_cs187/goi.png", "timeout": 30, "confidence": 0.8},
 
-            # từ đây
+            {"action": "click_coords", "x": 964, "y": 896, "timeout": 7},# chấp nhận
+            {"action": "click_coords", "x": 770, "y": 965, "timeout": 4},
+            {"action": "click_coords", "x": 770, "y": 965, "timeout": 2},
+            {"action": "click_coords", "x": 770, "y": 965, "timeout": 2},
+            # qh
+            {"action": "click_image", "target": "images_cs187/hoanthanh.png", "timeout": 30, "confidence": 0.8},
+            {"action": "click_image", "target1": "images_cs187/back.png", "target2": "images_cs187/back1.png","timeout": 30, "confidence": 0.8},
             
-            {"action": "click_image", "target1": "images_boxphone/home.png","target2": "images_boxphone/home1.png", "timeout": 20, "confidence": 0.7},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_coords", "x": 1601, "y": 468, "timeout": 2},
+            {"action": "click_coords", "x": 177, "y": 513, "timeout": 1},
+            {"action": "click_coords", "x": 177, "y": 513, "timeout": 1},
+            {"action": "click_coords", "x": 177, "y": 513, "timeout": 1},
+            {"action": "click_coords", "x": 1177, "y": 343, "timeout": 1},
+            {"action": "click_coords", "x": 1177, "y": 343, "timeout": 1},
+            {"action": "click_image", "target": "images_cs187/99.png", "timeout": 30, "confidence": 0.8},
             {"action": "wait", "timeout": 3},
-            
-            {"action": "click_coords", "x": 1702, "y": 210, "timeout": 6},
-            {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
-            {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
-            {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
-            {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
-            {"action": "click_coords", "x": 52, "y": 448, "timeout": 2},
-            {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.6, "duration": 600},
-            {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.6, "duration": 600},
-            {"action": "swipe", "x1": 0.2, "y1": 0.8, "x2": 0.2, "y2": 0.6, "duration": 600},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_coords", "x": 261, "y": 900, "timeout": 2},
-            {"action": "click_coords", "x": 261, "y": 900, "timeout": 2},
-            {"action": "click_image", "target": "images_boxphone/ruby.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_coords", "x": 951, "y": 1001, "timeout": 3},
-            {"action": "click_coords", "x": 951, "y": 1001, "timeout": 1},
-            {"action": "click_coords", "x": 80, "y": 81, "timeout": 6},
-            {"action": "click_image", "target": "images_boxphone/tui_do.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x_tuido.png","target3": "images_boxphone/xtuido.png","target4": "images_boxphone/xtuido1.png","target5": "images_boxphone/xtui.jpg","target6": "images_boxphone/daro.jpg", "timeout": 5, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/vatpham_tuido.png", "timeout": 20, "confidence": 0.7},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target1": "images_boxphone/sudung.png","target2": "images_boxphone/sudung1.png","target3": "images_boxphone/sudung2.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_coords", "x": 1738, "y": 993, "timeout": 2},
-            {"action": "click_coords", "x": 1738, "y": 993, "timeout": 2},
-            {"action": "click_coords", "x": 869, "y": 498, "timeout": 2},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target1": "images_boxphone/ok_tuido.png", "target2": "images_boxphone/ok1.png","timeout": 20, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target": "images_boxphone/shop.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_coords", "x": 112, "y": 513, "timeout": 2},
-            {"action": "click_coords", "x": 112, "y": 513, "timeout": 2},
-            {"action": "click_image_if", "target": "images_boxphone/shopruby.png", "timeout": 3, "confidence": 0.7},
-            {"action": "click_coords", "x": 800, "y": 1021, "timeout": 2},
-            {"action": "click_coords", "x": 800, "y": 1021, "timeout": 2},
-            {"action": "click_image", "target": "images_boxphone/ruby1.png","timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/mua.png","timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/mo.png","timeout": 20, "confidence": 0.7},
-            {"action": "press_esc", "wait": 3},
-           
-            {"action": "click_image_if", "target1": "images_boxphone/dauhang.png", "target2": "images_boxphone/dau_hang1.jpg", "timeout": 7, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_coords", "x": 1186, "y": 57, "timeout": 5},
-            {"action": "click_image", "target1": "images_boxphone/sukien.png","target2": "images_boxphone/sukien1.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_coords", "x": 1399, "y": 473, "timeout": 5}, # krixi
-            {"action": "press_esc", "wait": 3},
-            
-            {"action": "click_coords", "x": 1609, "y": 985, "timeout": 2}, # làm
-            {"action": "click_coords", "x": 1609, "y": 985, "timeout": 2},
-            {"action": "click_coords", "x": 1609, "y": 985, "timeout": 2},
-            {"action": "click_coords", "x": 1606, "y": 544, "timeout": 2},
-            {"action": "press_esc", "wait": 3},
-            {"action": "press_esc", "wait": 3},
-            {"action": "press_esc", "wait": 3},
-            {"action": "click_image", "target1": "images_boxphone/sukien.png","target2": "images_boxphone/sukien1.png", "timeout": 20, "confidence": 0.7},
-            {"action": "click_coords", "x": 1399, "y": 473, "timeout": 5},   
-            {"action": "press_esc", "wait": 3},
-            {"action": "press_esc", "wait": 3},
-            {"action": "press_esc", "wait": 3},
-            {"action": "wait", "timeout": 8},
-            {"action": "click_image_if", "target1": "images_boxphone/dauhang.png", "target2": "images_boxphone/dau_hang1.jpg", "timeout": 7, "confidence": 0.7},
-            {"action": "press_esc", "wait": 2},
-    #     {
-    #         "action": "cases",
-    #         "timeout": 60,
-    #         "cases": [
-    #             {"action": "wait", "timeout": 5},
-    #             {
-    #                 "trigger1": "images_boxphone/sukien.png",
-    #                 "trigger2": "images_boxphone/sukien1.png",
-    #                 "confidence": 0.7,
-    #                 "script": [
-                        
-                        
-    #             ]},
-    #     #         {
-    #     #             "trigger1": "images_boxphone/lam.png",
-    #     #             "trigger2": "images_boxphone/lam1.png",
-    #     #             "confidence": 0.7,
-    #     #             "script": [
-    #     #                 {
-    #     #                     "action": "click_image_if",
-    #     #                     "target1": "images_boxphone/lam.png",
-    #     #                     "target2": "images_boxphone/lam1.png",
-    #     #                     "timeout": 7,
-    #     #                     "confidence": 0.7
-    #     #                 },
-    #     #                 {
-    #     #                     "action": "press_esc",
-    #     #                     "wait": 3
-    #     #                 },
-    #     #                 {
-    #     #                     "action": "press_esc",
-    #     #                     "wait": 3
-    #     #                 },
-    #     #                 {
-    #     #                     "action": "press_esc",
-    #     #                     "wait": 3
-    #     #                 }
-    #     #         ]},
-    #     #     {
-    #     #         "trigger1": "images_boxphone/tanthu.png",
-    #     #         "trigger2": "images_boxphone/tanthu1.png",
-    #     #         "confidence": 0.7,
-    #     #         "script": [
-    #     #             {
-    #     #                 "action": "click_image",
-    #     #                 "target1": "images_boxphone/sukien.png",
-    #     #                 "target2": "images_boxphone/sukien1.png",
-    #     #                 "timeout": 20,
-    #     #                 "confidence": 0.6
-    #     #             },
-    #     #             {
-    #     #                 "action": "press_esc",
-    #     #                 "wait": 3
-    #     #             },
-    #     #             {
-    #     #                 "action": "press_esc",
-    #     #                 "wait": 3
-    #     #             }
-    #     #         ]
-    #     #      },
-    #     #   {
-    #     #     "trigger1": "images_boxphone/nhanxem.png","trigger2": "images_boxphone/check.jpg",
-    #     #     "confidence": 0.7,
-    #     #     "script": [
-    #     #         {
-    #     #             "action": "click_image_if",
-    #     #             "target1": "images_boxphone/dauhang.png",
-    #     #             "target2": "images_boxphone/dau_hang1.jpg",
-    #     #             "timeout": 15,
-    #     #             "confidence": 0.7
-    #     #         },
-    #     #         {
-    #     #             "action": "press_esc",
-    #     #             "wait": 3
-    #     #         },
-    #     #         {
-    #     #             "action": "press_esc",
-    #     #             "wait": 3
-    #     #         }
-    #     #     ]
-    #     # },
-    #     {
-    #         "trigger1": "images_boxphone/co.png",
-    #         "trigger2": "images_boxphone/co1.png",
-    #         "confidence": 0.7,
-    #         "script": [
-    #             {
-    #                 "action": "click_image_if",
-    #                 "target1": "images_boxphone/co.png",
-    #                 "timeout": 20,
-    #                 "confidence": 0.7
-    #             },
-    #             {"action": "click_coords", "x": 1399, "y": 473, "timeout": 5},
-    #             {
-    #                 "action": "press_esc",
-    #                 "wait": 3
-    #             },
-    #             {
-    #                 "action": "press_esc",
-    #                 "wait": 3
-    #             },
-                
-    #             {"action": "click_coords", "x": 1186, "y": 57, "timeout": 5},
-    #             {"action": "click_coords", "x": 1399, "y": 473, "timeout": 5},
-    #             {
-    #                 "action": "press_esc",
-    #                 "wait": 3
-    #             },
-    #             {
-    #                 "action": "press_esc",
-    #                 "wait": 3
-    #             },
-    #             {
-    #                 "action": "press_esc",
-    #                 "wait": 3
-    #             },
-    #             {"action": "click_coords", "x": 1186, "y": 57, "timeout": 5},
-    #             {
-    #                 "action": "press_esc",
-    #                 "wait": 3
-    #             },
-    #             {
-    #                 "action": "press_esc",
-    #                 "wait": 3
-    #             },
-    #         ]
-    #     }
-    # ]},
-        {"action": "wait", "timeout": 7},
-        {"action": "click_image_if", "target1": "images_boxphone/dauhang.png", "target2": "images_boxphone/dau_hang1.jpg", "timeout": 7, "confidence": 0.7},
-        {"action": "press_esc", "wait": 2},
-        {"action": "click_image_if", "target1": "images_boxphone/co.png", "timeout": 3, "confidence": 0.7},
-        {"action": "press_esc", "wait": 3},
-        {"action": "wait", "timeout": 4},
-    ]
+            {"action": "click_image", "target": "images_cs187/99.png", "timeout": 30, "confidence": 0.8},
+            {"action": "click_coords", "x": 1153, "y": 981, "timeout": 3},
+
+
+        ]
+    
 
         # 2.5 GIAI ĐOẠN MUA EXP
         mua_exp_script = [
@@ -1359,25 +1059,17 @@ class AutoClickerInstance:
 
         # 6. GIAI ĐOẠN ĐĂNG XUẤT
         uplevel_script = [
-            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png","timeout": 5, "confidence": 0.9},
-           
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target1": "images_boxphone/x1.png", "target2": "images_boxphone/x3.png","timeout": 5, "confidence": 0.9},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image_if", "target1": "images_boxphone/huy.png", "target2": "images_boxphone/huy1.png", "timeout": 6, "confidence": 0.9},
-            {"action": "wait", "timeout": 3},
-            {"action": "click_image", "target": "images_boxphone/logo.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/off.png", "timeout": 5, "confidence": 0.75, "use_color": True},
-            {"action": "click_image", "target1": "images_boxphone/minimize.png", "target2": "images_boxphone/minimize1.png", "target3": "images_boxphone/minimize2.png", "target4": "images_boxphone/minimize3.png", "target5": "images_boxphone/minimize.jpg","timeout": 20, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/home1.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image_if", "target": "images_boxphone/cai_dat_button.png", "timeout": 6, "confidence": 0.7},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            # {"action": "click_image_if", "target": "images_boxphone/cai_dat_button.png", "timeout": 6, "confidence": 0.7},
             {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
             {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
             {"action": "click_coords", "x": 1670, "y": 45, "timeout": 1},
 
-            {"action": "click_image", "target": "images_boxphone/dangxuat.png", "timeout": 30, "confidence": 0.7},
-            {"action": "click_image", "target": "images_boxphone/ok1.png", "timeout": 30, "confidence": 0.7},
-            {"action": "wait", "timeout": 15},
+            {"action": "click_image", "target1": "images_cs187/dang_xuat.png", "target2": "images_cs187/loguot.png", "timeout": 30, "confidence": 0.7},
+            {"action": "click_image", "target": "images_cs187/ok1.png", "timeout": 30, "confidence": 0.7},
+            {"action": "wait", "timeout": 8},
         ]
         
         def tag_script(script_list, stage_name):
@@ -1479,7 +1171,7 @@ class AutoClickerInstance:
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
             {"action": "press_esc", "wait": 3},
-            {"action": "clear_android_data", "package": "com.garena.gaslite"},
+            {"action": "clear_android_data", "package": "com.garena.game.kgvn"},
         ]
 
         # --- ASSEMBLE SCRIPT BASED ON MODES ---
@@ -1690,8 +1382,8 @@ class MultiPremiumApp(ctk.CTk):
         self.mode_login = ctk.CTkCheckBox(self.mode_frame, text="LOGIN"); self.mode_login.grid(row=0, column=0, pady=10); self.mode_login.select()
         self.mode_tutorial = ctk.CTkCheckBox(self.mode_frame, text="TÂN THỦ"); self.mode_tutorial.grid(row=0, column=1); self.mode_tutorial.select()
         self.mode_mua_exp = ctk.CTkCheckBox(self.mode_frame, text="MUA EXP"); self.mode_mua_exp.grid(row=0, column=2); self.mode_mua_exp.deselect()
-        self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME"); self.mode_dinh_game.grid(row=0, column=3); self.mode_dinh_game.select()
-        self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI"); self.mode_teamup.grid(row=0, column=4); self.mode_teamup.select()
+        self.mode_dinh_game = ctk.CTkCheckBox(self.mode_frame, text="DÍNH GAME"); self.mode_dinh_game.grid(row=0, column=3); self.mode_dinh_game.deselect()
+        self.mode_teamup = ctk.CTkCheckBox(self.mode_frame, text="GHÉP ĐỘI"); self.mode_teamup.grid(row=0, column=4); self.mode_teamup.deselect()
         
         self.battle_count_entry = ctk.CTkEntry(self.main_content, width=80, placeholder_text="Số trận Battle (3)")
         self.battle_count_entry.pack(pady=5); self.battle_count_entry.insert(0, "2")

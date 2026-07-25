@@ -1,4 +1,32 @@
 # -*- coding: utf-8 -*-
+import unicodedata
+# import easyocr
+
+# # Khởi tạo một biến toàn cục dùng chung cho tất cả các luồng thiết bị
+# GLOBAL_OCR_READER = None
+
+# import unicodedata
+# import easyocr
+
+# # Khởi tạo một biến toàn cục dùng chung cho tất cả các luồng thiết bị
+# GLOBAL_OCR_READER = None
+
+# def init_ocr_reader(log_func=None):
+#     """Khởi tạo hoặc trả về bộ đọc EasyOCR dùng chung để tiết kiệm RAM"""
+#     global GLOBAL_OCR_READER
+#     if GLOBAL_OCR_READER is None:
+#         if log_func:
+#             log_func("[OCR] Đang tải mô hình ngôn ngữ EasyOCR (Tiếng Việt + Tiếng Anh)...")
+#         try:
+#             # Khởi tạo hỗ trợ tiếng Việt ('vi') và tiếng Anh ('en')
+#             GLOBAL_OCR_READER = easyocr.Reader([ 'en'], gpu=False) # Đổi gpu=True nếu máy bạn có card Nvidia rời
+#             if log_func:
+#                 log_func("[OCR] Tải mô hình OCR (EasyOCR) thành công!")
+#         except Exception as e:
+#             if log_func:
+#                 log_func(f"[OCR] LỖI khởi tạo EasyOCR: {e}")
+#     return GLOBAL_OCR_READER
+
 
 import base64
 import gc
@@ -30,7 +58,70 @@ try:
 except: pass
 
 import tkinter.filedialog as fd
+import os
+import time
+from PIL import Image
 
+try:
+    import pytesseract
+    # Try common Windows install locations so OCR works even if PATH is not set.
+    if os.name == "nt":
+        for candidate in [
+            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        ]:
+            if os.path.exists(candidate):
+                pytesseract.pytesseract.tesseract_cmd = candidate
+                break
+except Exception as e:
+    pytesseract = None
+    print(f"[OCR] Không thể import pytesseract: {e}")
+
+def wait_until_text(self, device_id, roi):
+
+    init_ocr_reader()
+
+    while True:
+
+        screen = self.get_screenshot(device_id)
+
+        if screen is None:
+            continue
+
+        crop = self.crop_region(screen, *roi)
+
+        results = self.ocr_read_text_with_boxes(crop)
+
+        if results:
+            return True
+
+        time.sleep(0.03)
+def quet_chu_vung(x1, y1, x2, y2, delay=1.0):
+    """
+    Hàm tự động chụp màn hình Boxphone, cắt vùng và đọc văn bản.
+    delay: thời gian chờ (giây) để màn hình Boxphone kịp cập nhật sau hành động trước đó.
+    """
+    if pytesseract is None:
+        print("[OCR] pytesseract chưa sẵn sàng, hãy cài đặt thư viện và Tesseract OCR.")
+        return ""
+
+    time.sleep(delay) # Chờ màn hình ổn định sau hành động trước
+    
+    # 1. Chụp và tải ảnh về máy
+    os.system("adb shell screencap -p /sdcard/scan.png && adb pull /sdcard/scan.png .")
+    
+    # 2. Mở ảnh, cắt vùng và nhận diện chữ tiếng Việt
+    try:
+        img = Image.open("scan.png")
+        vung_cat = img.crop((x1, y1, x2, y2))
+        van_ban = pytesseract.image_to_string(vung_cat, lang="vie").strip()
+        return van_ban
+    except Exception as e:
+        print(f"Lỗi khi đọc hình ảnh: {e}")
+        return ""
+
+# Ví dụ OCR bên dưới đã bị tắt để không chạy tự động khi import file.
+# Nếu cần test thủ công, hãy gọi hàm quet_chu_vung(...) từ console.
 
 def resource_path(relative_path):
     try:
@@ -84,6 +175,7 @@ def get_cached_template(t_path, use_color=False):
     return None
 
 class AutoClickerInstance:
+    #
     def __init__(self, device_id, adb_path, log_func, update_ui_func, report_stats_func):
         self.device_id = device_id
         self.adb_path = adb_path
@@ -167,100 +259,6 @@ class AutoClickerInstance:
         except subprocess.TimeoutExpired:
             self.log(f"!! ADB TIMEOUT ({timeout}s): {' '.join(args)}")
             return subprocess.CompletedProcess(cmd, 1, b'', b'')
-
-    def force_stop_game(self):
-        self.log("-> Đang thực hiện đóng ứng dụng triệt để...")
-        # 1. Nhấn Home để thoát về launcher trước
-        self.call_adb(["shell", "input", "keyevent", "3"])
-        time.sleep(1)
-        # 2. Force stop các package liên quan
-        potential_apps = ["com.garena.game.kgvn64x", "com.garena.game.kgvn", "com.garena.game.kgtw"]
-        for app in potential_apps:
-            self.call_adb(["shell", "am", "force-stop", app])
-            self.call_adb(["shell", "pkill", "-f", app])
-        time.sleep(2)
-
-    def get_screenshot(self):
-        # Thêm jitter ngẫu nhiên để tránh nghẽn ADB khi chạy quá nhiều tab cùng lúc
-        time.sleep(random.uniform(0.1, 0.3))
-        try:
-            cmd = [self.adb_path, "-s", self.device_id, "exec-out", "screencap", "-p"]
-            try:
-                process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
-                if process.returncode != 0: raise Exception("Lỗi exec-out")
-                image_bytes = process.stdout
-            except:
-                cmd_fallback = [self.adb_path, "-s", self.device_id, "shell", "screencap", "-p"]
-                process = subprocess.run(cmd_fallback, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
-                image_bytes = process.stdout.replace(b"\r\n", b"\n")
-
-            if not image_bytes: return None
-            image_array = np.frombuffer(image_bytes, dtype=np.uint8)
-            img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-            return img
-        except Exception as e:
-            self.log(f"LỖI Chụp màn hình: {str(e)}")
-            return None
-            
-    def get_clipboard(self):
-        """Đọc clipboard bằng cách ép buộc App Clipper lên Foreground để sync (Fix Android 10+)."""
-        pkg = "com.example.clipper"
-        path_in_android = f"/sdcard/Android/data/{pkg}/files/clip.txt"
-        
-        # 1. Ép buộc mở App Clipper lên (Dùng monkey cho chắc chắn 100%)
-        self.log("[CLIPBOARD] Đang đồng bộ...")
-        self.call_adb(["shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
-        time.sleep(1.5) # Đợi app hiện lên, sync và tự ẩn mình
-        
-        # 2. Đọc file kết quả
-        cmd = [self.adb_path, "-s", self.device_id, "shell", f"cat {path_in_android} 2>/dev/null"]
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=False, creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
-        except subprocess.TimeoutExpired:
-            self.log("!! [CLIPBOARD] Timeout khi đọc clipboard.")
-            return ""
-        
-        if not res.stdout: 
-            self.log("!! [CLIPBOARD] File trống hoặc chưa có mã.")
-            return ""
-        
-        try:
-            raw_output = res.stdout.decode('utf-8', errors='ignore').strip()
-        except:
-            return ""
-
-        if not raw_output: return ""
-        
-        lines = raw_output.split('\n')
-        clean_lines = [l.strip() for l in lines if l.strip() and "adb" not in l.lower() and "*" not in l]
-        
-        if clean_lines:
-            content = clean_lines[-1]
-            
-            # --- LỌC LẤY MÃ MỜI GIỮA HAI DẤU GẠCH NGANG -- ---
-            import re
-            match = re.search(r'--([A-Za-z0-9]+)--', content)
-            if match:
-                content = match.group(1)
-                self.log(f"==> [CLIPBOARD] Đã lọc mã mời: {content}")
-            else:
-                self.log(f"==> [CLIPBOARD] Lấy mã thành công (Raw): {content}")
-            
-            return content
-        
-        return ""
-        # service call clipboard 2 i32 1 (lấy dữ liệu clipboard)
-        try:
-            cmd_service = [self.adb_path, "-s", self.device_id, "shell", "service call clipboard 2 i32 1"]
-            res_service = subprocess.run(cmd_service, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
-            # Kết quả service call cần parse rất phức tạp (HEX), nên đây chỉ là phương án dự phòng
-        except: pass
-
-        # 3. Thất bại
-        return ""
-
-
-
     def execute_step(self, step):
         if not self.running: return False
         action = step.get("action")
@@ -268,6 +266,136 @@ class AutoClickerInstance:
         # self.log(f"==> Bước: {action} {f'({target_info})' if target_info else ''}") # Tắt log bước chạy chi tiết trên UI
         self.last_step_time = time.time()
         res = True
+    # def force_stop_game(self):
+    #     self.log("-> Đang thực hiện đóng ứng dụng triệt để...")
+    #     # 1. Nhấn Home để thoát về launcher trước
+    #     self.call_adb(["shell", "input", "keyevent", "3"])
+    #     time.sleep(1)
+    #     # 2. Force stop các package liên quan
+    #     potential_apps = ["com.garena.game.kgvn64x", "com.garena.game.kgvn", "com.garena.game.kgtw"]
+    #     for app in potential_apps:
+        #     self.call_adb(["shell", "am", "force-stop", app])
+        #     self.call_adb(["shell", "pkill", "-f", app])
+        # time.sleep(2)
+
+    #   def get_screenshot(self):
+    #     # Thêm jitter ngẫu nhiên để tránh nghẽn ADB khi chạy quá nhiều tab cùng lúc
+    #     time.sleep(random.uniform(0.1, 0.3))
+    #     try:
+    #         cmd = [self.adb_path, "-s", self.device_id, "exec-out", "screencap", "-p"]
+    #         try:
+    #             process = subprocess.run(cmd, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
+    #             if process.returncode != 0: raise Exception("Lỗi exec-out")
+    #             image_bytes = process.stdout
+    #         except:
+    #             cmd_fallback = [self.adb_path, "-s", self.device_id, "shell", "screencap", "-p"]
+    #             process = subprocess.run(cmd_fallback, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
+    #             image_bytes = process.stdout.replace(b"\r\n", b"\n")
+
+    #         if not image_bytes: return None
+    #         image_array = np.frombuffer(image_bytes, dtype=np.uint8)
+    #         img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+    #         return img
+    #     except Exception as e:
+    #         self.log(f"LỖI Chụp màn hình: {str(e)}")
+    #         return None
+            
+    # def get_clipboard(self):
+    #     """Đọc clipboard bằng cách ép buộc App Clipper lên Foreground để sync (Fix Android 10+)."""
+    #     pkg = "com.example.clipper"
+    #     path_in_android = f"/sdcard/Android/data/{pkg}/files/clip.txt"
+        
+    #     # 1. Ép buộc mở App Clipper lên (Dùng monkey cho chắc chắn 100%)
+    #     self.log("[CLIPBOARD] Đang đồng bộ...")
+    #     self.call_adb(["shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
+    #     time.sleep(1.5) # Đợi app hiện lên, sync và tự ẩn mình
+        
+    #     # 2. Đọc file kết quả
+    #     cmd = [self.adb_path, "-s", self.device_id, "shell", f"cat {path_in_android} 2>/dev/null"]
+    #     try:
+    #         res = subprocess.run(cmd, capture_output=True, text=False, creationflags=subprocess.CREATE_NO_WINDOW, timeout=10)
+    #     except subprocess.TimeoutExpired:
+    #         self.log("!! [CLIPBOARD] Timeout khi đọc clipboard.")
+    #         return ""
+        
+    #     if not res.stdout: 
+    #         self.log("!! [CLIPBOARD] File trống hoặc chưa có mã.")
+    #         return ""
+        
+    #     try:
+    #         raw_output = res.stdout.decode('utf-8', errors='ignore').strip()
+    #     except:
+    #         return ""
+
+    #     if not raw_output: return ""
+        
+    #     lines = raw_output.split('\n')
+    #     clean_lines = [l.strip() for l in lines if l.strip() and "adb" not in l.lower() and "*" not in l]
+        
+    #     if clean_lines:
+    #         content = clean_lines[-1]
+            
+    #         # --- LỌC LẤY MÃ MỜI GIỮA HAI DẤU GẠCH NGANG -- ---
+    #         import re
+    #         match = re.search(r'--([A-Za-z0-9]+)--', content)
+    #         if match:
+    #             content = match.group(1)
+    #             self.log(f"==> [CLIPBOARD] Đã lọc mã mời: {content}")
+    #         else:
+    #             self.log(f"==> [CLIPBOARD] Lấy mã thành công (Raw): {content}")
+            
+    #         return content
+        
+    #     return ""
+        # # service call clipboard 2 i32 1 (lấy dữ liệu clipboard)
+        #     try:
+        #         cmd_service = [self.adb_path, "-s", self.device_id, "shell", "service call clipboard 2 i32 1"]
+        #         res_service = subprocess.run(cmd_service, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
+        #         # Kết quả service call cần parse rất phức tạp (HEX), nên đây chỉ là phương án dự phòng
+        #     except: pass
+
+        #     # 3. Thất bại
+        #     return ""
+
+
+    # def quet_chu_vung(self, x1, y1, x2, y2, delay=1.0):
+    #     # """
+    #     # Hàm tự động chụp màn hình Boxphone, cắt vùng và đọc văn bản.
+    #     # Hoạt động độc lập và an toàn cho từng luồng thiết bị.
+    #     # """
+    #     time.sleep(delay)  # Chờ màn hình ổn định sau hành động trước đó
+        
+    #     # Tạo tên file ảnh riêng biệt cho từng thiết bị để tránh ghi đè dữ liệu khi chạy đa luồng
+    #     local_filename = f"scan_{self.device_id.replace(':', '_')}.png"
+    #     remote_path = f"/sdcard/scan_{self.device_id.replace(':', '_')}.png"
+        
+    #     # 1. Chụp và tải ảnh về máy tính qua ADB của luồng hiện tại
+    #     self.call_adb(["shell", "screencap", "-p", remote_path])
+    #     self.call_adb(["pull", remote_path, local_filename])
+        
+    #     # 2. Mở ảnh, cắt vùng và nhận diện chữ tiếng Việt
+    #     try:
+    #         if pytesseract is None:
+    #             self.log("Lỗi OCR: pytesseract chưa sẵn sàng")
+    #             return ""
+    #         if os.path.exists(local_filename):
+    #             img = Image.open(local_filename)
+    #             vung_cat = img.crop((x1, y1, x2, y2))
+    #             van_ban = pytesseract.image_to_string(vung_cat, lang="vie").strip()
+                
+    #             # Dọn dẹp file ảnh sau khi quét xong để tránh nặng máy
+    #             try:
+    #                 os.remove(local_filename)
+    #                 self.call_adb(["shell", "rm", remote_path])
+    #             except: pass
+                
+    #             return van_ban
+    #         else:
+    #             return ""
+    #     except Exception as e:
+    #         self.log(f"Lỗi khi đọc hình ảnh OCR: {str(e)}")
+    #         return ""
+    
         
         if action == "click_image":
             res = bool(self.click_image_logic(step))
@@ -289,6 +417,8 @@ class AutoClickerInstance:
                     self.skip_all_retries = True
                     return False
             res = True
+        elif action == "click_coords":
+            res = self.click_coords_logic(step)
         elif action == "wait":
             wait_time = step.get("duration") or step.get("timeout") or 1
             start_wait = time.time()
@@ -327,16 +457,16 @@ class AutoClickerInstance:
                         return False
                 return True # Đã xử lý bằng timeout_then, coi như bước này thành công
             return res # Trả về True nếu khớp case, False nếu timeout mà không có timeout_then
-        elif action == "restart_app":
-            app = step.get("app", "com.garena.game.kgvn")
-            self.log(f"!! PHÁT HIỆN LỖI: Đóng game và khởi động lại {app}...")
-            self.force_stop_game()
-            self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
-            self.log("Đợi game khởi động lại (20s)...")
-            start_wait = time.time()
-            while time.time() - start_wait < 20 and self.running:
-                time.sleep(0.5)
-            return False
+        # elif action == "restart_app":
+        #     app = step.get("app", "com.garena.game.kgvn")
+        #     self.log(f"!! PHÁT HIỆN LỖI: Đóng game và khởi động lại {app}...")
+        #     self.force_stop_game()
+        #     self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+        #     self.log("Đợi game khởi động lại (20s)...")
+        #     start_wait = time.time()
+        #     while time.time() - start_wait < 20 and self.running:
+        #         time.sleep(0.5)
+        #     return False
         elif action == "handle_maintenance":
             # Tự động tìm package game có trên máy
             potential_apps = ["com.garena.game.kgvn64x", "com.garena.game.kgvn", "com.garena.game.kgtw"]
@@ -350,35 +480,35 @@ class AutoClickerInstance:
             if getattr(self, 'chest_claimed', False):
                 self.log("!! Lỗi sau khi nhận rương: Chỉ thực hiện đăng xuất...")
                 for _ in range(2): self.call_adb(["shell", "input", "keyevent", "4"]); time.sleep(1)
-                self.execute_step({"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "skip_maintain": True})
+                self.execute_step({"action": "click_image", "target1": "images_cs187_cs187/setting.jpg", "target2": "images_cs187/setting1.jpg", "timeout": 10, "skip_maintain": True})
                 time.sleep(2)
-                self.execute_step({"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 20, "skip_maintain": True})
+                self.execute_step({"action": "click_image", "target1": "images_cs187/logout.jpg", "target2": "images_cs187/logout_big.jpg", "timeout": 20, "skip_maintain": True})
                 time.sleep(2)
-                self.execute_step({"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
+                self.execute_step({"action": "click_image", "target": "images_cs187/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
                 
                 # Fallback nếu UI logout thất bại
-                if not self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
+                if not self.search_logic({"target": "images_cs187/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
                     self.force_stop_game()
                     self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
                     self.log("Đợi game mở và nhấn Garena...")
-                    self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
+                    self.execute_step({"action": "click_image_if", "target": "images_cs187/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
                     time.sleep(5)
                 return False
             elif getattr(self, 'code_entered', False):
                 self.log("!! PHÁT HIỆN LỖI (Đã nhập mã): Đang thực hiện đăng xuất...")
                 for _ in range(2): self.call_adb(["shell", "input", "keyevent", "4"]); time.sleep(1)
-                if self.execute_step({"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "skip_maintain": True}):
+                if self.execute_step({"action": "click_image", "target1": "images_cs187/setting.jpg", "target2": "images_cs187/setting1.jpg", "timeout": 10, "skip_maintain": True}):
                     time.sleep(2)
-                    self.execute_step({"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 20, "skip_maintain": True})
+                    self.execute_step({"action": "click_image", "target1": "images_cs187/logout.jpg", "target2": "images_cs187/logout_big.jpg", "timeout": 20, "skip_maintain": True})
                     time.sleep(2)
-                    self.execute_step({"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
+                    self.execute_step({"action": "click_image", "target": "images_cs187/ok_cs1.jpg", "timeout": 20, "skip_maintain": True})
                     time.sleep(5)
                 
-                if not self.search_logic({"target": "images/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
+                if not self.search_logic({"target": "images_cs187/login_garena2.jpg", "timeout": 5, "confidence": 0.8}):
                     self.force_stop_game()
                     self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
                     self.log("Đợi game mở và nhấn Garena...")
-                    self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
+                    self.execute_step({"action": "click_image_if", "target": "images_cs187/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
                     time.sleep(5)
                 return False
             elif getattr(self, 'is_login_phase', False):
@@ -388,18 +518,18 @@ class AutoClickerInstance:
                 self.skip_login_for_this_acc = False # Quan trọng: Không bỏ qua login
                 time.sleep(5)
                 return False
-            else:
-                self.log(f"!! PHÁT HIỆN BẢO TRÌ/LỖI: Tiến hành Restart {app}...")
-                self.force_stop_game()
-                self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
-                self.skip_login_for_this_acc = True
-                self.log("Đợi game mở và nhấn Garena...")
-                self.execute_step({"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
-                time.sleep(5)
-                if self.search_logic({"target1": "images/account_input1.jpg", "target2": "images/account_input.png", "target3": "images/account.jpg", "timeout": 5}):
-                    self.log("!! PHÁT HIỆN CHƯA ĐĂNG NHẬP (THẤY INPUT): TIẾN HÀNH ĐĂNG NHẬP LẠI.")
-                    self.skip_login_for_this_acc = False # Yêu cầu chạy kịch bản login
-                return False
+            # else:
+            #     self.log(f"!! PHÁT HIỆN BẢO TRÌ/LỖI: Tiến hành Restart {app}...")
+            #     self.force_stop_game()
+            #     self.call_adb(["shell", "monkey", "-p", app, "-c", "android.intent.category.LAUNCHER", "1"])
+            #     self.skip_login_for_this_acc = True
+            #     self.log("Đợi game mở và nhấn Garena...")
+            #     self.execute_step({"action": "click_image_if", "target": "images_cs187/login_garena2.jpg", "timeout": 30, "confidence": 0.7, "skip_maintain": True})
+            #     time.sleep(5)
+            #     if self.search_logic({"target1": "images_cs187/account_input1.jpg", "target2": "images_cs187/account_input.png", "target3": "images_cs187/account.jpg", "timeout": 5}):
+            #         self.log("!! PHÁT HIỆN CHƯA ĐĂNG NHẬP (THẤY INPUT): TIẾN HÀNH ĐĂNG NHẬP LẠI.")
+            #         self.skip_login_for_this_acc = False # Yêu cầu chạy kịch bản login
+            #     return False
         elif action == "long_click":
             duration = step.get("duration", 5000)
             res = self.long_click_logic(step, duration)
@@ -431,7 +561,15 @@ class AutoClickerInstance:
         if duration > 35: self.update_status("Lag", True)
         else: self.update_status("Đang chạy", False)
         return res
-
+    def click_coords_logic(self, step):
+        x, y = step.get("x"), step.get("y")
+        if x is not None and y is not None:
+            delay = step.get("timeout", 0)
+            if delay > 0: time.sleep(delay)
+            self.call_adb(["shell", "input", "tap", str(x), str(y)])
+            self.log(f"CLICK TỌA ĐỘ: ({x}, {y})")
+            return True
+        return False
     def click_image_logic(self, step):
         targets = []
         if step.get("target"): targets.append(step.get("target"))
@@ -538,7 +676,7 @@ class AutoClickerInstance:
                 return True
             time.sleep(1)
         return False
-    def search_logic(self, step):
+def search_logic(self, step):
         targets = []
         if step.get("target"): targets.append(step.get("target"))
         i = 1
@@ -579,7 +717,7 @@ class AutoClickerInstance:
             time.sleep(1)
         return False
 
-    def click_any_logic(self, step):
+def click_any_logic(self, step):
         wait_time = step.get("wait") or 0
         if wait_time > 0: time.sleep(wait_time)
         screen = self.get_screenshot()
@@ -590,7 +728,7 @@ class AutoClickerInstance:
             return True
         return False
 
-    def long_click_logic(self, step, duration):
+def long_click_logic(self, step, duration):
         target = step.get("target")
         confidence = step.get("confidence", 0.8)
         timeout = step.get("timeout", 10)
@@ -623,7 +761,7 @@ class AutoClickerInstance:
             self.call_adb(["shell", "input", "swipe", str(real_x), str(real_y), str(real_x), str(real_y), str(duration)])
             return True
 
-    def verify_or_restart_logic(self, step):
+def verify_or_restart_logic(self, step):
         target = step.get("target")
         timeout = step.get("timeout", 15)
         
@@ -652,98 +790,111 @@ class AutoClickerInstance:
             
         return False
 
-    def press_esc_logic(self, step):
+def press_esc_logic(self, step):
         time.sleep(step.get("wait", 0))
         self.call_adb(["shell", "input", "keyevent", "4"])
         return True
 
-    def input_account_logic(self):
+def input_account_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("tk", "")
-        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
+        # Không xóa nội dung trước đó nữa để tránh làm mất text đã nhập.
         self.input_text_robust(content)
         return True
 
-    def input_password_logic(self):
+def input_password_logic(self):
         if not self.current_account: return False
         content = self.current_account.get("mk", "")
-        self.call_adb(["shell", "input", "keyevent"] + ["67"] * 40)
+        # Không xóa nội dung trước đó nữa để tránh làm mất text đã nhập.
         self.input_text_robust(content)
         return True
 
-    def run(self, accounts, worker_index, shared_data):
+def run(self, accounts, worker_index, shared_data):
         self.accounts_list = accounts
         self.worker_index = worker_index
         self.shared_data = shared_data
         self.running = True
 
         # --- TẢI KỊCH BẢN TỪ FILE NGOÀI NẾU CÓ ---
-        script_file = "script_nhay.json"
+        script_file = "script.json"
         
         # Giá trị mặc định (Hardcoded)
         login_script = [
-            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 45, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/login_garena2.jpg", "timeout": 3, "confidence": 0.8, "login_step": True},
-            {"action": "click_image", "target1": "images/account_input1.jpg","target2": "images/account_input.png", "target3": "images/account.jpg", "target4": "images/account_input_note8.jpg", "timeout": 60, "confidence": 0.8, "login_step": True},
-            {"action": "input_account", "login_step": True},
-            {"action": "click_image", "target1": "images/tiep_theo.jpg", "target2": "images/tiep_theo1.jpg", "timeout": 60, "confidence": 0.8, "login_step": True},
-            {"action": "input_password", "login_step": True},
+            {"action": "click_image_if", "target": "images_cs187/garena.png", "timeout": 45, "confidence": 0.8},
             {"action": "wait", "timeout": 2, "login_step": True},
-            {"action": "click_image", "target1": "images/xong.jpg", "target2": "images/xong1.jpg", "timeout": 30, "confidence": 0.8, "login_step": True},
-            {"action": "wait", "timeout": 5, "login_step": True},
-            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.8, "login_step": True},
-            {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 2, "confidence": 0.8, "login_step": True},
-            {"action": "wait", "timeout": 5, "login_step": True},
-            {"action": "click_image_if", "target1": "images/login.png", "target2": "images/login_now.png", "target3": "images/dang_nhap1.jpg", "timeout": 7, "confidence": 0.8, "login_step": True, "then": [
-                {"action": "click_image_if", "target1": "images/ok2.png", "target2": "images/ok_dang_nhap_cs.jpg", "timeout": 4, "confidence": 0.8},
-                {"action": "click_image_if", "target": "images/sai_pass.jpg", "timeout": 5, "confidence": 0.8, "login_step": True, "then": [
-                {"action": "clear_android_data", "package": "com.garena.gaslite"},
-                {"action": "restart_app"}]
-            },
-            ]},
-            {"action": "click_image_if", "target": "images/batdau.png", "timeout": 10, "confidence": 0.85},
-            {"action": "press_esc", "wait": 2},
+            {"action": "input_account", "login_step": True},
+            {"action": "click_coords", "x": 391, "y": 638, "timeout": 1},
+            
+            {"action": "input_password", "login_step": True},
+            {"action": "click_coords", "x": 1718, "y": 533, "timeout": 1},
+            {"action": "click_coords", "x": 1537, "y": 981, "timeout": 3},
+            
+                
+               
+                
+            
+            
+            {"action": "click_image_if", "target": "images_cs187/batdau.png", "timeout": 4, "confidence": 0.85},
+            {"action": "wait", "timeout": 17, "login_step": True},
             {"action": "clear_android_data", "package": "com.garena.gaslite"},
-        ]
-
+        
+]
+        # --- 1. ĐỊNH NGHĨA CÁC KỊCH BẢN CHUẨN ---
         nhay_script = [
-            {"action": "press_esc", "wait": 2},
-            {"action": "wait", "timeout": 8},
-            {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target1": "images/su_kien.jpg","target2": "images/su_kien2.jpg", "timeout": 25, "confidence": 0.8},
-            {"action": "click_image_if", "target1": "images/su_kien.jpg", "target2": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.8},
-            {"action": "press_esc", "wait": 1},
-            {"action": "press_esc", "wait": 1},
-            {"action": "press_esc", "wait": 1},
-            {"action": "press_esc", "wait": 1},
-            {"action": "click_image", "target": "images/su_kien_cs.jpg", "timeout": 10, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/su_kien_cs.jpg", "timeout": 2, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/buoc_nhay_chung_suc.jpg", "timeout": 10, "confidence": 0.8},
+            {"action": "click_image_if", "target1": "images_cs187/x.png", "target2": "images_cs187/x1.png", "timeout": 60, "confidence": 0.85},
             {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
-            {"action": "loop", "count": 15, "until": "images/0_ve_cs.jpg", "steps": [
-                {"action": "click_image_if", "target": "images/x_cs2.jpg", "timeout": 2, "confidence": 0.7},
-                {"action": "long_click", "target": "images/nhay_nao.jpg", "duration": 5000},
-                {"action": "click_any", "timeout": 11},
-                {"action": "click_image_if","target": "images/A.jpg", "timeout": 11, "confidence": 0.8, "success": True}
-            ]},
-            {"action": "click_image", "target": "images/back_sk1.jpg", "timeout": 10, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.8},
-            {"action": "click_image_if", "target": "images/back_sk1.jpg", "timeout": 2, "confidence": 0.8},
+            
+            {"action": "click_coords", "x": 1759, "y": 226, "timeout": 2},  # sự kiện
+            {"action": "click_coords", "x": 253, "y": 424, "timeout": 2},   # 18/7
+            {"action": "click_coords", "x": 253, "y": 424, "timeout": 2},   # đăng nhập là trúng
+            {"action": "click_coords", "x": 253, "y": 424, "timeout": 2},   # đăng nhập là trúng
+            
+            {"action": "click_coords", "x": 1682, "y": 997, "timeout": 3} ,  # collect
+            {"action": "click_image", "target1": "images_cs187/back.png", "target2": "images_cs187/back1.png","timeout": 30, "confidence": 0.8},
+            
+            {"action": "click_coords", "x": 1561, "y": 45, "timeout": 2},
+            {"action": "click_coords", "x": 197, "y": 311, "timeout": 2}, # hệ thống
+
+            {"action": "click_coords", "x": 1105, "y": 989, "timeout": 2},# claim
+            {"action": "click_coords", "x": 754, "y": 977, "timeout": 2},# claim
+            {"action": "click_coords", "x": 754, "y": 977, "timeout": 2},# claim
+            {"action": "press_esc", "wait": 1},
+            {"action": "click_coords", "x": 1759, "y": 226, "timeout": 2},  # sự kiện
+           
+            {"action": "click_coords", "x": 241, "y": 311, "timeout": 2}, # sưu tầm
+            {"action": "click_image", "target": "images_cs187/batdau.png", "timeout": 30, "confidence": 0.8},
+            {"action": "click_image", "target": "images_cs187/goi.png", "timeout": 30, "confidence": 0.8},
+
+            {"action": "click_coords", "x": 947, "y": 842, "timeout": 7},# chấp nhận
+            {"action": "click_coords", "x": 770, "y": 965, "timeout": 2},
+            {"action": "click_coords", "x": 770, "y": 965, "timeout": 2},
+            {"action": "click_coords", "x": 770, "y": 965, "timeout": 2},
+            # qh
+            {"action": "click_image", "target": "images_cs187/hoanhthanh.png", "timeout": 30, "confidence": 0.8},
+            {"action": "click_image", "target1": "images_cs187/back.png", "target2": "images_cs187/back1.png","timeout": 30, "confidence": 0.8},
+            {"action": "click_image_if", "target1": "images_cs187/back.png", "target2": "images_cs187/back1.png","timeout": 5, "confidence": 0.8},
+            {"action": "press_esc", "wait": 2},
+            {"action": "press_esc", "wait": 2},
+            {"action": "click_coords", "x": 1601, "y": 468, "timeout": 2},
+            {"action": "click_coords", "x": 177, "y": 513, "timeout": 1},
+            {"action": "click_coords", "x": 177, "y": 513, "timeout": 1},
+            {"action": "click_coords", "x": 177, "y": 513, "timeout": 1},
+            {"action": "click_coords", "x": 1177, "y": 343, "timeout": 1},
+            {"action": "click_coords", "x": 1177, "y": 343, "timeout": 1},
+
+
         ]
 
         dang_xuat_script = [
             {"action": "press_esc", "wait": 2},
             {"action": "press_esc", "wait": 2},
-            {"action": "click_image", "target1": "images/setting.jpg", "target2": "images/setting1.jpg", "timeout": 10, "confidence": 0.8},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target1": "images/logout.jpg", "target2": "images/logout_big.jpg", "timeout": 30, "confidence": 0.8},
-            {"action": "wait", "timeout": 2},
-            {"action": "click_image", "target": "images/ok_cs1.jpg", "timeout": 30, "confidence": 0.8},
-            {"action": "wait", "timeout": 15},
+            {"action": "click_coords", "x": 1670, "y": 37, "timeout": 2},
+            {"action": "click_coords", "x": 1706, "y": 989, "timeout": 2},
+            {"action": "click_coords", "x": 1165, "y": 775, "timeout": 2},
+           
         ]
-
+       
         if os.path.exists(script_file):
             try:
                 with open(script_file, "r", encoding="utf-8") as f:
@@ -755,14 +906,19 @@ class AutoClickerInstance:
             except Exception as e:
                 self.log(f"!! LỖI khi tải {script_file}: {str(e)}")
 
+        # --- 2. VÒNG LẶP CHẠY DANH SÁCH TÀI KHOẢN ---
         while self.running:
             self.current_account = None
             with FILE_LOCK:
                 for acc in self.accounts_list:
                     if not acc.get("used"):
-                        acc["used"] = True; self.current_account = acc
-                        self.update_ui_func(); break
-            if not self.current_account: break
+                        acc["used"] = True
+                        self.current_account = acc
+                        self.update_ui_func()
+                        break
+            if not self.current_account: 
+                break
+                
             self.log(f">> START: {self.current_account['tk']}")
             self.skip_login_for_this_acc = False
             self.chest_claimed = False
@@ -771,12 +927,11 @@ class AutoClickerInstance:
                 self.skip_all_retries = False
                 success = False
                 
-                # --- 1. ĐĂNG NHẬP ---
+                # --- 2.1. ĐĂNG NHẬP ---
                 success_login = False
                 self.is_login_phase = True
                 for retry_login in range(3):
-                    # Check nếu đã ở trong sảnh rồi thì skip login luôn
-                    if self.search_logic({"target1": "images/su_kien.jpg", "target2": "images/setting.jpg", "target3": "images/su_kien2.jpg", "timeout": 5, "confidence": 0.7}):
+                    if self.search_logic({"target1": "images_cs187/su_kien.jpg", "target2": "images_cs187/setting.jpg", "target3": "images_cs187/su_kien2.jpg", "timeout": 5, "confidence": 0.7}):
                         self.log("==> ĐÃ Ở TRONG SẢNH, BỎ QUA ĐĂNG NHẬP.")
                         success_login = True
                         break
@@ -786,10 +941,12 @@ class AutoClickerInstance:
                         if not self.running: break
                         if self.skip_login_for_this_acc and step.get("login_step"): continue
                         if not self.execute_step(step):
-                            success_login = False; break
-                    if success_login or not self.running or self.skip_all_retries: break
+                            success_login = False
+                            break
+                    if success_login or not self.running or self.skip_all_retries: 
+                        break
                     self.log(f"!! Login thất bại (vòng {retry_login+1}/3). Đang bắt đầu lại...")
-                    self.skip_login_for_this_acc = False # Nếu skip login thất bại, vòng sau hãy làm full login
+                    self.skip_login_for_this_acc = False
                 
                 if not success_login or self.skip_all_retries or not self.running:
                     if self.skip_all_retries:
@@ -800,49 +957,83 @@ class AutoClickerInstance:
                 
                 self.is_login_phase = False
 
-                # --- 2. THỰC HIỆN NHÀY SCRIPT ---
+                # --- 2.2. THỰC HIỆN CÁC BƯỚC CLICK TRONG SCRIPT NHẢY ---
                 success_nhay = True
                 decisive_failure = False
                 self.chest_claimed = False
+                
                 for step in nhay_script:
-                    if not self.running: break
+                    if not self.running: 
+                        break
                     
-                    if decisive_failure and step.get("target") == "images/xac_nhan_ruong_ss.jpg":
-                        continue # Bỏ qua bước xác nhận rương nếu không thấy rương
+                    if decisive_failure and step.get("target") == "images_cs187/xac_nhan_ruong_ss.jpg":
+                        continue
                         
                     if not self.execute_step(step):
                         if step.get("decisive_failure"):
                             decisive_failure = True
-                            continue # KHÔNG break, để nó tiếp tục chạy các bước sau (back)
+                            continue 
                         else:
                             success_nhay = False
                             break
                     
-                    if step.get("target") == "images/xac_nhan_ruong_ss.jpg":
+                    if step.get("target") == "images_cs187/xac_nhan_ruong_ss.jpg":
                         self.chest_claimed = True
                 
-                # --- 3. ĐĂNG XUẤT ---
-                # Chạy đăng xuất nếu các bước nhay_script thành công (kể cả khi decisive_failure = True do không thấy rương)
+                # --- 2.3. ĐOẠN MỚI: VÒNG LẶP QUÉT TÌM VẬT PHẨM ĐẶC BIỆT QUA OCR ---
+                found_item = False
+                if self.running and success_nhay:
+                    self.log("=== BẮT ĐẦU VÒNG LẶP OCR QUÉT TÌM VẬT PHẨM ĐẶC BIỆT ===")
+                    max_retry_ocr = 1
+                    
+                    for attempt in range(max_retry_ocr):
+                        if not self.running: 
+                            break
+                            
+                        self.log(f"Đang quét tìm vật phẩm lần {attempt + 1}/{max_retry_ocr}...")
+                        
+                        # Thực hiện quét vùng tọa độ chỉ định
+                        ket_qua_quet = self.quet_tu_khoa_ocr(267, 586, 1670, 702)
+                        
+                        if ket_qua_quet:
+                            self.log("🎉 XÁC NHẬN: Tìm thấy Valhein TNVT hoặc Liliana MPTT!")
+                            found_item = True
+                            
+                            # Định dạng thông tin acc để ghi ra file riêng
+                            acc_info = f"{self.current_account['tk']}|{self.current_account['mk']}"
+                            try:
+                                with open("tai_khoan_trung.txt", "a", encoding="utf-8") as file_out:
+                                    file_out.write(f"{acc_info} | Trúng lúc: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                                self.log("💾 Đã xuất thông tin tài khoản thành công vào file 'tai_khoan_trung.txt'")
+                            except Exception as e:
+                                self.log(f"LỖI ghi file txt: {e}")
+                                
+                            break  # Tìm thấy vật phẩm yêu cầu -> Ngắt vòng lặp OCR ngay lập tức
+                        
+                        time.sleep(1.5)  # Chờ hiệu ứng chuyển động/lật thẻ game
+                    
+                    if not found_item:
+                        self.log("⚠️ Không tìm thấy từ khóa yêu cầu ở acc này.")
+
+                # --- 2.4. ĐĂNG XUẤT ---
                 if self.running and success_nhay:
                     for step in dang_xuat_script:
                         if not self.running: break
                         if not self.execute_step(step): break
 
-                # --- 4. KẾT THÚC ---
+                # --- 2.5. KẾT THÚC VÀ ĐỔI ACCOUNT KẾ TIẾP ---
                 if self.running:
                     if decisive_failure:
                         self.report_stats_func(False, f"{self.current_account['tk']}|{self.current_account['mk']} (KHÔNG THẤY RƯƠNG)")
-                        break # Thoát vòng lặp retry, chuyển sang acc tiếp theo
+                        break
                     elif success_nhay or self.chest_claimed:
                         self.current_account["success"] = True
                         self.report_stats_func(True, f"{self.current_account['tk']}|{self.current_account['mk']}")
-                        # Đảm bảo reset flag cho acc tiếp theo
                         self.skip_login_for_this_acc = False
-                        break # Thoát vòng lặp retry, chuyển sang acc tiếp theo
+                        break
                     else:
                         self.log(f"!! Lỗi thực thi Script Nhảy, đang thử lại: {self.current_account['tk']}")
                         time.sleep(2)
-                        # Không break, vòng lặp while sẽ quay lại đăng nhập và thử lại acc này
             
             gc.collect()
 
@@ -850,8 +1041,18 @@ class AutoClickerInstance:
         self.update_status("Đã dừng")
         self.running = False
 
-        
-       
+
+# Gắn các helper ở module level vào class để code cũ vẫn chạy đúng.
+AutoClickerInstance.press_esc_logic = press_esc_logic
+AutoClickerInstance.input_account_logic = input_account_logic
+AutoClickerInstance.input_password_logic = input_password_logic
+AutoClickerInstance.search_logic = search_logic
+AutoClickerInstance.click_any_logic = click_any_logic
+AutoClickerInstance.long_click_logic = long_click_logic
+AutoClickerInstance.verify_or_restart_logic = verify_or_restart_logic
+AutoClickerInstance.run = run
+
+
 class MultiPremiumApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -1129,4 +1330,4 @@ if __name__ == "__main__":
     app = MultiPremiumApp()
     app.mainloop()
 
-# pyinstaller --noconfirm --onefile --windowed --icon "nhay_script_logo.png" --name "AutoNhayLQ_Pro" --add-data "images;images" --add-data "nhay_script_logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool_cs_nhay.py
+# pyinstaller --noconfirm --onefile --windowed --icon "nhay_script_logo.png" --name "AutoNhayLQ_Pro" --add-data "images_cs187;images_cs187" --add-data "nhay_script_logo.png;." --add-data "start.png;." --add-data "stop.png;." gui_tool_cs_nhay.py
